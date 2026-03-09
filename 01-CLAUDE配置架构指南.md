@@ -2,7 +2,7 @@
 
 > Claude Code 原生记忆系统 — 告别手动维护，拥抱自动化记忆
 
-**版本**: v3.5
+**版本**: v3.6
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -217,10 +217,17 @@ pnpm build            # 生产构建
 ## 完成标准
 
 功能实现后，MUST 按顺序完成以下验证再报告"完成"：
+
+### 代码验证
 1. 运行 `pnpm test`，所有测试通过
 2. 运行 `pnpm lint`，无 error
 3. 检查边界条件：空值、异常输入、权限不足
 4. 确认改动不影响现有功能（回归验证）
+
+### 文档同步（功能完成时）
+5. 更新 `docs/roadmap/` 对应条目的 checkbox 状态
+6. 如有关联 Spec，更新 `docs/specs/` 中的 status 为 `implemented`
+7. 确认代码注释反映最终实现
 
 ## Git 提交规范
 
@@ -276,7 +283,9 @@ type: feat | fix | docs | refactor | perf | test | chore
 
 ## 7. 路径感知规则 `.claude/rules/`
 
-将专属规范按文件路径划分，仅在 Claude 编辑对应文件时加载，减少无关上下文：
+将专属规范按文件路径划分，仅在 Claude 操作对应文件时加载，减少无关上下文。
+
+> **已知限制**：`paths` 规则仅在 Read 操作时触发加载，Write 操作不触发。重要规则不要完全依赖 `paths` 条件，关键约束应放在根 CLAUDE.md 或直接放在 rules 文件中不设 paths 条件。
 
 ### 前端规则示例 `.claude/rules/frontend.md`
 
@@ -429,5 +438,5 @@ rm docs/ai-context/CURRENT.md
 
 ---
 
-**版本**: v3.5
+**版本**: v3.6
 **更新日期**: 2026-03

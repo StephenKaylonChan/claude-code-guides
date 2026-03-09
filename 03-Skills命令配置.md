@@ -2,7 +2,7 @@
 
 > Slash Commands 的进化版 — 更强大的自定义工作流命令
 
-**版本**: v3.5
+**版本**: v3.6
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -661,12 +661,15 @@ mkdir -p docs/specs
 **新建模式** — 写入 `docs/specs/<name>.md`：
 
 ```markdown
-# [功能名称] 设计文档
+---
+title: [功能名称]
+status: draft
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+phase: phase-N
+---
 
-> **状态**：草稿
-> **关联 ROADMAP**：Phase X — [条目名]（如有）
-> **创建日期**：YYYY-MM-DD
-> **最后更新**：YYYY-MM-DD
+# [功能名称] 设计文档
 
 ## 背景与目标
 
@@ -722,7 +725,7 @@ mkdir -p docs/specs
 **增量更新模式** — 读取已有文件，将新讨论成果合并到对应模块：
 - 保留已有内容不删除
 - 新增内容融入对应章节
-- 更新"最后更新"日期
+- 更新 frontmatter 中的 `updated` 日期
 - 如果讨论推翻了之前的结论，更新对应内容并在"讨论过的方案"中记录变更原因
 
 ## Step 3: 检查 ROADMAP 关联
@@ -734,20 +737,26 @@ mkdir -p docs/specs
 
 ## Step 4: 判断状态
 
-根据讨论充分程度判断状态：
-- **草稿**：讨论还在进行中，部分模块尚未确定
-- **已确认**：核心方案已确定，可以开始实施
+根据讨论充分程度判断 frontmatter 中的 `status`：
+- `draft`：讨论还在进行中，部分模块尚未确定
+- `approved`：核心方案已确定，可以开始实施
 
-如果用户明确说"确认"或"可以开始做了"，状态设为"已确认"。
+如果用户明确说"确认"或"可以开始做了"，status 设为 `approved`。
 
 **完整状态生命周期**：
 
-| 状态 | 转换时机 | 谁触发 |
-|------|---------|--------|
-| 草稿 | `/spec` 首次生成 | `/spec` Skill |
-| 已确认 | 用户确认内容 OK | `/spec` Skill |
-| 实施中 | 基于 spec 开始编码时 | Claude 在 Explore 阶段发现相关 spec 时自动更新 |
-| 已完成 | 功能全部完成 | `/handoff` 自动更新 |
+```
+draft → approved → implementing → implemented → [deprecated | superseded]
+```
+
+| status | 含义 | 转换时机 | 谁触发 |
+|--------|------|---------|--------|
+| `draft` | 讨论中 | `/spec` 首次生成 | `/spec` Skill |
+| `approved` | 方案已确认 | 用户确认内容 OK | `/spec` Skill |
+| `implementing` | 实施中 | 基于 spec 开始编码时 | Claude 自动更新 |
+| `implemented` | 已完成 | 功能全部完成 | `/done` 或完成标准自动更新 |
+| `deprecated` | 已弃用 | 技术/业务变化 | 手动更新 |
+| `superseded` | 被替代 | 新 spec 取代 | 手动更新（在 frontmatter 中注明替代文件） |
 
 ## Step 5: 输出确认
 
@@ -767,6 +776,122 @@ mkdir -p docs/specs
 
 </workflow>
 ```
+
+---
+
+### 5.4 /done — 功能完成收尾
+
+**用途**：一个功能开发完成后，执行完整的收尾检查：验证代码质量、同步文档状态（Roadmap + Spec）、确认无遗漏。大多数情况下，完成标准会自动执行这些动作；`/done` 作为手动兜底，偶尔执行以确保没有遗漏。
+
+**文件路径**: `.claude/skills/done/SKILL.md`
+
+```markdown
+---
+name: done
+description: |
+  功能完成收尾检查。验证代码质量，同步文档状态（Roadmap + Spec），确认无遗漏。
+  触发关键词：功能完成、收尾检查、done、wrap up
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+disable-model-invocation: true
+---
+
+<task>
+对刚完成的功能执行完整的收尾检查：代码验证 + 文档同步 + 状态汇总。
+</task>
+
+<workflow>
+
+## Step 0: 识别刚完成的功能
+
+- 查看最近的 git log 和 diff，确定刚完成了什么功能
+- 如果用户提供了功能名称，以用户说明为准
+
+```bash
+git log --oneline -5
+git diff --stat HEAD~3
+```
+
+## Step 1: 代码验证
+
+运行项目的测试和 lint 命令（从 CLAUDE.md 的"完成标准"或"常用命令"中获取）：
+
+```bash
+# 示例（根据项目实际命令调整）
+pnpm test
+pnpm lint
+```
+
+检查项：
+- [ ] 所有测试通过
+- [ ] Lint 无 error
+- [ ] 边界条件已考虑（空值、异常输入、权限不足）
+- [ ] 改动不影响现有功能
+
+## Step 2: Roadmap 更新
+
+如果 `docs/roadmap/` 存在：
+
+```bash
+ls docs/roadmap/
+```
+
+- 找到当前功能对应的 Phase 文件
+- 将对应的 checkbox 从 `- [ ]` 改为 `- [x] ✅ YYYY/MM/DD`
+- 更新 `docs/roadmap/README.md` 中的进度统计
+
+## Step 3: Spec 状态更新
+
+如果 `docs/specs/` 存在：
+
+```bash
+ls docs/specs/
+```
+
+- 找到与当前功能关联的 spec 文件
+- 将 frontmatter 中的 `status` 从 `implementing` 更新为 `implemented`
+- 更新 `updated` 日期
+
+## Step 4: 代码审查
+
+运行 `/simplify` 进行三维并行审查（如果本次还未运行过）。
+
+## Step 5: 提交文档变更
+
+如果 Step 2-3 产生了文档更新：
+
+```bash
+git add docs/roadmap/ docs/specs/
+git commit -m "docs: 更新 [功能名] 的 roadmap 和 spec 状态"
+```
+
+## Step 6: 输出状态汇总
+
+```
+✅ 功能收尾完成
+
+功能：[功能名称]
+代码验证：✅ 测试通过 | ✅ Lint 通过
+Roadmap：✅ Phase N — [条目] 已勾选 / ⏭️ 无关联条目
+Spec：✅ [spec名].md → implemented / ⏭️ 无关联 Spec
+代码审查：✅ /simplify 已执行 / ⏭️ 之前已执行
+
+下一步建议：
+- 继续下一个功能
+- git push 推送到远程
+- /deep-audit（如果当前 Phase 接近完成）
+```
+
+</workflow>
+```
+
+**自动 vs 手动**：
+
+| 方式 | 触发 | 覆盖内容 |
+|------|------|---------|
+| **自动**（推荐） | CLAUDE.md 完成标准，Claude 报告"功能完成"前自动执行 | 代码验证 + 文档同步 |
+| **手动** `/done` | 用户显式调用 | 完整检查（含 /simplify 审查 + 状态汇总） |
+
+日常开发中，完成标准驱动 Claude 自动完成文档同步。`/done` 用于阶段性核查，确保没有遗漏。
 
 ---
 
@@ -836,6 +961,7 @@ mkdir -p .claude/skills/deep-audit
 mkdir -p .claude/skills/catchup
 mkdir -p .claude/skills/handoff
 mkdir -p .claude/skills/spec
+mkdir -p .claude/skills/done
 ```
 
 ### 6.2 文件创建
@@ -846,6 +972,7 @@ mkdir -p .claude/skills/spec
 - `.claude/skills/catchup/SKILL.md`
 - `.claude/skills/handoff/SKILL.md`
 - `.claude/skills/spec/SKILL.md`
+- `.claude/skills/done/SKILL.md`
 
 ### 6.3 查看已安装的 Skills
 
@@ -870,6 +997,8 @@ mkdir -p .claude/skills/spec
 
 /spec               # 将讨论成果整理为设计文档
 /spec user-auth     # 指定功能名称
+
+/done               # 功能完成收尾检查（手动兜底）
 ```
 
 ### 6.5 旧 commands/ 迁移
@@ -887,5 +1016,5 @@ rm -rf .claude/commands/
 
 ---
 
-**版本**: v3.5
+**版本**: v3.6
 **更新日期**: 2026-03

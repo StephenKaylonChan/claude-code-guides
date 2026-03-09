@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.5（2026-03）
+> **版本**: v3.6（2026-03）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -59,6 +59,9 @@
 | `/simplify` `/batch` Bundled 内置命令 | 文档 03 |
 | `/catchup` `/handoff` 自定义命令（handoff 含自动 commit） | 文档 03 |
 | `/spec` 讨论成果整理为设计文档 | 文档 03、04 |
+| `/done` 功能完成收尾检查（Roadmap/Spec 自动同步） | 文档 03、04 |
+| Hook 高级能力（updatedInput、CLAUDE_ENV_FILE、Frontmatter Hooks） | 文档 02 |
+| GitHub Actions 集成 + Remote Control | 文档 04 |
 | `docs/roadmap/` 项目进度跟踪系统 | 文档 00、03、04 |
 | `docs/specs/` 功能设计文档目录 | 文档 03、04 |
 | Plan Mode 工作流（Explore→Plan→Code→Simplify→Commit） | 文档 04 |
@@ -84,6 +87,7 @@
 | `/catchup` | 清空上下文后快速恢复 | 按需 |
 | `/handoff` | 提交变更 + 生成交接文档 | 中断前 |
 | `/spec` | 讨论成果整理为设计文档 | 需求讨论后 |
+| `/done` | 功能完成收尾检查（Roadmap/Spec 同步） | 功能完成后（手动兜底） |
 | `/audit` | 项目健康检查 | 每周 |
 | `/deep-audit` | 全面深度审计 | Phase 完成后 |
 
@@ -108,7 +112,8 @@ project-root/
 │   │   ├── deep-audit/SKILL.md
 │   │   ├── catchup/SKILL.md
 │   │   ├── handoff/SKILL.md
-│   │   └── spec/SKILL.md
+│   │   ├── spec/SKILL.md
+│   │   └── done/SKILL.md
 │   ├── agents/                    # 自定义子代理（可选）
 │   └── hooks/                     # Hook 脚本
 │       ├── session-start.sh
@@ -153,6 +158,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.6 | 2026-03 | 三层收尾模型（Commit/功能/Phase），/done Skill，Spec YAML frontmatter 生命周期，完成标准扩展文档同步，Hook 高级能力（updatedInput/CLAUDE_ENV_FILE/Frontmatter Hooks），GitHub Actions 集成，Remote Control |
 | v3.5 | 2026-03 | 升级开发循环为六步（加 Verify 验证步骤），复杂度分级流程选择，Explore→Plan→Clear→Code 主动策略，CLAUDE.md 完成标准驱动自动验证 |
 | v3.4 | 2026-03 | 对标最新 Claude Code 功能：补充 5 个 Hook 事件 + async hooks，更新 MCP Tool Search 懒加载，补充 /loop 命令，更新 Context7 安装方式 |
 | v3.3 | 2026-03 | 新增 /spec Skill + docs/specs/ 设计文档系统，更新 catchup/handoff/audit 联动，更新三个 Prompt 模板 |

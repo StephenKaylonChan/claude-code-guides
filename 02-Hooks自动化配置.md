@@ -2,7 +2,7 @@
 
 > 用 Claude Code 原生钩子替代手动工作流，实现零干预的开发自动化
 
-**版本**: v3.5
+**版本**: v3.6
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -14,9 +14,10 @@
 3. [Handler 类型](#3-handler-类型)
 4. [配置方式](#4-配置方式)
 5. [实用 Hook 模板](#5-实用-hook-模板)
-6. [完整配置示例](#6-完整配置示例)
-7. [性能注意事项](#7-性能注意事项)
-8. [调试 Hooks](#8-调试-hooks)
+6. [高级 Hook 能力](#6-高级-hook-能力)
+7. [完整配置示例](#7-完整配置示例)
+8. [性能注意事项](#8-性能注意事项)
+9. [调试 Hooks](#9-调试-hooks)
 
 ---
 
@@ -501,7 +502,131 @@ exit 0
 
 ---
 
-## 6. 完整配置示例
+## 6. 高级 Hook 能力
+
+### 6.1 Input Modification（updatedInput）
+
+PreToolUse 和 PermissionRequest Hook 可以**透明修改工具输入参数**，在工具实际执行前改变其行为。这是 Hook 系统最强大的能力之一。
+
+**原理**：Hook 通过 stdout 输出 JSON，包含 `updatedInput` 字段，Claude Code 用修改后的参数执行工具：
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "allow",
+    "updatedInput": {
+      "command": "npm run lint --fix"
+    }
+  }
+}
+```
+
+**典型用途**：
+
+| 场景 | 做法 |
+|------|------|
+| 沙盒化 | 重写文件路径到 `/sandbox/` 目录 |
+| 安全强制 | 自动给危险命令添加 `--dry-run` 标志 |
+| 密钥脱敏 | 替换命令中的硬编码密钥为环境变量引用 |
+| 团队规范 | Commit message 自动格式化、linter 配置注入 |
+| 路径纠正 | 自动修正相对路径为绝对路径 |
+
+**示例：自动给 rm 命令添加 -i 交互确认**
+
+```bash
+#!/bin/bash
+# .claude/hooks/safe-rm.sh
+INPUT=$(cat)
+COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
+
+if echo "$COMMAND" | grep -q '^rm '; then
+  SAFE_CMD=$(echo "$COMMAND" | sed 's/^rm /rm -i /')
+  echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"updatedInput\":{\"command\":\"$SAFE_CMD\"}}}"
+fi
+```
+
+---
+
+### 6.2 CLAUDE_ENV_FILE（环境变量持久化）
+
+**SessionStart Hook 独享能力**：在 Hook 执行期间，环境变量 `CLAUDE_ENV_FILE` 指向一个临时文件。向该文件写入 `export` 语句，可在整个会话的所有 Bash 命令中生效。
+
+```bash
+#!/bin/bash
+# .claude/hooks/session-start.sh 中添加
+# 持久化 Node.js 版本
+if command -v nvm &>/dev/null; then
+  nvm use 2>/dev/null
+  echo "export PATH=\"$(npm config get prefix)/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
+fi
+
+# 激活 Python 虚拟环境
+if [ -f ".venv/bin/activate" ]; then
+  echo "export VIRTUAL_ENV=\"$(pwd)/.venv\"" >> "$CLAUDE_ENV_FILE"
+  echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
+fi
+```
+
+**适合场景**：nvm use、pyenv、conda activate、自定义 PATH 等环境初始化操作。
+
+> **注意**：仅 SessionStart 事件提供 `CLAUDE_ENV_FILE`，其他 Hook 事件中该变量不可用。
+
+---
+
+### 6.3 Hooks in Skill/Agent Frontmatter
+
+Hook 可以直接定义在 Skill 或 Agent 的 YAML frontmatter 中，**作用域限定在组件生命周期内**，组件完成后自动清理：
+
+```yaml
+---
+name: secure-deploy
+description: 安全部署工作流
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "./scripts/deploy-safety-check.sh"
+  PostToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "./scripts/deploy-audit-log.sh"
+---
+```
+
+**`once` 字段**：设置 `"once": true` 可让 Hook 每个会话只运行一次后自动移除，适合一次性初始化检查。
+
+**与全局 Hook 的区别**：
+
+| 维度 | 全局 Hook（settings.json） | Frontmatter Hook |
+|------|--------------------------|-----------------|
+| 作用域 | 整个会话 | 组件生命周期内 |
+| 配置位置 | `.claude/settings.json` | `SKILL.md` / Agent YAML |
+| 清理方式 | 持久存在 | 组件完成后自动清理 |
+| 适合场景 | 通用质量门禁 | 特定工作流的临时检查 |
+
+---
+
+### 6.4 HTTP Hook 的环境变量插值
+
+HTTP 类型 Hook 支持在 headers 中使用环境变量，通过 `allowedEnvVars` 白名单控制：
+
+```json
+{
+  "type": "http",
+  "url": "https://your-audit-server.com/hook",
+  "headers": { "Authorization": "Bearer $AUDIT_TOKEN" },
+  "allowedEnvVars": ["AUDIT_TOKEN"]
+}
+```
+
+只有 `allowedEnvVars` 中列出的环境变量才会被插值，防止意外泄露敏感信息。
+
+---
+
+## 7. 完整配置示例
 
 以下是一个完整的 `.claude/settings.json`，整合上述所有 Hooks：
 
@@ -618,7 +743,7 @@ chmod +x .claude/hooks/*.sh
 
 ---
 
-## 7. 性能注意事项
+## 8. 性能注意事项
 
 ### 7.1 避免过度 Hook
 
@@ -653,7 +778,7 @@ wait
 
 ---
 
-## 8. 调试 Hooks
+## 9. 调试 Hooks
 
 ### 查看 Hook 状态
 
@@ -682,5 +807,5 @@ echo "退出码: $?"
 
 ---
 
-**版本**: v3.5
+**版本**: v3.6
 **更新日期**: 2026-03

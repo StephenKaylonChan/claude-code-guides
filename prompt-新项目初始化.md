@@ -68,7 +68,7 @@ Stop：是否需要完成通知？（macOS / Linux）
 **Skills 选择**：
 
 ```
-必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）
+必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、done（功能完成收尾）
 可选：是否有项目特定的高频操作值得封装为命令？
 ```
 
@@ -181,7 +181,8 @@ mkdir -p docs/roadmap
 │   ├── deep-audit/SKILL.md
 │   ├── catchup/SKILL.md
 │   ├── handoff/SKILL.md       # 含自动 commit 逻辑（方案B）
-│   └── spec/SKILL.md          # 讨论成果整理为设计文档
+│   ├── spec/SKILL.md          # 讨论成果整理为设计文档
+│   └── done/SKILL.md          # 功能完成收尾检查
 └── hooks/
     ├── session-start.sh
     ├── pre-commit-check.sh
@@ -226,6 +227,7 @@ chmod +x .claude/hooks/*.sh
 - `catchup/SKILL.md`：读取 CLAUDE.md 和 session-notes.md 恢复状态
 - `handoff/SKILL.md`：**使用方案 B** — 先尝试正常 commit（走测试门禁），失败则降级为 `wip:` 前缀 + `--no-verify`，然后写 session-notes.md
 - `spec/SKILL.md`：将需求讨论成果整理为结构化设计文档，写入 `docs/specs/`
+- `done/SKILL.md`：功能完成收尾检查（验证 + Roadmap 更新 + Spec 状态更新）
 
 #### 5.4 创建路径感知规则（Monorepo 或前后端分离项目）
 
@@ -251,7 +253,7 @@ CLAUDE.local.md
 [✓] CLAUDE.md 中已添加 @docs/roadmap/README.md 和当前 Phase 引用
 [✓] .claude/settings.json 格式正确（可用 jq . .claude/settings.json 验证）
 [✓] .claude/hooks/ 所有脚本有执行权限（ls -la .claude/hooks/）
-[✓] .claude/skills/ 5 个 Skill 已创建（audit / deep-audit / catchup / handoff / spec）
+[✓] .claude/skills/ 6 个 Skill 已创建（audit / deep-audit / catchup / handoff / spec / done）
 [✓] .gitignore 包含 CLAUDE.local.md、session-notes.md 等
 [✓] Monorepo：各子目录 CLAUDE.md 已创建
 [✓] 按需：.claude/rules/ 路径配置正确
@@ -293,7 +295,7 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 - 子目录 CLAUDE.md: [数量] 个（如有）
 - .claude/rules/: [数量] 个规则文件（如有）
 - Hooks 已启用: [SessionStart / PreToolUse / PostToolUse / Stop / UserPromptSubmit（如有）]
-- Skills: audit / deep-audit / catchup / handoff / spec
+- Skills: audit / deep-audit / catchup / handoff / spec / done
 - Agent Teams: [已启用 / 未启用]
 
 ### 适配说明

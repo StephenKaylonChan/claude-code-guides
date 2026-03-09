@@ -220,7 +220,8 @@ mkdir -p .claude
 │   ├── deep-audit/SKILL.md    # 从旧 deep-audit.md 升级（保留核心逻辑）
 │   ├── catchup/SKILL.md       # 新增
 │   ├── handoff/SKILL.md       # 新增（含自动 commit 方案 B）
-│   └── spec/SKILL.md          # 新增（讨论成果整理为设计文档）
+│   ├── spec/SKILL.md          # 新增（讨论成果整理为设计文档）
+│   └── done/SKILL.md          # 新增（功能完成收尾检查）
 └── hooks/
     ├── session-start.sh
     ├── pre-commit-check.sh
@@ -279,7 +280,7 @@ grep -q "session-notes.md" .gitignore || echo ".claude/session-notes.md" >> .git
 [✓] CLAUDE.md 中已添加 @docs/roadmap/ 引用
 [✓] .claude/settings.json 格式正确（jq . .claude/settings.json）
 [✓] .claude/hooks/ 所有脚本有执行权限
-[✓] .claude/skills/ 5 个 Skill 已创建
+[✓] .claude/skills/ 6 个 Skill 已创建
 [✓] 旧文件已清理（docs/ai-context/、.claude/commands/）
 [✓] .gitignore 已更新
 ```
@@ -318,7 +319,7 @@ echo "退出码: $?"
 |------|--------|--------|
 | AI 记忆 | CONTEXT.md + CURRENT.md（手动） | CLAUDE.md + Auto Memory（自动） |
 | 进度跟踪 | CURRENT.md 滚动日志（手动） | docs/roadmap/（/handoff 自动更新） |
-| 命令数量 | [X] 个 commands | 5 个 Skills |
+| 命令数量 | [X] 个 commands | 6 个 Skills |
 | 自动化程度 | 手动触发 /start /end /checkpoint | Hooks 全自动 |
 
 ### 知识迁移清单
