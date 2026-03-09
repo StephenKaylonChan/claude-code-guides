@@ -65,7 +65,7 @@
 | GitHub Actions 集成 + Remote Control | 文档 04 |
 | `docs/roadmap/` 项目进度跟踪系统 | 文档 00、03、04 |
 | `docs/specs/` 功能设计文档目录 | 文档 03、04 |
-| Plan Mode 工作流（Explore→Plan→Code→Simplify→Commit） | 文档 04 |
+| Plan Mode 工作流（Explore→Plan→Code→Verify→Simplify→Commit） | 文档 04 |
 | Git Worktrees 并行开发 | 文档 04 |
 | Agent Teams 多 Claude 协作（实验性） | 文档 04 |
 | MCP 服务器选型 | 文档 04 |
