@@ -133,6 +133,7 @@ ls .claude/rules/ 2>/dev/null
 - 技术栈版本是否仍然准确（对照实际 package.json / pyproject.toml）？
 - 是否有 Claude 反复犯的错误，还没有加入 `MUST NOT`？
 - 是否有过时的内容需要清理？
+- **是否有"完成标准"章节**？（定义 Claude 在报告"功能完成"前 MUST 完成的验证步骤：测试通过 + lint 通过 + 边界条件 + 回归验证）
 
 #### 2.6 新功能知识
 
