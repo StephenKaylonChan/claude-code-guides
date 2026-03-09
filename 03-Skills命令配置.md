@@ -112,7 +112,7 @@ user-invocable: true                  # false = 隐藏，只能 Claude 内部调
 
 **文件路径**: `.claude/skills/audit/SKILL.md`
 
-```markdown
+````markdown
 ---
 name: audit
 description: |
@@ -235,7 +235,7 @@ grep "^\.env" .gitignore || echo "⚠️ .env 可能未被忽略"
 ```
 
 </workflow>
-```
+````
 
 ---
 
@@ -243,7 +243,7 @@ grep "^\.env" .gitignore || echo "⚠️ .env 可能未被忽略"
 
 **文件路径**: `.claude/skills/deep-audit/SKILL.md`
 
-```markdown
+````markdown
 ---
 name: deep-audit
 description: |
@@ -379,7 +379,7 @@ git push
 ```
 
 </workflow>
-```
+````
 
 ---
 
@@ -391,7 +391,7 @@ git push
 
 **文件路径**: `.claude/skills/catchup/SKILL.md`
 
-```markdown
+````markdown
 ---
 name: catchup
 description: |
@@ -457,7 +457,7 @@ git log --oneline @{u}.. 2>/dev/null || echo "（无法获取，可能没有追�
 ```
 
 </workflow>
-```
+````
 
 ---
 
@@ -467,7 +467,7 @@ git log --oneline @{u}.. 2>/dev/null || echo "（无法获取，可能没有追�
 
 **文件路径**: `.claude/skills/handoff/SKILL.md`
 
-```markdown
+````markdown
 ---
 name: handoff
 description: |
@@ -600,7 +600,7 @@ git commit -m "docs: 更新路线图和设计文档状态" 2>/dev/null || true
 ```
 
 </workflow>
-```
+````
 
 ---
 
@@ -610,7 +610,7 @@ git commit -m "docs: 更新路线图和设计文档状态" 2>/dev/null || true
 
 **文件路径**: `.claude/skills/spec/SKILL.md`
 
-```markdown
+````markdown
 ---
 name: spec
 description: |
@@ -775,7 +775,7 @@ draft → approved → implementing → implemented → [deprecated | superseded
 ```
 
 </workflow>
-```
+````
 
 ---
 
@@ -785,7 +785,7 @@ draft → approved → implementing → implemented → [deprecated | superseded
 
 **文件路径**: `.claude/skills/done/SKILL.md`
 
-```markdown
+````markdown
 ---
 name: done
 description: |
@@ -882,7 +882,7 @@ Spec：✅ [spec名].md → implemented / ⏭️ 无关联 Spec
 ```
 
 </workflow>
-```
+````
 
 **自动 vs 手动**：
 

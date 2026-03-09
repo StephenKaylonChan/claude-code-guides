@@ -173,7 +173,7 @@ project-root/
 
 ## 5. 项目根 CLAUDE.md 模板
 
-```markdown
+````markdown
 # [项目名称]
 
 > [一句话描述：这是什么项目，解决什么问题]
@@ -249,7 +249,7 @@ type: feat | fix | docs | refactor | perf | test | chore
 
 @docs/roadmap/README.md
 @docs/roadmap/phase-2-核心业务.md
-```
+````
 
 ---
 
@@ -425,7 +425,7 @@ rm docs/ai-context/CURRENT.md
 - [ ] 是否有 Claude 反复犯的错误，还没有加入 `MUST NOT`？
 - [ ] 行数是否接近 200 行？需要拆分到子目录？
 - [ ] Auto Memory 是否有需要"固化"到 `CLAUDE.md` 的内容？
-- [ ] `@import` 引用的文件是否仍然有效？
+- [ ] `@` 引用的文件是否仍然有效？
 
 ### 信号与响应
 
@@ -434,7 +434,7 @@ rm docs/ai-context/CURRENT.md
 | Claude 反复忽略某条规定 | 用更强的 `MUST NOT` 语言重写；检查是否超过 200 行导致忽略 |
 | Claude 反复问同样的背景问题 | 将答案加入 `CLAUDE.md` |
 | 同一个 Bug 出现两次 | 在 `CLAUDE.md` 加入防范约束 |
-| Claude 上下文加载很慢 | 检查 `@import` 引用的文件大小；检查是否有不必要的大文件引用 |
+| Claude 上下文加载很慢 | 检查 `@` 引用的文件大小；检查是否有不必要的大文件引用 |
 
 ---
 

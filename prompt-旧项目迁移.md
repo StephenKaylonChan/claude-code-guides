@@ -39,6 +39,7 @@
 | 新增 | `/catchup` Skill | 清空上下文后恢复状态 |
 | 新增 | `/handoff` Skill | 提交变更 + 生成交接文档 |
 | 新增 | `/spec` Skill | 讨论成果整理为设计文档 |
+| 新增 | `/done` Skill | 功能完成收尾检查（Roadmap/Spec 同步） |
 
 ---
 

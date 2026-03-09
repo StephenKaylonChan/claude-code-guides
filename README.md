@@ -26,6 +26,7 @@
 ### 配置参考文档
 
 | 文档 | 说明 | 优先阅读 |
+|------|------|-----------|
 | [01-CLAUDE配置架构指南.md](./01-CLAUDE配置架构指南.md) | CLAUDE.md 层级结构 + Auto Memory 管理 | 配置参考 |
 | [02-Hooks自动化配置.md](./02-Hooks自动化配置.md) | 19个 Hook 事件 + 实用模板（测试门禁/自动格式化/通知） | 配置参考 |
 | [03-Skills命令配置.md](./03-Skills命令配置.md) | 替代旧 Slash Commands 的 Skills 系统配置 | 第三读 |
