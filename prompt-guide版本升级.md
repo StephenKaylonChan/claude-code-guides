@@ -40,12 +40,13 @@ ls .claude/rules/ 2>/dev/null
 4. `.claude/skills/deep-audit/SKILL.md`
 5. `.claude/skills/catchup/SKILL.md`
 6. `.claude/skills/handoff/SKILL.md`
-7. `.claude/hooks/session-start.sh`
-8. `.claude/hooks/pre-commit-check.sh`
-9. `.claude/hooks/post-write.sh`
-10. `.claude/hooks/on-stop.sh`
-11. `.claude/rules/*.md`（如有）
-12. 各子目录 `CLAUDE.md`（如有）
+7. `.claude/skills/spec/SKILL.md`
+8. `.claude/hooks/session-start.sh`
+9. `.claude/hooks/pre-commit-check.sh`
+10. `.claude/hooks/post-write.sh`
+11. `.claude/hooks/on-stop.sh`
+12. `.claude/rules/*.md`（如有）
+13. 各子目录 `CLAUDE.md`（如有）
 
 ---
 
