@@ -4,6 +4,7 @@
 
 首先阅读以下所有指南，完整理解新系统理念，再开始执行：
 
+- `~/Downloads/00_project/guides/README.md`（目录结构、命令体系、废弃对照表）
 - `~/Downloads/00_project/guides/00-日常使用说明.md`
 - `~/Downloads/00_project/guides/01-CLAUDE配置架构指南.md`
 - `~/Downloads/00_project/guides/02-Hooks自动化配置.md`
@@ -27,14 +28,16 @@
 | 旧系统 | 新系统 | 迁移方式 |
 |--------|--------|---------|
 | `docs/ai-context/CONTEXT.md` | 根 `CLAUDE.md` | 提取有效内容，精简重写 |
-| `docs/ai-context/CURRENT.md` | Auto Memory（自动）| 丢弃进度日志，有效任务保留到 session-notes.md |
+| `docs/ai-context/CURRENT.md` | Auto Memory + `/tasks`（自动）| 丢弃进度日志，有效任务保留到 session-notes.md |
+| `docs/ai-context/`（整个目录） | 不再需要 | 内容提取后删除 |
+| `.claude/commands/`（整个目录） | `.claude/skills/` | 升级格式后删除旧目录 |
 | `.claude/commands/audit.md` | `.claude/skills/audit/SKILL.md` | 升级格式，保留核心逻辑 |
 | `.claude/commands/deep-audit.md` | `.claude/skills/deep-audit/SKILL.md` | 升级格式，保留核心逻辑 |
 | `.claude/commands/start.md` | `SessionStart` Hook | 废弃，自动替代 |
 | `.claude/commands/end.md` | `Stop` Hook + Auto Memory | 废弃，自动替代 |
 | `.claude/commands/checkpoint.md` | Claude 直接 commit | 废弃，自动替代 |
-| `.claude/commands/weekly.md` | 不再需要 | 废弃 |
-| `.claude/commands/monthly.md` | 不再需要 | 废弃 |
+| `.claude/commands/weekly.md` | 不再需要 | 废弃（CLAUDE.md < 200 行不会膨胀，Auto Memory 无需归档） |
+| `.claude/commands/monthly.md` | 不再需要 | 废弃（同上） |
 | `.claude/commands/fix.md` | `PostToolUse` Hook | 废弃，自动替代 |
 | 新增 | `/catchup` Skill | 清空上下文后恢复状态 |
 | 新增 | `/handoff` Skill | 提交变更 + 生成交接文档 |
@@ -146,7 +149,7 @@ docs/ai-context/（整个目录）: → 删除
 - 将旧规范改写为 `MUST` / `MUST NOT` 语言（参考文档 01 的模板）
 - 删除进度信息、协作日志等动态内容
 - 技术栈版本对照实际代码确认准确
-- 确保包含**完成标准**章节（定义 Claude 在报告"功能完成"前 MUST 完成的验证步骤：测试通过 + lint 通过 + 边界条件 + 回归验证）
+- 确保包含**完成标准**章节，分两部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 确认代码注释）
 - 控制在 **150 行以内**
 
 #### 3.2 生成项目路线图（ROADMAP）
@@ -223,6 +226,7 @@ mkdir -p .claude
 │   ├── handoff/SKILL.md       # 新增（含自动 commit 方案 B）
 │   ├── spec/SKILL.md          # 新增（讨论成果整理为设计文档）
 │   └── done/SKILL.md          # 新增（功能完成收尾检查）
+├── agents/                    # 自定义子代理（可选）
 └── hooks/
     ├── session-start.sh
     ├── pre-commit-check.sh
@@ -244,11 +248,19 @@ mkdir -p .claude
 chmod +x .claude/hooks/*.sh
 ```
 
-#### 3.5 创建子目录 CLAUDE.md（Monorepo 才需要）
+#### 3.5 创建 docs/specs/ 目录
+
+```bash
+mkdir -p docs/specs
+```
+
+`/spec` Skill 生成的设计文档将存放在此目录。
+
+#### 3.6 创建子目录 CLAUDE.md（Monorepo 才需要）
 
 如果项目是 Monorepo，为各模块创建专属 CLAUDE.md（< 100 行），从旧 CONTEXT.md 中提取模块级规范。
 
-#### 3.6 清理旧文件
+#### 3.7 清理旧文件
 
 确认以上步骤完成后，删除旧系统文件：
 
@@ -260,7 +272,7 @@ rm -rf docs/ai-context/
 rm -rf .claude/commands/
 ```
 
-#### 3.7 更新 .gitignore
+#### 3.8 更新 .gitignore
 
 ```bash
 # 确认以下内容在 .gitignore 中
@@ -340,7 +352,8 @@ echo "退出码: $?"
 
 ### 日常使用变化
 - 不再需要：/start、/end、/checkpoint、/weekly、/monthly、/fix
-- 新的工作流：功能完成 → /simplify → Claude 自动 commit → 你确认 push
+- 新的工作流：功能完成 → /simplify → 你手动 commit → 你确认 push
+- 功能收尾：/done（手动兜底检查：Roadmap/Spec 状态同步）
 - 批量变更：/batch "描述"
 - 需求讨论后：/spec（整理讨论成果为设计文档）
 - 中断前：/handoff（自动 commit + 写交接文档）

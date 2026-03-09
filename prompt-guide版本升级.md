@@ -6,6 +6,7 @@
 
 首先阅读以下所有指南，了解最新版本的完整内容：
 
+- `~/Downloads/00_project/guides/README.md`（目录结构、命令体系、版本记录）
 - `~/Downloads/00_project/guides/00-日常使用说明.md`
 - `~/Downloads/00_project/guides/01-CLAUDE配置架构指南.md`
 - `~/Downloads/00_project/guides/02-Hooks自动化配置.md`
@@ -70,29 +71,49 @@ ls .claude/rules/ 2>/dev/null
 | `UserPromptSubmit` | ? | 推荐（自动注入 session-notes 上下文） |
 | `TaskCompleted` | ? | Agent Teams 时需要 |
 | `TeammateIdle` | ? | Agent Teams 时需要 |
-| `WorktreeCreate/Remove` | ? | 自定义 VCS 时需要 |
+| `WorktreeCreate` | ? | 自定义 VCS 时需要 |
+| `WorktreeRemove` | ? | 自定义 VCS 时需要 |
 | `ConfigChange` | ? | 企业安全需求时需要 |
 | `PermissionRequest` | ? | 自动审批/拒绝权限时需要 |
-| `PostToolUseFailure` | ? | 按需（错误处理） |
+| `PostToolUseFailure` | ? | 按需（支持 matcher，错误处理） |
 | `SessionEnd` | ? | 按需（清理资源） |
 | `SubagentStart` | ? | 按需（监控子代理） |
+| `SubagentStop` | ? | 按需（子代理完成后处理） |
+| `InstructionsLoaded` | ? | 按需（指令加载后处理） |
 | `Setup` | ? | 按需（仓库初始化脚本） |
 
 #### 2.2 Skills 内容检查
 
 重点检查以下 Skill 是否使用最新逻辑：
 
-**`handoff/SKILL.md`**（最重要，v3.1 有重大更新）：
-- 旧版：只写 session-notes.md
-- 新版（方案 B）：先尝试正常 commit → 失败则 `wip:` + `--no-verify` → 再写 session-notes.md
-- 如果当前是旧版，需要升级
+**`handoff/SKILL.md`**（v3.1-v3.6 持续更新，检查是否与最新 03-Skills 模板一致）：
+- 自动 commit 逻辑：方案 B（先尝试正常 commit → 失败则 `wip:` + `--no-verify`）
+- Roadmap 联动：Step 2 是否更新 `docs/roadmap/` checkbox
+- Spec 联动：是否更新 `docs/specs/` 中活跃 spec 的 status
+- session-notes.md：是否在最后写交接文档
 
 **`audit/SKILL.md`**：
 - 检查 lint/test 命令是否仍然与项目实际一致
 - 检查扫描路径是否准确
 
+**`deep-audit/SKILL.md`**：
+- 是否包含 `docs/specs/` 检查逻辑（stale spec 检查）
+- 是否覆盖 Phase 级收尾需要的全面审计项
+
 **`catchup/SKILL.md`**：
 - 检查是否包含读取 `session-notes.md` 的步骤
+- 是否有读取 `docs/roadmap/README.md` 和当前 Phase 文件的步骤
+- 是否有读取 `docs/specs/` 中活跃 spec 的步骤
+
+**`spec/SKILL.md`**（v3.3 新增）：
+- 是否存在？不存在则新建（参考 03-Skills 模板）
+- 是否包含 YAML frontmatter 模板（status 字段）
+- 状态生命周期是否完整：`draft → approved → implementing → implemented → [deprecated | superseded]`
+- 是否有增量更新逻辑（已有 spec 时更新而非覆盖）
+
+**`done/SKILL.md`**（v3.6 新增）：
+- 是否存在？不存在则新建（参考 03-Skills 模板）
+- 步骤是否完整：代码验证 → Roadmap checkbox 更新 → Spec status 更新 → /simplify 审查
 
 #### 2.3 项目路线图检查
 
@@ -135,13 +156,32 @@ ls .claude/rules/ 2>/dev/null
 - 技术栈版本是否仍然准确（对照实际 package.json / pyproject.toml）？
 - 是否有 Claude 反复犯的错误，还没有加入 `MUST NOT`？
 - 是否有过时的内容需要清理？
-- **是否有"完成标准"章节**？（定义 Claude 在报告"功能完成"前 MUST 完成的验证步骤：测试通过 + lint 通过 + 边界条件 + 回归验证）
+- **是否有"完成标准"章节**？应包含两部分：
+  - 代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）
+  - 文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 确认代码注释）
 
 #### 2.6 新功能知识
 
-以下是最新 guide 新增的内容，检查是否需要加入项目配置或文档：
+以下是 v3.5-v3.7 guide 新增的内容，检查是否需要加入项目配置或文档：
 
-- **`/simplify` 和 `/batch`** 是内置命令，无需配置，但日常使用规范中是否已知晓？（在 CLAUDE.md 或团队文档中注明即可）
+**v3.5 新增**：
+- **六步开发循环**：`Explore → Plan → Code → Verify → Simplify → Commit`（旧版可能是五步，缺 Verify）。检查 CLAUDE.md 或团队文档中的开发循环描述是否已更新。
+- **复杂度分级**：简单（Code→Commit）/ 中等（六步）/ 复杂（六步 + Clear 主动策略）/ Bug 修复（变体）。
+- **Clear 主动策略**：复杂功能的 Explore+Plan 消耗大量上下文后，主动 `/clear` 后带 plan 文件开新会话编码。
+
+**v3.6 新增**：
+- **三层收尾模型**：Commit 级（Hooks 自动门禁）→ 功能级（完成标准 + /done 手动兜底）→ Phase 级（/deep-audit）。
+- **`/done` Skill**：功能完成收尾检查，是否已创建？
+- **Spec 生命周期 YAML frontmatter**：`draft → approved → implementing → implemented → [deprecated | superseded]`。
+- **Hook 高级能力**：`updatedInput`（修改用户输入）、`CLAUDE_ENV_FILE`（SessionStart 环境变量持久化）、Frontmatter Hooks（在 SKILL.md/agent 配置中内嵌 Hook）。
+- **GitHub Actions 集成**：`/install-github-app` 安装 claude-code-action。
+- **Remote Control**：`claude remote-control` 远程控制 Claude Code 实例。
+
+**v3.7 新增**：
+- **Bug 修复工作流变体**：复用六步循环，侧重复现+定位+回归测试。Explore=复现 Bug，Code=先写复现测试再修复，Commit=`fix:` 前缀。
+
+**Bundled 命令**：
+- **`/simplify`、`/batch`、`/loop`** 是内置命令，无需配置，但日常使用规范中是否已知晓？
 - **Agent Teams**：是否需要启用？如需要，在 settings.json 中加入：
   ```json
   "env": {"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"}
@@ -205,11 +245,12 @@ grep "session-notes.md" .gitignore
 
 ```
 Step 1: git status --short 检查是否有变更
-Step 2: 如有变更 → 精确 git add → 尝试正常 commit
+Step 2: 更新项目文档（docs/roadmap/ checkbox + docs/specs/ status）
+Step 3: 如有变更 → 精确 git add → 尝试正常 commit
         → 成功：记录正常 commit
         → 失败（exit 2）：git commit --no-verify -m "wip: <描述>"
-Step 3: 写 session-notes.md（原有逻辑保留）
-Step 4: 输出状态汇总
+Step 4: 写 session-notes.md（原有逻辑保留）
+Step 5: 输出状态汇总
 ```
 
 **新增 Hook 脚本**（如需要）：

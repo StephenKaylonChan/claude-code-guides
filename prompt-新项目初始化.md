@@ -4,6 +4,7 @@
 
 首先阅读以下所有指南，完整理解整套体系，再开始执行：
 
+- `~/Downloads/00_project/guides/README.md`（目录结构、命令体系、废弃对照表）
 - `~/Downloads/00_project/guides/00-日常使用说明.md`
 - `~/Downloads/00_project/guides/01-CLAUDE配置架构指南.md`
 - `~/Downloads/00_project/guides/02-Hooks自动化配置.md`
@@ -161,7 +162,8 @@ mkdir -p docs/roadmap
 
 - 删除泛化内容，只保留项目特有的信息
 - 将规范语言改为 `MUST` / `MUST NOT` 表述（参考文档 01 的语言规范）
-- 确保包含：项目结构说明、常用命令（含测试/构建/启动）、技术栈（含版本号）、关键约束、**完成标准**（定义 Claude 在报告"功能完成"前 MUST 完成的验证步骤）
+- 确保包含：项目结构说明、常用命令（含测试/构建/启动）、技术栈（含版本号）、关键约束、Git 提交规范（Conventional Commits）、关键架构决策
+- **完成标准**章节分两部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 确认代码注释）
 - 控制在 **150 行以内**
 - Monorepo 则还需为各 app 子目录创建专属 CLAUDE.md（< 100 行）
 
@@ -183,6 +185,7 @@ mkdir -p docs/roadmap
 │   ├── handoff/SKILL.md       # 含自动 commit 逻辑（方案B）
 │   ├── spec/SKILL.md          # 讨论成果整理为设计文档
 │   └── done/SKILL.md          # 功能完成收尾检查
+├── agents/                    # 自定义子代理（可选）
 └── hooks/
     ├── session-start.sh
     ├── pre-commit-check.sh
@@ -233,7 +236,16 @@ chmod +x .claude/hooks/*.sh
 
 参考文档 `01-CLAUDE配置架构指南.md` 中的模板，创建 `.claude/rules/frontend.md` 和 `.claude/rules/backend.md`，在 frontmatter 中用 `paths:` 指定生效路径。
 
-#### 5.5 更新 .gitignore
+#### 5.5 创建 docs/ 目录结构
+
+```bash
+mkdir -p docs/roadmap docs/specs
+```
+
+- `docs/roadmap/` — Phase 3 已创建路线图文件
+- `docs/specs/` — `/spec` Skill 生成的设计文档存放目录
+
+#### 5.6 更新 .gitignore
 
 确保以下内容在 .gitignore 中：
 
@@ -303,7 +315,8 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 
 ### 日常使用
 - 开始开发：直接说需求（Hook 自动运行）
-- 功能完成：/simplify 审查 → Claude 自动 commit → 你确认 push
+- 功能完成：/simplify 审查 → 你手动 commit → 你确认 push
+- 功能收尾：/done（手动兜底检查：Roadmap/Spec 状态同步）
 - 批量跨文件变更：/batch "描述"
 - 需求讨论后：/spec（整理讨论成果为设计文档）
 - 中断前：/handoff（自动 commit + 写交接文档）

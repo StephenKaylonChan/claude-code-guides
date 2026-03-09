@@ -16,6 +16,9 @@
    - `~/Downloads/00_project/guides/02-Hooks自动化配置.md`
    - `~/Downloads/00_project/guides/03-Skills命令配置.md`
    - `~/Downloads/00_project/guides/04-工作流最佳实践.md`
+   - `~/Downloads/00_project/guides/prompt-新项目初始化.md`
+   - `~/Downloads/00_project/guides/prompt-旧项目迁移.md`
+   - `~/Downloads/00_project/guides/prompt-guide版本升级.md`
 
 记录当前 guides 版本和最后更新时间，作为对比基准。
 
@@ -109,7 +112,21 @@
 
 ## Phase 2：信息整理与分析
 
-将收集到的信息按以下维度整理：
+将收集到的信息按以下维度整理。
+
+**维度检查清单**（确保每个领域都有覆盖）：
+
+1. Hook 事件列表（当前 19 个，是否有新增/废弃）
+2. Hook Handler 类型和能力（updatedInput / CLAUDE_ENV_FILE / Frontmatter Hooks）
+3. Skills/Commands 系统变化
+4. CLAUDE.md 配置结构变化
+5. Auto Memory 系统变化
+6. 内置命令（/simplify / /batch / /loop 等）变化
+7. MCP 相关变化
+8. Agent Teams 变化
+9. GitHub Actions 集成变化
+10. 模型名称/推荐变化
+11. settings.json 结构变化
 
 ### 2.1 新功能和新特性
 
@@ -194,6 +211,15 @@
 - [ ] 版本号更新为 vX.X
 - [ ] 更新日期更新为 [当前日期]
 
+**prompt-新项目初始化.md**
+- [ ] [检查文档引用、目录结构、Skills 列表是否需要同步更新]
+
+**prompt-旧项目迁移.md**
+- [ ] [检查迁移对照表、目录结构是否需要同步更新]
+
+**prompt-guide版本升级.md**
+- [ ] [检查 Hook 事件列表、Skills 检查项、新功能知识是否需要同步更新]
+
 ### 不更新的内容（已是最新）
 - [列出已经是最新、无需修改的部分]
 
@@ -215,8 +241,19 @@
 - 如果是新的大型功能，可以新增章节
 - 过时内容直接删除（不保留注释）
 - 每个文档更新完成后，确认行数和格式正确
-- CLAUDE.md 相关内容保持 < 150 行的建议
+- CLAUDE.md 相关内容保持 < 150 行（建议）、不超过 200 行（硬性上限）
+- 00-日常使用说明.md 是面向用户的简化版，每个 01-04 中新增的用户可感知功能都应在 00 中有对应的使用说明或命令速查条目
 - 更新每个文件末尾的"更新日期"
+
+### Phase 4.5：更新后交叉验证
+
+更新完成后，执行以下一致性检查：
+
+- README.md 中的功能描述和文档列表是否与更新后的各文档一致
+- 各文档间的交叉引用（章节号、文件名、事件数量等）是否正确
+- 所有文件的版本号和更新日期是否统一
+- README.md 版本记录中本次更新的描述是否准确
+- Prompt 模板中引用的目录结构、Skills 列表、命令列表是否与最新 guides 同步
 
 ---
 
@@ -247,6 +284,10 @@
 | 02-Hooks自动化配置.md | [新增/修改/删除] | [描述] |
 | 03-Skills命令配置.md | [新增/修改/删除] | [描述] |
 | 04-工作流最佳实践.md | [新增/修改/删除] | [描述] |
+| README.md | [新增/修改/删除] | [描述] |
+| prompt-新项目初始化.md | [同步更新/无变更] | [描述] |
+| prompt-旧项目迁移.md | [同步更新/无变更] | [描述] |
+| prompt-guide版本升级.md | [同步更新/无变更] | [描述] |
 
 ### 未收录的内容（及原因）
 [列出搜索到但决定不加入 guides 的内容，说明原因]
