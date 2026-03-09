@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.6（2026-03）
+> **版本**: v3.7（2026-03）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -108,7 +108,7 @@ project-root/
 │   │   ├── frontend.md            # 前端路径感知规则
 │   │   └── backend.md             # 后端路径感知规则
 │   ├── skills/                    # 自定义命令
-│   │   │   ├── audit/SKILL.md
+│   │   ├── audit/SKILL.md
 │   │   ├── deep-audit/SKILL.md
 │   │   ├── catchup/SKILL.md
 │   │   ├── handoff/SKILL.md
@@ -158,6 +158,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.7 | 2026-03 | Bug 修复工作流变体（复用六步循环，侧重复现+定位+回归测试），修复子节编号错位（04/03 文档） |
 | v3.6 | 2026-03 | 三层收尾模型（Commit/功能/Phase），/done Skill，Spec YAML frontmatter 生命周期，完成标准扩展文档同步，Hook 高级能力（updatedInput/CLAUDE_ENV_FILE/Frontmatter Hooks），GitHub Actions 集成，Remote Control |
 | v3.5 | 2026-03 | 升级开发循环为六步（加 Verify 验证步骤），复杂度分级流程选择，Explore→Plan→Clear→Code 主动策略，CLAUDE.md 完成标准驱动自动验证 |
 | v3.4 | 2026-03 | 对标最新 Claude Code 功能：补充 5 个 Hook 事件 + async hooks，更新 MCP Tool Search 懒加载，补充 /loop 命令，更新 Context7 安装方式 |

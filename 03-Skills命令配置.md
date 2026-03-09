@@ -2,7 +2,7 @@
 
 > Slash Commands 的进化版 — 更强大的自定义工作流命令
 
-**版本**: v3.6
+**版本**: v3.7
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -952,7 +952,7 @@ Claude Code 2.x 内置了两个由 Anthropic 维护的 bundled 命令，随版�
 
 ## 7. 安装说明
 
-### 6.1 目录结构
+### 7.1 目录结构
 
 ```bash
 # 创建 Skills 目录
@@ -964,7 +964,7 @@ mkdir -p .claude/skills/spec
 mkdir -p .claude/skills/done
 ```
 
-### 6.2 文件创建
+### 7.2 文件创建
 
 将上述各 Skill 内容分别写入：
 - `.claude/skills/audit/SKILL.md`
@@ -974,14 +974,14 @@ mkdir -p .claude/skills/done
 - `.claude/skills/spec/SKILL.md`
 - `.claude/skills/done/SKILL.md`
 
-### 6.3 查看已安装的 Skills
+### 7.3 查看已安装的 Skills
 
 ```bash
 # Claude Code 内部命令
 /skills         # 列出所有可用 Skills
 ```
 
-### 6.4 使用方式
+### 7.4 使用方式
 
 ```bash
 /audit              # 标准健康检查
@@ -1001,7 +1001,7 @@ mkdir -p .claude/skills/done
 /done               # 功能完成收尾检查（手动兜底）
 ```
 
-### 6.5 旧 commands/ 迁移
+### 7.5 旧 commands/ 迁移
 
 如果有旧版 `.claude/commands/` 文件：
 
@@ -1016,5 +1016,5 @@ rm -rf .claude/commands/
 
 ---
 
-**版本**: v3.6
+**版本**: v3.7
 **更新日期**: 2026-03
