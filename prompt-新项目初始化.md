@@ -184,7 +184,8 @@ mkdir -p docs/roadmap
 │   ├── catchup/SKILL.md
 │   ├── handoff/SKILL.md       # 含自动 commit 逻辑（方案B）
 │   ├── spec/SKILL.md          # 讨论成果整理为设计文档
-│   └── done/SKILL.md          # 功能完成收尾检查
+│   ├── done/SKILL.md          # 功能完成收尾检查
+│   └── release/SKILL.md       # Phase 完成文档刷新
 ├── agents/                    # 自定义子代理（可选）
 └── hooks/
     ├── session-start.sh
@@ -230,7 +231,8 @@ chmod +x .claude/hooks/*.sh
 - `catchup/SKILL.md`：读取 CLAUDE.md 和 session-notes.md 恢复状态
 - `handoff/SKILL.md`：**使用方案 B** — 先尝试正常 commit（走测试门禁），失败则降级为 `wip:` 前缀 + `--no-verify`，然后写 session-notes.md
 - `spec/SKILL.md`：将需求讨论成果整理为结构化设计文档，写入 `docs/specs/`
-- `done/SKILL.md`：功能完成收尾检查（验证 + Roadmap 更新 + Spec 状态更新）
+- `done/SKILL.md`：功能完成收尾检查（验证 + Roadmap 更新 + Spec 状态更新 + 部署配置检测）
+- `release/SKILL.md`：Phase 完成文档刷新（全量更新开发文档 + Changelog + ADR 检查）
 
 #### 5.4 创建路径感知规则（Monorepo 或前后端分离项目）
 
@@ -239,11 +241,22 @@ chmod +x .claude/hooks/*.sh
 #### 5.5 创建 docs/ 目录结构
 
 ```bash
-mkdir -p docs/roadmap docs/specs
+mkdir -p docs/roadmap docs/specs docs/development docs/architecture/adr
 ```
 
 - `docs/roadmap/` — Phase 3 已创建路线图文件
 - `docs/specs/` — `/spec` Skill 生成的设计文档存放目录
+- `docs/development/` — 开发文档（API/数据库/部署/上手指南/Changelog）
+- `docs/architecture/adr/` — 架构决策记录
+
+根据项目实际情况，按需生成开发文档初始文件（参考文档 `04-工作流最佳实践.md` 第 7 节的模板）：
+
+- `docs/development/getting-started.md` — 根据项目实际环境要求和启动步骤生成
+- `docs/development/deployment.md` — 根据项目部署方式生成
+- `docs/development/changelog.md` — 创建空模板
+- `docs/architecture/adr/README.md` — 创建 ADR 索引
+
+> 注意：不需要手写 API 文档和数据库文档 — FastAPI 自带 `/docs`（Swagger UI），Spring Boot 配合 springdoc 自动生成；数据库结构看 ORM 模型定义即可。在 CLAUDE.md 中指明源码路径（如 `apps/api/routers/`、`apps/api/models/`）让 Claude 知道去哪找。
 
 #### 5.6 更新 .gitignore
 
@@ -265,7 +278,9 @@ CLAUDE.local.md
 [✓] CLAUDE.md 中已添加 @docs/roadmap/README.md 和当前 Phase 引用
 [✓] .claude/settings.json 格式正确（可用 jq . .claude/settings.json 验证）
 [✓] .claude/hooks/ 所有脚本有执行权限（ls -la .claude/hooks/）
-[✓] .claude/skills/ 6 个 Skill 已创建（audit / deep-audit / catchup / handoff / spec / done）
+[✓] .claude/skills/ 7 个 Skill 已创建（audit / deep-audit / catchup / handoff / spec / done / release）
+[✓] docs/development/ 目录已创建，按需生成初始文档
+[✓] docs/architecture/adr/ 目录已创建
 [✓] .gitignore 包含 CLAUDE.local.md、session-notes.md 等
 [✓] Monorepo：各子目录 CLAUDE.md 已创建
 [✓] 按需：.claude/rules/ 路径配置正确
@@ -307,7 +322,8 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 - 子目录 CLAUDE.md: [数量] 个（如有）
 - .claude/rules/: [数量] 个规则文件（如有）
 - Hooks 已启用: [SessionStart / PreToolUse / PostToolUse / Stop / UserPromptSubmit（如有）]
-- Skills: audit / deep-audit / catchup / handoff / spec / done
+- Skills: audit / deep-audit / catchup / handoff / spec / done / release
+- 开发文档: docs/development/（[已生成的文档列表]）
 - Agent Teams: [已启用 / 未启用]
 
 ### 适配说明
@@ -316,14 +332,14 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 ### 日常使用
 - 开始开发：直接说需求（Hook 自动运行）
 - 功能完成：/simplify 审查 → 你手动 commit → 你确认 push
-- 功能收尾：/done（手动兜底检查：Roadmap/Spec 状态同步）
+- 功能收尾：/done（手动兜底检查：Roadmap/Spec 同步 + 部署配置检测）
 - 批量跨文件变更：/batch "描述"
 - 需求讨论后：/spec（整理讨论成果为设计文档）
 - 中断前：/handoff（自动 commit + 写交接文档）
 - 接续任务：/catchup
 - 上下文接近 70%：/handoff → /clear → /catchup
 - 每周：/audit
-- 阶段完成：/deep-audit
+- 阶段完成：/release（全量刷新开发文档）→ /deep-audit（代码审计）
 
 ### 参考
 完整使用说明：~/Downloads/00_project/guides/00-日常使用说明.md

@@ -2,7 +2,7 @@
 
 > Claude Code 原生记忆系统 — 告别手动维护，拥抱自动化记忆
 
-**版本**: v3.7
+**版本**: v3.8
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -123,7 +123,12 @@ project-root/
 └── docs/
     ├── roadmap/                   # 项目路线图（@引用当前 Phase）
     ├── specs/                     # 功能设计文档（/spec 生成）
-    └── architecture/              # ADR 等架构文档
+    ├── development/               # 开发文档（/release 刷新）
+    │   ├── getting-started.md     #   手写：新人上手指南
+    │   ├── deployment.md          #   手写：部署流程、环境变量、回滚
+    │   └── changelog.md           #   自动生成：版本发布记录
+    └── architecture/
+        └── adr/                   # 架构决策记录（/release 检查是否需要新增）
 ```
 
 **Token 预算参考**：
@@ -182,8 +187,11 @@ project-root/
 
 - `apps/web/` — [前端框架] 前端，开发端口 [port]
 - `apps/api/` — [后端框架] 后端，API 端口 [port]
+- `apps/api/routers/` — API 路由定义（自动生成文档：http://localhost:8000/docs）
+- `apps/api/models/` — 数据模型定义（ORM）
+- `apps/api/migrations/` — 数据库迁移脚本
 - `packages/shared/` — 共享类型定义和工具函数
-- `docs/` — 架构文档和 ADR 记录
+- `docs/` — 开发文档、架构决策记录、项目路线图
 
 ## 常用命令
 
@@ -227,7 +235,8 @@ pnpm build            # 生产构建
 ### 文档同步（功能完成时）
 5. 更新 `docs/roadmap/` 对应条目的 checkbox 状态
 6. 如有关联 Spec，更新 `docs/specs/` 中的 status 为 `implemented`
-7. 确认代码注释反映最终实现
+7. 检测是否涉及部署配置/环境变量变更，如涉及则提示更新 `docs/development/deployment.md`
+8. 确认代码注释反映最终实现
 
 ## Git 提交规范
 
@@ -438,5 +447,5 @@ rm docs/ai-context/CURRENT.md
 
 ---
 
-**版本**: v3.7
+**版本**: v3.8
 **更新日期**: 2026-03

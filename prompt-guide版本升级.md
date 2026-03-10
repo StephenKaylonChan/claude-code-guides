@@ -111,9 +111,14 @@ ls .claude/rules/ 2>/dev/null
 - 状态生命周期是否完整：`draft → approved → implementing → implemented → [deprecated | superseded]`
 - 是否有增量更新逻辑（已有 spec 时更新而非覆盖）
 
-**`done/SKILL.md`**（v3.6 新增）：
+**`done/SKILL.md`**（v3.6 新增，v3.8 增强）：
 - 是否存在？不存在则新建（参考 03-Skills 模板）
-- 步骤是否完整：代码验证 → Roadmap checkbox 更新 → Spec status 更新 → /simplify 审查
+- 步骤是否完整：代码验证 → Roadmap checkbox 更新 → Spec status 更新 → **开发文档智能检测** → /simplify 审查
+- 是否包含 Step 4 部署配置检测逻辑？（v3.8 新增：检测部署/环境变量变更，提示更新 deployment.md）
+
+**`release/SKILL.md`**（v3.8 新增）：
+- 是否存在？不存在则新建（参考 03-Skills 模板）
+- 步骤是否完整：Phase 范围确认 → 变更扫描 → 部署文档更新 → 上手指南更新 → Changelog 生成 → ADR 检查 → Roadmap Phase 状态更新
 
 #### 2.3 项目路线图检查
 
@@ -148,9 +153,36 @@ ls .claude/rules/ 2>/dev/null
 - `handoff/SKILL.md`：是否有更新 spec 状态的步骤？
 - `audit/SKILL.md`：是否有检查 stale spec 的步骤？
 
+#### 2.5 开发文档体系检查（v3.8 新增）
+
+检查 `docs/development/` 目录是否存在：
+
+| 状态 | 处理方式 |
+|------|---------|
+| 不存在 | 需要新建目录和初始文档（参考 04-工作流最佳实践 第 7 节的模板） |
+| 存在但缺少关键文档 | 补建缺失文档 |
+| 存在且完整 | 检查内容是否过时 |
+
+应包含的文档：
+- `getting-started.md` — 新人上手指南（手写）
+- `deployment.md` — 部署文档（手写）
+- `changelog.md` — 变更日志（自动生成）
+
+> 注意：不需要 api.md 和 database.md — FastAPI/Spring Boot 自动生成 API 文档，ORM 模型定义本身就是数据库文档。
+
+检查 `docs/architecture/adr/` 目录：
+- 是否存在？不存在则创建目录和 README.md 索引
+- 是否有 ADR 模板可参考
+
+检查 CLAUDE.md 完成标准是否包含开发文档检测步骤（v3.8 要求）。
+
+检查 Skills 是否已包含开发文档联动逻辑：
+- `done/SKILL.md`：是否有 Step 4 开发文档智能检测？
+- `release/SKILL.md`：是否存在？
+
 ---
 
-#### 2.5 CLAUDE.md 内容审查
+#### 2.6 CLAUDE.md 内容审查
 
 - 行数是否仍在 150 行以内？
 - 技术栈版本是否仍然准确（对照实际 package.json / pyproject.toml）？
@@ -158,11 +190,11 @@ ls .claude/rules/ 2>/dev/null
 - 是否有过时的内容需要清理？
 - **是否有"完成标准"章节**？应包含两部分：
   - 代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）
-  - 文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 确认代码注释）
+  - 文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 检测开发文档更新需求 + 确认代码注释）
 
-#### 2.6 新功能知识
+#### 2.7 新功能知识
 
-以下是 v3.5-v3.7 guide 新增的内容，检查是否需要加入项目配置或文档：
+以下是 v3.5-v3.8 guide 新增的内容，检查是否需要加入项目配置或文档：
 
 **v3.5 新增**：
 - **六步开发循环**：`Explore → Plan → Code → Verify → Simplify → Commit`（旧版可能是五步，缺 Verify）。检查 CLAUDE.md 或团队文档中的开发循环描述是否已更新。
@@ -170,7 +202,7 @@ ls .claude/rules/ 2>/dev/null
 - **Clear 主动策略**：复杂功能的 Explore+Plan 消耗大量上下文后，主动 `/clear` 后带 plan 文件开新会话编码。
 
 **v3.6 新增**：
-- **三层收尾模型**：Commit 级（Hooks 自动门禁）→ 功能级（完成标准 + /done 手动兜底）→ Phase 级（/deep-audit）。
+- **三层收尾模型**：Commit 级（Hooks 自动门禁）→ 功能级（完成标准 + /done 手动兜底）→ Phase 级（/release + /deep-audit）。
 - **`/done` Skill**：功能完成收尾检查，是否已创建？
 - **Spec 生命周期 YAML frontmatter**：`draft → approved → implementing → implemented → [deprecated | superseded]`。
 - **Hook 高级能力**：`updatedInput`（修改用户输入）、`CLAUDE_ENV_FILE`（SessionStart 环境变量持久化）、Frontmatter Hooks（在 SKILL.md/agent 配置中内嵌 Hook）。
@@ -180,6 +212,20 @@ ls .claude/rules/ 2>/dev/null
 **v3.7 新增**：
 - **Bug 修复工作流变体**：复用六步循环，侧重复现+定位+回归测试。Explore=复现 Bug，Code=先写复现测试再修复，Commit=`fix:` 前缀。
 
+**v3.8 新增**：
+- **开发文档体系**：`docs/development/` 目录（getting-started / api / database / deployment / changelog），`docs/architecture/adr/` 模板。
+- **`/release` Skill**：Phase 完成后全量刷新开发文档 + 生成 Changelog + ADR 检查。
+- **`/done` 增强**：新增 Step 4 部署配置检测（检测部署/环境变量变更，提示更新 deployment.md）。
+- **三层收尾模型更新**：Phase 级从 `/deep-audit` 扩展为 `/release`（文档刷新）+ `/deep-audit`（代码审计）。
+- **CLAUDE.md 完成标准更新**：文档同步步骤新增开发文档检测。
+- **`/voice` 语音模式**：Push-to-talk（空格键），支持 20 种语言。检查日常使用说明是否提及。
+- **`/mcp` 对话框管理**：在聊天中直接启用/禁用 MCP 服务器、重连、OAuth 授权。
+- **MCP `list_changed` 通知**：MCP 服务器动态更新工具/资源时无需重连。
+- **`/rewind` 回滚模式**：可选仅回滚对话、仅回滚代码、或两者同时。
+- **Worktree 增强**：`isolation: worktree` 声明式隔离（Agent 定义中使用），Hook 状态扩展（name/path/branch/原始仓库路径）。
+- **Remote Control `--name`**：`claude remote-control --name "会话名"` 自定义远程会话标题。
+- **`/loop` 定时调度增强**：最长 3 天过期、上限 50 个任务。
+
 **Bundled 命令**：
 - **`/simplify`、`/batch`、`/loop`** 是内置命令，无需配置，但日常使用规范中是否已知晓？
 - **Agent Teams**：是否需要启用？如需要，在 settings.json 中加入：
@@ -188,7 +234,7 @@ ls .claude/rules/ 2>/dev/null
   ```
 - **`on-prompt-submit.sh`** Hook：是否需要自动注入 session-notes 上下文？
 
-#### 2.7 .gitignore 检查
+#### 2.8 .gitignore 检查
 
 ```bash
 grep "CLAUDE.local.md" .gitignore

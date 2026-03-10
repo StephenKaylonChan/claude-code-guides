@@ -225,7 +225,8 @@ mkdir -p .claude
 │   ├── catchup/SKILL.md       # 新增
 │   ├── handoff/SKILL.md       # 新增（含自动 commit 方案 B）
 │   ├── spec/SKILL.md          # 新增（讨论成果整理为设计文档）
-│   └── done/SKILL.md          # 新增（功能完成收尾检查）
+│   ├── done/SKILL.md          # 新增（功能完成收尾检查）
+│   └── release/SKILL.md       # 新增（Phase 完成文档刷新）
 ├── agents/                    # 自定义子代理（可选）
 └── hooks/
     ├── session-start.sh
@@ -248,13 +249,22 @@ mkdir -p .claude
 chmod +x .claude/hooks/*.sh
 ```
 
-#### 3.5 创建 docs/specs/ 目录
+#### 3.5 创建 docs/ 目录结构
 
 ```bash
-mkdir -p docs/specs
+mkdir -p docs/specs docs/development docs/architecture/adr
 ```
 
-`/spec` Skill 生成的设计文档将存放在此目录。
+- `docs/specs/` — `/spec` Skill 生成的设计文档存放目录
+- `docs/development/` — 开发文档（参考 `04-工作流最佳实践.md` 第 7 节的模板按需生成）
+- `docs/architecture/adr/` — 架构决策记录
+
+根据项目已有的代码和文档，按需生成开发文档初始文件：
+- 生成 `docs/development/getting-started.md`（新人上手指南）
+- 生成 `docs/development/deployment.md`（如有部署配置）
+- 创建 `docs/development/changelog.md` 空模板
+
+> 注意：不需要手写 API 文档和数据库文档 — FastAPI/Spring Boot 自动生成 API 文档，ORM 模型定义本身就是数据库文档。在 CLAUDE.md 中指明源码路径即可。
 
 #### 3.6 创建子目录 CLAUDE.md（Monorepo 才需要）
 
@@ -293,7 +303,9 @@ grep -q "session-notes.md" .gitignore || echo ".claude/session-notes.md" >> .git
 [✓] CLAUDE.md 中已添加 @docs/roadmap/ 引用
 [✓] .claude/settings.json 格式正确（jq . .claude/settings.json）
 [✓] .claude/hooks/ 所有脚本有执行权限
-[✓] .claude/skills/ 6 个 Skill 已创建
+[✓] .claude/skills/ 7 个 Skill 已创建（含 release）
+[✓] docs/development/ 目录已创建，按需生成初始文档
+[✓] docs/architecture/adr/ 目录已创建
 [✓] 旧文件已清理（docs/ai-context/、.claude/commands/）
 [✓] .gitignore 已更新
 ```
@@ -332,7 +344,7 @@ echo "退出码: $?"
 |------|--------|--------|
 | AI 记忆 | CONTEXT.md + CURRENT.md（手动） | CLAUDE.md + Auto Memory（自动） |
 | 进度跟踪 | CURRENT.md 滚动日志（手动） | docs/roadmap/（/handoff 自动更新） |
-| 命令数量 | [X] 个 commands | 6 个 Skills |
+| 命令数量 | [X] 个 commands | 7 个 Skills |
 | 自动化程度 | 手动触发 /start /end /checkpoint | Hooks 全自动 |
 
 ### 知识迁移清单

@@ -2,7 +2,7 @@
 
 > Slash Commands 的进化版 — 更强大的自定义工作流命令
 
-**版本**: v3.7
+**版本**: v3.8
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -67,6 +67,9 @@ Skills 是 Claude Code 2.x 中 Slash Commands 的升级版（文件位置从 `.c
 |--------|------|
 | `/catchup` | 执行 `/clear` 后快速恢复工作上下文 |
 | `/handoff` | 会话结束前生成结构化交接文档 |
+| `/spec` | 讨论成果整理为设计文档 |
+| `/done` | 功能完成收尾检查（Roadmap/Spec/开发文档同步） |
+| `/release` | Phase 完成：全量刷新开发文档 + 生成 Changelog |
 
 ---
 
@@ -306,9 +309,9 @@ find . -name "*.md" -not -path "*/node_modules/*" | sort
 - 实际组件数 vs 文档记录数
 - 找出文档缺失的组件
 
-**API vs 文档**：
-- 实际 API 端点（扫描 router 文件）vs api.md 记录
-- 找出文档缺失的端点
+**API 自动文档**：
+- 检查 FastAPI `/docs` 或 springdoc `/swagger-ui` 是否正常可访问
+- 检查 CLAUDE.md 中是否指明了 API 路由和数据模型的源码路径
 
 **package.json vs CLAUDE.md**：
 - 实际依赖版本 vs CLAUDE.md 声明的版本
@@ -781,7 +784,7 @@ draft → approved → implementing → implemented → [deprecated | superseded
 
 ### 5.4 /done — 功能完成收尾
 
-**用途**：一个功能开发完成后，执行完整的收尾检查：验证代码质量、同步文档状态（Roadmap + Spec）、确认无遗漏。大多数情况下，完成标准会自动执行这些动作；`/done` 作为手动兜底，偶尔执行以确保没有遗漏。
+**用途**：一个功能开发完成后，执行完整的收尾检查：验证代码质量、同步文档状态（Roadmap + Spec）、检测部署配置变更、确认无遗漏。大多数情况下，完成标准会自动执行文档同步；`/done` 作为手动兜底，偶尔执行以确保没有遗漏。
 
 **文件路径**: `.claude/skills/done/SKILL.md`
 
@@ -789,7 +792,7 @@ draft → approved → implementing → implemented → [deprecated | superseded
 ---
 name: done
 description: |
-  功能完成收尾检查。验证代码质量，同步文档状态（Roadmap + Spec），确认无遗漏。
+  功能完成收尾检查。验证代码质量，同步文档状态（Roadmap + Spec），检测部署配置变更，确认无遗漏。
   触发关键词：功能完成、收尾检查、done、wrap up
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 disable-model-invocation: true
@@ -851,20 +854,36 @@ ls docs/specs/
 - 将 frontmatter 中的 `status` 从 `implementing` 更新为 `implemented`
 - 更新 `updated` 日期
 
-## Step 4: 代码审查
+## Step 4: 开发文档检测
+
+检测本次改动是否涉及部署/配置变更：
+
+```bash
+# 检测配置/环境/部署变更
+git diff --stat HEAD~3 -- '**/.env*' '**/docker*' '**/deploy*' '**/Dockerfile*' '**/nginx*' '**/ci*' '**/cd*'
+```
+
+如果 `docs/development/deployment.md` 存在且检测到变更：
+- 提示："检测到部署/配置变更，建议更新 `docs/development/deployment.md`，是否现在更新？"
+- 用户确认后执行增量更新
+- 用户拒绝则跳过（不阻断流程）
+
+> 注意：API 文档和数据库文档不需要手动维护 — FastAPI/Spring Boot 自动生成 API 文档，ORM 模型定义本身就是数据库文档。此步骤仅关注代码中无法自动体现的部署信息。
+
+## Step 5: 代码审查
 
 运行 `/simplify` 进行三维并行审查（如果本次还未运行过）。
 
-## Step 5: 提交文档变更
+## Step 6: 提交文档变更
 
-如果 Step 2-3 产生了文档更新：
+如果 Step 2-4 产生了文档更新：
 
 ```bash
-git add docs/roadmap/ docs/specs/
-git commit -m "docs: 更新 [功能名] 的 roadmap 和 spec 状态"
+git add docs/
+git commit -m "docs: 更新 [功能名] 的 roadmap、spec 状态和开发文档"
 ```
 
-## Step 6: 输出状态汇总
+## Step 7: 输出状态汇总
 
 ```
 ✅ 功能收尾完成
@@ -873,12 +892,13 @@ git commit -m "docs: 更新 [功能名] 的 roadmap 和 spec 状态"
 代码验证：✅ 测试通过 | ✅ Lint 通过
 Roadmap：✅ Phase N — [条目] 已勾选 / ⏭️ 无关联条目
 Spec：✅ [spec名].md → implemented / ⏭️ 无关联 Spec
+部署文档：✅ deployment.md 已更新 / ⏭️ 无需更新 / ⚠️ 建议更新（用户跳过）
 代码审查：✅ /simplify 已执行 / ⏭️ 之前已执行
 
 下一步建议：
 - 继续下一个功能
 - git push 推送到远程
-- /deep-audit（如果当前 Phase 接近完成）
+- /release（如果当前 Phase 接近完成）
 ```
 
 </workflow>
@@ -892,6 +912,138 @@ Spec：✅ [spec名].md → implemented / ⏭️ 无关联 Spec
 | **手动** `/done` | 用户显式调用 | 完整检查（含 /simplify 审查 + 状态汇总） |
 
 日常开发中，完成标准驱动 Claude 自动完成文档同步。`/done` 用于阶段性核查，确保没有遗漏。
+
+---
+
+### 5.5 /release — Phase 完成文档刷新
+
+**用途**：一个 Phase 的所有功能完成后，全量扫描代码变更，自动刷新所有开发文档（API、数据库、部署、上手指南），生成 Changelog 条目，更新 Roadmap Phase 状态，检查是否需要新增 ADR。
+
+**文件路径**: `.claude/skills/release/SKILL.md`
+
+````markdown
+---
+name: release
+description: |
+  Phase 完成文档刷新。全量更新开发文档（API/数据库/部署/上手指南），生成 Changelog，更新 Phase 状态。
+  触发关键词：release、发版、Phase 完成、阶段完成、全量文档刷新
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
+disable-model-invocation: true
+---
+
+<task>
+Phase 完成后的全量文档刷新：扫描所有代码变更，自动更新开发文档，生成 Changelog，更新 Roadmap Phase 状态。
+</task>
+
+<workflow>
+
+## Step 0: 确认 Phase 范围
+
+- 查看 `docs/roadmap/README.md` 确认当前 Phase
+- 查看当前 Phase 文件，确认所有功能是否已完成（所有 checkbox 已勾选）
+- 如有未完成的功能条目，提醒用户确认是否继续
+
+```bash
+cat docs/roadmap/README.md
+ls docs/roadmap/
+```
+
+## Step 1: 分析 Phase 变更范围
+
+使用 Explore Subagent 全面扫描当前 Phase 期间的所有变更：
+
+```bash
+# 查看 Phase 期间的所有提交
+git log --oneline --since="[Phase 开始日期]"
+
+# 分析变更涉及的文件类型
+git diff --stat [Phase 起始 commit]..HEAD
+```
+
+分类整理：
+- **配置变更**：新增/修改了哪些环境变量、部署配置
+- **依赖变更**：新增/升级/移除了哪些依赖
+- **架构变更**：是否有重大架构决策
+
+> 注意：API 接口和数据库结构不需要手动维护文档 — FastAPI/Spring Boot 自动生成 API 文档，ORM 模型定义本身就是数据库文档。
+
+## Step 2: 更新部署文档
+
+如果有配置/部署变更且 `docs/development/deployment.md` 存在：
+
+- 更新环境变量列表
+- 更新部署流程（如有变化）
+- 更新依赖版本要求
+
+## Step 3: 更新上手指南
+
+如果 `docs/development/getting-started.md` 存在：
+
+- 检查环境要求是否仍然准确（对照 package.json / pyproject.toml）
+- 检查首次运行步骤是否需要更新（新增的初始化步骤）
+- 更新项目结构概览（如有新增目录）
+
+## Step 4: 生成 Changelog
+
+更新 `docs/development/changelog.md`（如不存在则新建）：
+
+```bash
+# 收集 Phase 期间的所有功能性提交
+git log --oneline --no-merges --since="[Phase 开始日期]" | grep -E "^[a-f0-9]+ (feat|fix|perf|refactor)"
+```
+
+按 [Keep a Changelog](https://keepachangelog.com/) 格式生成：
+- **Added**: feat 类型的提交
+- **Fixed**: fix 类型的提交
+- **Changed**: refactor/perf 类型的提交
+- **Removed**: 删除功能的提交
+
+## Step 5: 检查 ADR
+
+检查本 Phase 是否有需要记录的架构决策：
+
+- 是否引入了新的技术栈组件
+- 是否有重大架构重构
+- 是否有技术选型变更
+
+如有，提示用户："检测到 [变更描述]，建议新增 ADR，是否创建？"
+用户确认后，按 ADR 模板在 `docs/architecture/adr/` 中新建。
+
+## Step 6: 更新 Roadmap Phase 状态
+
+```bash
+# 将当前 Phase 文件中的所有 checkbox 状态确认
+# 更新 docs/roadmap/README.md 中的 Phase 状态为 "✅ 完成"
+# 更新进度统计
+```
+
+## Step 7: 提交所有文档变更
+
+```bash
+git add docs/
+git commit -m "docs: Phase N [Phase名称] 完成 — 全量更新开发文档"
+```
+
+## Step 8: 输出 Release 报告
+
+```
+🎉 Phase N [Phase名称] 文档刷新完成
+
+文档更新摘要：
+- 部署文档：✅ 新增 N 个环境变量 / ⏭️ 无变更
+- 上手指南：✅ 已更新 / ⏭️ 无需更新
+- Changelog：✅ 新增 [版本号] 条目
+- ADR：✅ 新增 N 条 / ⏭️ 无需新增
+- Roadmap：✅ Phase N 标记为完成
+
+下一步建议：
+- git push 推送文档更新
+- /deep-audit 全面代码审计
+- 开始规划 Phase N+1
+```
+
+</workflow>
+````
 
 ---
 
@@ -962,6 +1114,7 @@ mkdir -p .claude/skills/catchup
 mkdir -p .claude/skills/handoff
 mkdir -p .claude/skills/spec
 mkdir -p .claude/skills/done
+mkdir -p .claude/skills/release
 ```
 
 ### 7.2 文件创建
@@ -973,6 +1126,7 @@ mkdir -p .claude/skills/done
 - `.claude/skills/handoff/SKILL.md`
 - `.claude/skills/spec/SKILL.md`
 - `.claude/skills/done/SKILL.md`
+- `.claude/skills/release/SKILL.md`
 
 ### 7.3 查看已安装的 Skills
 
@@ -999,6 +1153,8 @@ mkdir -p .claude/skills/done
 /spec user-auth     # 指定功能名称
 
 /done               # 功能完成收尾检查（手动兜底）
+
+/release            # Phase 完成文档刷新
 ```
 
 ### 7.5 旧 commands/ 迁移
@@ -1016,5 +1172,5 @@ rm -rf .claude/commands/
 
 ---
 
-**版本**: v3.7
+**版本**: v3.8
 **更新日期**: 2026-03

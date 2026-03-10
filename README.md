@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.7（2026-03）
+> **版本**: v3.8（2026-03）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -65,6 +65,15 @@
 | GitHub Actions 集成 + Remote Control | 文档 04 |
 | `docs/roadmap/` 项目进度跟踪系统 | 文档 00、03、04 |
 | `docs/specs/` 功能设计文档目录 | 文档 03、04 |
+| `docs/development/` 开发文档体系（上手指南/部署/Changelog + 代码即文档原则） | 文档 04 |
+| `/release` Phase 完成文档刷新 Skill | 文档 03、04 |
+| `docs/architecture/adr/` ADR 模板 | 文档 04 |
+| `/voice` 语音模式（Push-to-talk，20 种语言） | 文档 00 |
+| `/mcp` 对话框式 MCP 管理 + `list_changed` 动态更新 | 文档 00、04 |
+| `/rewind` 回滚模式（仅对话/仅代码/两者） | 文档 00 |
+| Worktree `isolation: worktree` 声明式隔离 + Hook 状态扩展 | 文档 04 |
+| Remote Control `--name` 自定义会话名称 | 文档 04 |
+| `/loop` 定时调度增强（3 天过期、50 任务上限） | 文档 00、04 |
 | Plan Mode 工作流（Explore→Plan→Code→Verify→Simplify→Commit） | 文档 04 |
 | Git Worktrees 并行开发 | 文档 04 |
 | Agent Teams 多 Claude 协作（实验性） | 文档 04 |
@@ -80,6 +89,7 @@
 |------|------|------|
 | `/simplify` | PR 前三维并行代码审查并自动修复 | **每次 PR 前** |
 | `/batch <描述>` | 跨文件大规模并行变更 | 批量重构时 |
+| `/loop <间隔> <命令>` | 定时重复执行（如 `/loop 5m /audit --quick`，最长 3 天，上限 50 任务） | 监控/轮询 |
 
 ### 自定义 Skills（需安装到 .claude/skills/）
 
@@ -88,9 +98,24 @@
 | `/catchup` | 清空上下文后快速恢复 | 按需 |
 | `/handoff` | 提交变更 + 生成交接文档 | 中断前 |
 | `/spec` | 讨论成果整理为设计文档 | 需求讨论后 |
-| `/done` | 功能完成收尾检查（Roadmap/Spec 同步） | 功能完成后（手动兜底） |
+| `/done` | 功能完成收尾检查（Roadmap/Spec 同步 + 部署配置检测） | 功能完成后（手动兜底） |
+| `/release` | Phase 完成文档刷新（全量更新开发文档 + Changelog） | Phase 完成后 |
 | `/audit` | 项目健康检查 | 每周 |
 | `/deep-audit` | 全面深度审计 | Phase 完成后 |
+
+### 常用系统命令（内置，无需配置）
+
+| 命令 | 用途 |
+|------|------|
+| `/plan` | 进入 Plan Mode（复杂任务前先规划） |
+| `/voice` | 语音模式（Push-to-talk，空格键说话，支持 20 种语言） |
+| `/fast` | 切换 Fast Mode（Opus 4.6 快速输出，约 2.5x 速度） |
+| `/model` | 切换模型（sonnet/opus/haiku） |
+| `/rewind` | 回滚（可选仅对话 / 仅代码 / 两者同时） |
+| `/mcp` | 管理 MCP 服务器（启用/禁用/重连/OAuth） |
+| `/clear` | 清空上下文（配合 /handoff 使用） |
+| `/cost` | 查看 Token 使用量 |
+| `/context` | 可视化上下文占用 |
 
 > 注：`/start`、`/end`、`/checkpoint`、`/weekly`、`/monthly`、`/fix` 已由 Hooks 自动化替代，无需手动命令。
 
@@ -114,7 +139,8 @@ project-root/
 │   │   ├── catchup/SKILL.md
 │   │   ├── handoff/SKILL.md
 │   │   ├── spec/SKILL.md
-│   │   └── done/SKILL.md
+│   │   ├── done/SKILL.md
+│   │   └── release/SKILL.md
 │   ├── agents/                    # 自定义子代理（可选）
 │   └── hooks/                     # Hook 脚本
 │       ├── session-start.sh
@@ -136,9 +162,12 @@ project-root/
     ├── specs/                     # 功能设计文档（/spec 生成）
     │   ├── user-auth.md           #   各功能的设计 spec
     │   └── dashboard-redesign.md
-    ├── architecture/
-    │   └── adr/                   # 架构决策记录
-    └── development/               # 开发文档（按需维护）
+    ├── development/               # 开发文档（/release 刷新）
+    │   ├── getting-started.md     #   手写：新人上手指南
+    │   ├── deployment.md          #   手写：部署流程、环境变量、回滚
+    │   └── changelog.md           #   自动生成：版本发布记录
+    └── architecture/
+        └── adr/                   # 架构决策记录（/release 检查是否需要新增）
 ```
 
 ---
@@ -159,6 +188,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.8 | 2026-03 | 开发文档体系（`docs/development/` 上手指南/部署/Changelog + 代码即文档原则 + ADR 模板）、`/release` Skill、`/done` 增强（部署配置检测）、`/voice` 语音模式、`/mcp` 对话框管理 + `list_changed`、`/rewind` 回滚模式、Worktree 声明式隔离 + Hook 状态、Remote Control `--name`、`/loop` 调度增强 |
 | v3.7 | 2026-03 | Bug 修复工作流变体（复用六步循环，侧重复现+定位+回归测试），修复子节编号错位（04/03 文档） |
 | v3.6 | 2026-03 | 三层收尾模型（Commit/功能/Phase），/done Skill，Spec YAML frontmatter 生命周期，完成标准扩展文档同步，Hook 高级能力（updatedInput/CLAUDE_ENV_FILE/Frontmatter Hooks），GitHub Actions 集成，Remote Control |
 | v3.5 | 2026-03 | 升级开发循环为六步（加 Verify 验证步骤），复杂度分级流程选择，Explore→Plan→Clear→Code 主动策略，CLAUDE.md 完成标准驱动自动验证 |
