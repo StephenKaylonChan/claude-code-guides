@@ -69,7 +69,7 @@ Stop：是否需要完成通知？（macOS / Linux）
 **Skills 选择**：
 
 ```
-必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、done（功能完成收尾）
+必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、done（功能完成收尾）、release（Phase 完成文档刷新）
 可选：是否有项目特定的高频操作值得封装为命令？
 ```
 
@@ -163,7 +163,7 @@ mkdir -p docs/roadmap
 - 删除泛化内容，只保留项目特有的信息
 - 将规范语言改为 `MUST` / `MUST NOT` 表述（参考文档 01 的语言规范）
 - 确保包含：项目结构说明、常用命令（含测试/构建/启动）、技术栈（含版本号）、关键约束、Git 提交规范（Conventional Commits）、关键架构决策
-- **完成标准**章节分两部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 确认代码注释）
+- **完成标准**章节分三部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 检测部署/环境变量变更并提示更新 deployment.md + 确认代码注释）（3）Spec 实施自检（基于 spec 开发时：每完成 task 勾 `[x]` → 检查 Phase Gate → 提醒 `/done` → 所有 Phase 完成提醒 `/release`）
 - 控制在 **150 行以内**
 - Monorepo 则还需为各 app 子目录创建专属 CLAUDE.md（< 100 行）
 
@@ -204,7 +204,7 @@ mkdir -p docs/roadmap
 - `permissions.deny`：直接拒绝的危险操作（`git push --force *`、`git reset --hard *`）
 - `hooks`：按 Phase 2 的决策配置各 Hook
 
-注意：`UserPromptSubmit`、`InstructionsLoaded`、`ConfigChange`、`WorktreeCreate`、`WorktreeRemove`、`TeammateIdle`、`TaskCompleted`、`SessionEnd`、`SubagentStart`、`Setup` 不支持 matcher 字段。
+注意：`UserPromptSubmit`、`Stop`、`TaskCompleted`、`TeammateIdle`、`WorktreeCreate`、`WorktreeRemove`、`InstructionsLoaded` 共 7 个事件不支持 matcher 字段。
 
 #### 5.2 创建 Hook 脚本
 
@@ -246,7 +246,7 @@ mkdir -p docs/roadmap docs/specs docs/development docs/architecture/adr
 
 - `docs/roadmap/` — Phase 3 已创建路线图文件
 - `docs/specs/` — `/spec` Skill 生成的设计文档存放目录
-- `docs/development/` — 开发文档（API/数据库/部署/上手指南/Changelog）
+- `docs/development/` — 开发文档（上手指南/部署/Changelog）
 - `docs/architecture/adr/` — 架构决策记录
 
 根据项目实际情况，按需生成开发文档初始文件（参考文档 `04-工作流最佳实践.md` 第 7 节的模板）：
@@ -331,7 +331,7 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 
 ### 日常使用
 - 开始开发：直接说需求（Hook 自动运行）
-- 功能完成：/simplify 审查 → 你手动 commit → 你确认 push
+- 功能完成：/simplify 审查 → Claude 自动 commit（Hook 验证后）→ 你确认 push
 - 功能收尾：/done（手动兜底检查：Roadmap/Spec 同步 + 部署配置检测）
 - 批量跨文件变更：/batch "描述"
 - 需求讨论后：/spec（整理讨论成果为设计文档）

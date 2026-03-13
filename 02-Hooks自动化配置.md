@@ -2,7 +2,7 @@
 
 > 用 Claude Code 原生钩子替代手动工作流，实现零干预的开发自动化
 
-**版本**: v3.8
+**版本**: v3.9
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -45,44 +45,42 @@ Hooks 是 Claude Code 的生命周期钩子系统，允许你在 AI 操作的关
 
 ## 2. 核心 Hook 事件
 
-Claude Code 当前支持以下 Hook 事件：
+Claude Code 当前支持 **18 个** Hook 事件：
 
-### 通用开发事件（支持 matcher）
+### 支持 matcher 的事件（11 个）
 
-| 事件 | 触发时机 | 典型用途 |
-|------|---------|---------|
-| `SessionStart` | 会话开始或恢复时 | 加载 git 状态、检查环境 |
-| `PreToolUse` | 工具调用**前**（可阻断） | 测试门禁、危险命令拦截 |
-| `PostToolUse` | 工具调用**成功后** | 自动格式化、自动测试 |
-| `Stop` | Claude 完成响应时 | 完成通知、状态验证 |
-| `Notification` | 需要用户注意时 | 桌面通知、TTS 提醒 |
-| `PreCompact` | 上下文压缩前 | 保存关键信息 |
-| `SubagentStop` | 子代理完成时 | 汇总子代理结果 |
-| `PermissionRequest` | 权限请求时（可阻断） | 编程化自动审批/拒绝权限 |
-| `PostToolUseFailure` | 工具调用**失败后** | 错误处理、自动恢复 |
+| 事件 | 触发时机 | matcher 匹配对象 | 典型用途 |
+|------|---------|-----------------|---------|
+| `SessionStart` | 会话开始或恢复时 | 启动方式：`startup`/`resume`/`compact`/`clear` | 加载 git 状态、检查环境 |
+| `PreToolUse` | 工具调用**前**（可阻断） | 工具名 | 测试门禁、危险命令拦截 |
+| `PostToolUse` | 工具调用**成功后** | 工具名 | 自动格式化、自动测试 |
+| `PostToolUseFailure` | 工具调用**失败后** | 工具名 | 错误处理、自动恢复 |
+| `PermissionRequest` | 权限请求时（可阻断） | 工具名 | 编程化自动审批/拒绝权限 |
+| `Notification` | 需要用户注意时 | 通知类型：`permission_prompt`/`idle_prompt` 等 | 桌面通知、TTS 提醒 |
+| `SubagentStart` | 子代理启动时 | 代理类型：`Bash`/`Explore`/`Plan` 或自定义名 | 监控子代理生命周期 |
+| `SubagentStop` | 子代理完成时 | 代理类型（同 SubagentStart） | 汇总子代理结果 |
+| `PreCompact` | 上下文压缩前 | 触发方式：`manual`/`auto` | 保存关键信息 |
+| `SessionEnd` | 会话终止时 | 终止原因：`clear`/`logout`/`other` 等 | 清理资源、记录会话统计 |
+| `ConfigChange` | 配置文件变更时（可阻断） | 配置来源：`user_settings`/`project_settings` 等 | 企业安全审计、防止配置篡改 |
 
-### 不支持 matcher（每次必触发）
+### 不支持 matcher（每次必触发，共 7 个）
 
 | 事件 | 触发时机 | 典型用途 |
 |------|---------|---------|
 | `UserPromptSubmit` | 用户提交 prompt**前** | 注入额外上下文、校验 prompt |
-| `InstructionsLoaded` | 指令文件加载时（只读，无法阻断） | 调试 CLAUDE.md 层级加载、合规审计 |
-| `ConfigChange` | 配置文件变更时（可阻断） | 企业安全审计、防止配置篡改 |
+| `Stop` | Claude 完成响应时 | 完成通知、状态验证 |
+| `TaskCompleted` | 任务被标记为完成时 | 强制完成标准（测试通过、lint 通过） |
+| `TeammateIdle` | Agent Teams 中 teammate 空闲时 | 控制 teammate 继续还是停止 |
 | `WorktreeCreate` | 创建 worktree 时（替换默认 git 行为） | 自定义 VCS 初始化（SVN/Perforce） |
 | `WorktreeRemove` | 删除 worktree 时 | 清理 worktree 相关资源 |
-| `TeammateIdle` | Agent Teams 中 teammate 空闲时 | 控制 teammate 继续还是停止 |
-| `TaskCompleted` | 任务被标记为完成时 | 强制完成标准（测试通过、lint 通过） |
-| `SessionEnd` | 会话终止时 | 清理资源、记录会话统计 |
-| `SubagentStart` | 子代理启动时 | 监控子代理生命周期 |
-| `Setup` | `--init` / `--maintenance` 触发 | 仓库初始化和维护脚本 |
+| `InstructionsLoaded` | 指令文件加载时（只读，无法阻断） | 调试 CLAUDE.md 层级加载、合规审计 |
 
 ### Handler 类型支持
 
 并非所有事件都支持全部 Handler 类型（详见 [Section 3](#3-handler-类型)）：
 
-- **command + prompt + agent**：PreToolUse、PostToolUse、PostToolUseFailure、PermissionRequest、Stop、SubagentStop、TaskCompleted、UserPromptSubmit
-- **仅 command**：SessionStart、SessionEnd、Notification、PreCompact、SubagentStart、ConfigChange、WorktreeCreate、WorktreeRemove、TeammateIdle、Setup
-- **只读**（无法阻断）：InstructionsLoaded
+- **全部 4 种（command + http + prompt + agent）**：PreToolUse、PostToolUse、PostToolUseFailure、PermissionRequest、Stop、SubagentStop、TaskCompleted、UserPromptSubmit
+- **仅 command**：SessionStart、SessionEnd、Notification、PreCompact、SubagentStart、ConfigChange、WorktreeCreate、WorktreeRemove、TeammateIdle、InstructionsLoaded
 
 ### SessionStart 的 matcher 值
 
@@ -481,9 +479,43 @@ exit 0
 
 ---
 
-### 5.7 PreCompact：压缩前保存上下文
+### 5.7 PreCompact：压缩前保存上下文（v3.9 增强）
 
-**用途**：上下文压缩前（`/compact` 或自动压缩），让 Claude 先将关键进度写入文件，防止压缩后丢失重要信息。
+**用途**：上下文压缩前（`/compact` 或自动压缩），让 Claude 先将关键进度写入文件，防止压缩后丢失重要信息。配合 Spec 进度自检协议，实现 compact 后无缝恢复。
+
+```bash
+#!/bin/bash
+# .claude/hooks/pre-compact-save.sh
+
+# 收集当前 spec 进度信息（如有）
+SPEC_STATUS=""
+if [ -d "docs/specs" ]; then
+  # 找到正在实施的 spec
+  ACTIVE_SPECS=$(grep -rl "status: implementing" docs/specs/ 2>/dev/null)
+  if [ -n "$ACTIVE_SPECS" ]; then
+    SPEC_STATUS="当前实施中的 Spec:\n"
+    for spec in $ACTIVE_SPECS; do
+      PHASE=$(grep "active_phase:" "$spec" 2>/dev/null | head -1)
+      SPEC_STATUS="$SPEC_STATUS- $spec ($PHASE)\n"
+    done
+  fi
+fi
+
+echo "⚠️ 上下文即将自动压缩。"
+echo ""
+echo "请在压缩摘要中保留以下关键信息："
+echo "1. 当前正在实施的功能和进度"
+echo "2. 已完成的步骤和未完成的步骤"
+echo "3. 重要的技术决策和原因"
+echo "4. 下一步计划"
+echo ""
+if [ -n "$SPEC_STATUS" ]; then
+  echo -e "$SPEC_STATUS"
+  echo "请读取上述 spec 文件确认 active_phase 和 Tasks 勾选状态。"
+fi
+echo ""
+echo "同时请将上述信息写入 .claude/session-notes.md 文件。"
+```
 
 在 `settings.json` 中配置：
 ```json
@@ -492,13 +524,40 @@ exit 0
     "matcher": "auto",
     "hooks": [
       {
-        "type": "prompt",
-        "prompt": "上下文即将压缩。请将当前工作进度、已完成的任务、待完成的任务、重要的技术决策写入 .claude/session-notes.md 文件，以便压缩后可以快速恢复。"
+        "type": "command",
+        "command": "bash .claude/hooks/pre-compact-save.sh"
+      }
+    ]
+  },
+  {
+    "matcher": "manual",
+    "hooks": [
+      {
+        "type": "command",
+        "command": "bash .claude/hooks/pre-compact-save.sh"
       }
     ]
   }
 ]
 ```
+
+**Auto-Compact 触发阈值调整**：
+
+```bash
+# 环境变量：控制 auto-compact 触发百分比（1-100），默认约 83%
+export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=90
+```
+
+可在 `.claude/settings.json` 中通过 `env` 字段持久化：
+```json
+{
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "88"
+  }
+}
+```
+
+> 设高可延迟触发但留给压缩的 buffer 更小。建议范围 80-90，不建议超过 95。
 
 ---
 
@@ -704,8 +763,17 @@ HTTP 类型 Hook 支持在 headers 中使用环境变量，通过 `allowedEnvVar
         "matcher": "auto",
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "上下文即将自动压缩。请将当前工作进度写入 .claude/session-notes.md。"
+            "type": "command",
+            "command": "bash .claude/hooks/pre-compact-save.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre-compact-save.sh"
           }
         ]
       }
@@ -721,7 +789,7 @@ HTTP 类型 Hook 支持在 headers 中使用环境变量，通过 `allowedEnvVar
 }
 ```
 
-> **注意**：`UserPromptSubmit`、`InstructionsLoaded`、`ConfigChange`、`WorktreeCreate`、`WorktreeRemove`、`TeammateIdle`、`TaskCompleted`、`SessionEnd`、`SubagentStart`、`Setup` 均不支持 `matcher` 字段，每次触发必定执行。
+> **注意**：`UserPromptSubmit`、`Stop`、`TaskCompleted`、`TeammateIdle`、`WorktreeCreate`、`WorktreeRemove`、`InstructionsLoaded` 共 7 个事件不支持 `matcher` 字段，每次触发必定执行。其余 11 个事件均支持 matcher（详见 Section 2）。
 
 ### Hooks 脚本目录结构
 
@@ -731,6 +799,7 @@ HTTP 类型 Hook 支持在 headers 中使用环境变量，通过 `allowedEnvVar
     ├── session-start.sh      # 会话启动检查
     ├── pre-commit-check.sh   # 提交前测试门禁
     ├── post-write.sh         # 写文件后自动格式化
+    ├── pre-compact-save.sh   # 压缩前保存 Spec 进度和工作状态
     ├── on-stop.sh            # 完成通知
     ├── on-notification.sh    # 等待输入提醒
     └── on-prompt-submit.sh   # 每次 prompt 前注入上下文（可选）
@@ -807,5 +876,5 @@ echo "退出码: $?"
 
 ---
 
-**版本**: v3.8
+**版本**: v3.9
 **更新日期**: 2026-03

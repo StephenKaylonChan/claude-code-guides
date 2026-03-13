@@ -80,7 +80,6 @@ ls .claude/rules/ 2>/dev/null
 | `SubagentStart` | ? | 按需（监控子代理） |
 | `SubagentStop` | ? | 按需（子代理完成后处理） |
 | `InstructionsLoaded` | ? | 按需（指令加载后处理） |
-| `Setup` | ? | 按需（仓库初始化脚本） |
 
 #### 2.2 Skills 内容检查
 
@@ -105,16 +104,21 @@ ls .claude/rules/ 2>/dev/null
 - 是否有读取 `docs/roadmap/README.md` 和当前 Phase 文件的步骤
 - 是否有读取 `docs/specs/` 中活跃 spec 的步骤
 
-**`spec/SKILL.md`**（v3.3 新增）：
+**`spec/SKILL.md`**（v3.3 新增，v3.9 增强）：
 - 是否存在？不存在则新建（参考 03-Skills 模板）
 - 是否包含 YAML frontmatter 模板（status 字段）
 - 状态生命周期是否完整：`draft → approved → implementing → implemented → [deprecated | superseded]`
 - 是否有增量更新逻辑（已有 spec 时更新而非覆盖）
+- 是否包含讨论收敛步骤（Step 1a 共识/分歧归纳）？（v3.9 新增）
+- 是否包含 Implementation Phases 结构（Tasks/Gate/On Complete）？（v3.9 新增）
+- frontmatter 是否包含 `total_phases` 和 `active_phase` 字段？（v3.9 新增）
 
-**`done/SKILL.md`**（v3.6 新增，v3.8 增强）：
+**`done/SKILL.md`**（v3.6 新增，v3.8 增强，v3.9 增强）：
 - 是否存在？不存在则新建（参考 03-Skills 模板）
-- 步骤是否完整：代码验证 → Roadmap checkbox 更新 → Spec status 更新 → **开发文档智能检测** → /simplify 审查
+- 步骤是否完整：代码验证 → Roadmap checkbox 更新 → Spec 状态智能检测 → **开发文档智能检测** → /simplify 审查 → Roadmap Phase 完成检测
 - 是否包含 Step 4 部署配置检测逻辑？（v3.8 新增：检测部署/环境变量变更，提示更新 deployment.md）
+- 是否包含三级自动升级逻辑？（v3.9 新增：自动检测 Spec Phase 完成 / Spec 全部完成 / Roadmap Phase 完成）
+- Spec 状态更新是否区分"单 Phase 完成"（更新 active_phase）和"全部完成"（status→implemented）？（v3.9 新增）
 
 **`release/SKILL.md`**（v3.8 新增）：
 - 是否存在？不存在则新建（参考 03-Skills 模板）
@@ -202,7 +206,7 @@ ls .claude/rules/ 2>/dev/null
 - **Clear 主动策略**：复杂功能的 Explore+Plan 消耗大量上下文后，主动 `/clear` 后带 plan 文件开新会话编码。
 
 **v3.6 新增**：
-- **三层收尾模型**：Commit 级（Hooks 自动门禁）→ 功能级（完成标准 + /done 手动兜底）→ Phase 级（/release + /deep-audit）。
+- **三层收尾模型**：Commit 级（Hooks 自动门禁）→ 功能级（完成标准 + /done 手动兜底）→ Phase 级（/deep-audit）。v3.8 扩展为 /release + /deep-audit。
 - **`/done` Skill**：功能完成收尾检查，是否已创建？
 - **Spec 生命周期 YAML frontmatter**：`draft → approved → implementing → implemented → [deprecated | superseded]`。
 - **Hook 高级能力**：`updatedInput`（修改用户输入）、`CLAUDE_ENV_FILE`（SessionStart 环境变量持久化）、Frontmatter Hooks（在 SKILL.md/agent 配置中内嵌 Hook）。
@@ -213,7 +217,7 @@ ls .claude/rules/ 2>/dev/null
 - **Bug 修复工作流变体**：复用六步循环，侧重复现+定位+回归测试。Explore=复现 Bug，Code=先写复现测试再修复，Commit=`fix:` 前缀。
 
 **v3.8 新增**：
-- **开发文档体系**：`docs/development/` 目录（getting-started / api / database / deployment / changelog），`docs/architecture/adr/` 模板。
+- **开发文档体系**：`docs/development/` 目录（getting-started / deployment / changelog），`docs/architecture/adr/` 模板。
 - **`/release` Skill**：Phase 完成后全量刷新开发文档 + 生成 Changelog + ADR 检查。
 - **`/done` 增强**：新增 Step 4 部署配置检测（检测部署/环境变量变更，提示更新 deployment.md）。
 - **三层收尾模型更新**：Phase 级从 `/deep-audit` 扩展为 `/release`（文档刷新）+ `/deep-audit`（代码审计）。
@@ -226,8 +230,17 @@ ls .claude/rules/ 2>/dev/null
 - **Remote Control `--name`**：`claude remote-control --name "会话名"` 自定义远程会话标题。
 - **`/loop` 定时调度增强**：最长 3 天过期、上限 50 个任务。
 
+**v3.9 新增**：
+- **`/done` 三级智能升级**：`/done` 自动检测完成粒度（Spec 单 Phase / Spec 全部完成 / Roadmap Phase 完成），执行对应深度的收尾动作。检查 `/done` Skill 是否已更新。
+- **四层收尾模型**：从三层（Commit/功能/Phase）扩展为四层（Commit/功能·Spec Phase/Spec 完成/Roadmap Phase）。检查 CLAUDE.md 完成标准和工作流文档是否已更新。
+- **Spec 分阶段实施**：`/spec` 输出的 spec 包含 Implementation Phases（Tasks/Gate/On Complete 结构），支持分阶段实施和 auto-compact 后进度恢复。检查 `/spec` Skill 是否已更新。
+- **Spec 进度自检协议**：CLAUDE.md 完成标准中新增"Spec 实施自检"小节（每完成 task 勾 [x] → 检查 Gate → 提醒 /done）。检查 CLAUDE.md 是否已包含。
+- **PreCompact Hook 增强**：`pre-compact-save.sh` 自动检测正在实施的 spec 并保存进度。检查 Hook 脚本是否已更新。
+- **`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`**：环境变量控制 auto-compact 触发阈值。是否需要在 settings.json 的 `env` 中配置？
+- **讨论收敛机制**：`/spec` Step 1a 自动归纳共识与分歧，避免讨论发散。
+
 **Bundled 命令**：
-- **`/simplify`、`/batch`、`/loop`** 是内置命令，无需配置，但日常使用规范中是否已知晓？
+- **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`** 共 5 个内置命令，无需配置，但日常使用规范中是否已知晓？
 - **Agent Teams**：是否需要启用？如需要，在 settings.json 中加入：
   ```json
   "env": {"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"}
@@ -349,7 +362,7 @@ bash .claude/hooks/on-prompt-submit.sh 2>/dev/null
 - ...
 
 ### 新功能说明
-- /simplify 和 /batch 是内置命令，无需配置，直接使用即可
+- /simplify、/batch、/debug、/loop、/claude-api 共 5 个内置命令，无需配置，直接使用即可
 - [如启用 Agent Teams] 已在 settings.json 中启用 CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
 
 ### 参考

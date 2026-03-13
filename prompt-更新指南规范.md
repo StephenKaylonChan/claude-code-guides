@@ -116,7 +116,7 @@
 
 **维度检查清单**（确保每个领域都有覆盖）：
 
-1. Hook 事件列表（当前 19 个，是否有新增/废弃）
+1. Hook 事件列表（当前 18 个，是否有新增/废弃）
 2. Hook Handler 类型和能力（updatedInput / CLAUDE_ENV_FILE / Frontmatter Hooks）
 3. Skills/Commands 系统变化
 4. CLAUDE.md 配置结构变化

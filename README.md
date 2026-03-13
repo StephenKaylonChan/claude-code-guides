@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.8（2026-03）
+> **版本**: v3.9（2026-03）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -28,7 +28,7 @@
 | 文档 | 说明 | 优先阅读 |
 |------|------|-----------|
 | [01-CLAUDE配置架构指南.md](./01-CLAUDE配置架构指南.md) | CLAUDE.md 层级结构 + Auto Memory 管理 | 配置参考 |
-| [02-Hooks自动化配置.md](./02-Hooks自动化配置.md) | 19个 Hook 事件 + 实用模板（测试门禁/自动格式化/通知） | 配置参考 |
+| [02-Hooks自动化配置.md](./02-Hooks自动化配置.md) | 18个 Hook 事件 + 实用模板（测试门禁/自动格式化/通知） | 配置参考 |
 | [03-Skills命令配置.md](./03-Skills命令配置.md) | 替代旧 Slash Commands 的 Skills 系统配置 | 第三读 |
 | [04-工作流最佳实践.md](./04-工作流最佳实践.md) | Explore→Plan→Code→Verify→Simplify→Commit、Worktrees、MCP 选型、反模式 | 随时参考 |
 
@@ -57,7 +57,7 @@
 | Auto Memory 系统 | 文档 01 |
 | Hooks 自动化（含 UserPromptSubmit 等新事件） | 文档 02 |
 | Skills 系统（升级版 Commands）| 文档 03 |
-| `/simplify` `/batch` Bundled 内置命令 | 文档 03 |
+| `/simplify` `/batch` `/debug` `/loop` `/claude-api` Bundled 内置命令 | 文档 03 |
 | `/catchup` `/handoff` 自定义命令（handoff 含自动 commit） | 文档 03 |
 | `/spec` 讨论成果整理为设计文档 | 文档 03、04 |
 | `/done` 功能完成收尾检查（Roadmap/Spec 自动同步） | 文档 03、04 |
@@ -89,7 +89,9 @@
 |------|------|------|
 | `/simplify` | PR 前三维并行代码审查并自动修复 | **每次 PR 前** |
 | `/batch <描述>` | 跨文件大规模并行变更 | 批量重构时 |
+| `/debug` | 交互式调试助手（设置断点、分析堆栈、定位根因） | Bug 调试时 |
 | `/loop <间隔> <命令>` | 定时重复执行（如 `/loop 5m /audit --quick`，最长 3 天，上限 50 任务） | 监控/轮询 |
+| `/claude-api` | Claude API / Anthropic SDK 集成指导 | 使用 Claude API 开发时 |
 
 ### 自定义 Skills（需安装到 .claude/skills/）
 
@@ -98,7 +100,7 @@
 | `/catchup` | 清空上下文后快速恢复 | 按需 |
 | `/handoff` | 提交变更 + 生成交接文档 | 中断前 |
 | `/spec` | 讨论成果整理为设计文档 | 需求讨论后 |
-| `/done` | 功能完成收尾检查（Roadmap/Spec 同步 + 部署配置检测） | 功能完成后（手动兜底） |
+| `/done` | 智能收尾检查（自动检测粒度：功能/Spec Phase/Spec 完成/Roadmap Phase） | 功能完成后 |
 | `/release` | Phase 完成文档刷新（全量更新开发文档 + Changelog） | Phase 完成后 |
 | `/audit` | 项目健康检查 | 每周 |
 | `/deep-audit` | 全面深度审计 | Phase 完成后 |
@@ -113,7 +115,8 @@
 | `/model` | 切换模型（sonnet/opus/haiku） |
 | `/rewind` | 回滚（可选仅对话 / 仅代码 / 两者同时） |
 | `/mcp` | 管理 MCP 服务器（启用/禁用/重连/OAuth） |
-| `/clear` | 清空上下文（配合 /handoff 使用） |
+| `/insights` | 会话分析报告（交互模式、项目区域、摩擦点） |
+| `/clear` | 清空上下文（别名 /reset、/new，配合 /handoff 使用） |
 | `/cost` | 查看 Token 使用量 |
 | `/context` | 可视化上下文占用 |
 
@@ -188,6 +191,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.9 | 2026-03 | `/done` 三级智能升级（自动检测完成粒度：功能/Spec Phase/Spec 完成/Roadmap Phase）、四层收尾模型、Spec 分阶段实施（Implementation Phases + Tasks/Gate/On Complete）、Spec 进度自检协议、讨论收敛机制（共识/分歧归纳）、PreCompact Hook 增强（Spec 进度保存 + `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`）、大 Spec 实施策略、auto-compact 应对 |
 | v3.8 | 2026-03 | 开发文档体系（`docs/development/` 上手指南/部署/Changelog + 代码即文档原则 + ADR 模板）、`/release` Skill、`/done` 增强（部署配置检测）、`/voice` 语音模式、`/mcp` 对话框管理 + `list_changed`、`/rewind` 回滚模式、Worktree 声明式隔离 + Hook 状态、Remote Control `--name`、`/loop` 调度增强 |
 | v3.7 | 2026-03 | Bug 修复工作流变体（复用六步循环，侧重复现+定位+回归测试），修复子节编号错位（04/03 文档） |
 | v3.6 | 2026-03 | 三层收尾模型（Commit/功能/Phase），/done Skill，Spec YAML frontmatter 生命周期，完成标准扩展文档同步，Hook 高级能力（updatedInput/CLAUDE_ENV_FILE/Frontmatter Hooks），GitHub Actions 集成，Remote Control |

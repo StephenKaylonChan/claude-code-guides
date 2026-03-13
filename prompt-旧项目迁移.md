@@ -42,7 +42,8 @@
 | 新增 | `/catchup` Skill | 清空上下文后恢复状态 |
 | 新增 | `/handoff` Skill | 提交变更 + 生成交接文档 |
 | 新增 | `/spec` Skill | 讨论成果整理为设计文档 |
-| 新增 | `/done` Skill | 功能完成收尾检查（Roadmap/Spec 同步） |
+| 新增 | `/done` Skill | 功能完成收尾检查（Roadmap/Spec 同步 + 部署配置检测） |
+| 新增 | `/release` Skill | Phase 完成文档刷新（全量更新开发文档 + Changelog） |
 
 ---
 
@@ -149,7 +150,7 @@ docs/ai-context/（整个目录）: → 删除
 - 将旧规范改写为 `MUST` / `MUST NOT` 语言（参考文档 01 的模板）
 - 删除进度信息、协作日志等动态内容
 - 技术栈版本对照实际代码确认准确
-- 确保包含**完成标准**章节，分两部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 确认代码注释）
+- 确保包含**完成标准**章节，分三部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 检测部署/环境变量变更并提示更新 deployment.md + 确认代码注释）（3）Spec 实施自检（基于 spec 开发时：每完成 task 勾 `[x]` → 检查 Phase Gate → 提醒 `/done` → 所有 Phase 完成提醒 `/release`）
 - 控制在 **150 行以内**
 
 #### 3.2 生成项目路线图（ROADMAP）
@@ -364,8 +365,9 @@ echo "退出码: $?"
 
 ### 日常使用变化
 - 不再需要：/start、/end、/checkpoint、/weekly、/monthly、/fix
-- 新的工作流：功能完成 → /simplify → 你手动 commit → 你确认 push
-- 功能收尾：/done（手动兜底检查：Roadmap/Spec 状态同步）
+- 新的工作流：功能完成 → /simplify → Claude 自动 commit（Hook 验证后）→ 你确认 push
+- 功能收尾：/done（手动兜底检查：Roadmap/Spec 状态同步 + 部署配置检测）
+- 阶段完成：/release（全量刷新开发文档）→ /deep-audit（代码审计）
 - 批量变更：/batch "描述"
 - 需求讨论后：/spec（整理讨论成果为设计文档）
 - 中断前：/handoff（自动 commit + 写交接文档）

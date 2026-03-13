@@ -2,7 +2,7 @@
 
 > Slash Commands 的进化版 — 更强大的自定义工作流命令
 
-**版本**: v3.8
+**版本**: v3.9
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -301,7 +301,7 @@ find . -name "*.md" -not -path "*/node_modules/*" | sort
 - `docs/roadmap/`：各 Phase 功能描述是否准确反映代码现状？README.md 进度统计是否正确？
 - `docs/specs/`：各 spec 的设计描述是否仍然准确反映代码现状？状态是否正确（是否有"实施中"但功能已完成的 spec）？
 - `docs/architecture/`：ADR 是否反映实际决策？
-- `docs/development/`：API 文档是否与代码同步？
+- `docs/development/`：部署文档和上手指南是否与代码同步？
 
 ## Step 3: 对比分析
 
@@ -611,6 +611,8 @@ git commit -m "docs: 更新路线图和设计文档状态" 2>/dev/null || true
 
 **用途**：需求讨论、技术方案探讨、UI 设计讨论到一定程度后，将对话中的讨论成果整理为结构化设计文档，持久化到 `docs/specs/` 目录。支持增量更新（跨多次上下文持续完善同一份 spec）。
 
+**v3.9 增强**：Spec 输出结构支持分阶段实施追踪——每个 Phase 包含 Tasks checklist、Gate 完成条件、完成触发动作，解决大 Spec 实施中途 auto-compact 后丢失进度的问题。
+
 **文件路径**: `.claude/skills/spec/SKILL.md`
 
 ````markdown
@@ -627,6 +629,8 @@ disable-model-invocation: true
 <task>
 将当前对话中的讨论成果整理为结构化设计文档，写入 docs/specs/ 目录。
 如果目标文件已存在，执行增量更新（合并新内容，保留已有内容）。
+
+重点：输出的 spec 必须包含可追踪的实施计划（Implementation Phases），每个 Phase 独立可交付、独立可验证。
 </task>
 
 <workflow>
@@ -643,9 +647,25 @@ disable-model-invocation: true
 mkdir -p docs/specs
 ```
 
-## Step 1: 提取讨论成果
+## Step 1: 收敛讨论成果
 
-回顾当前对话，提取以下内容（按需包含，不强制全部有）：
+回顾当前对话，**先归纳共识与分歧**，再提取内容：
+
+### 1a. 共识与分歧梳理
+
+在整理前，先输出一段简要总结：
+
+```
+📋 讨论收敛总结：
+✅ 已达成共识：[列出 2-5 条核心决定]
+⚠️ 待确认/分歧：[列出尚未敲定的点，如有]
+```
+
+如有待确认项，询问用户是否现在确认，或标记为 draft 后续再定。
+
+### 1b. 提取讨论内容
+
+按需提取（不强制全部有）：
 
 - 功能背景与目标
 - 需求要点和验收标准
@@ -657,9 +677,21 @@ mkdir -p docs/specs
 - 业务逻辑和处理流程
 - 调研发现（联网搜索结果、技术选型依据）
 - 约束条件和注意事项
-- 实施建议（开发顺序、依赖关系、风险点）
 
-## Step 2: 写入/更新 Spec 文件
+## Step 2: 规划实施阶段
+
+将功能拆分为 **2-5 个 Implementation Phases**，每个 Phase 必须满足：
+
+- **独立可交付**：完成后有可验证的产出（不是"写了一半的模块"）
+- **独立可验证**：有明确的 Gate 条件可以检查
+- **上下文友好**：单个 Phase 的实施不超过一个上下文窗口（约 30 分钟人工等效工作量）
+
+Phase 拆分原则：
+- 数据层 → API 层 → UI 层（后端优先）
+- 或按功能模块独立拆分（各模块无强依赖时）
+- 简单功能（预估 < 30 分钟）可以只有 1 个 Phase
+
+## Step 3: 写入/更新 Spec 文件
 
 **新建模式** — 写入 `docs/specs/<name>.md`：
 
@@ -670,6 +702,8 @@ status: draft
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 phase: phase-N
+total_phases: 3
+active_phase: 1
 ---
 
 # [功能名称] 设计文档
@@ -720,9 +754,44 @@ phase: phase-N
 
 [性能要求、安全考虑、兼容性、已知限制]
 
-## 实施备注
+## Implementation Phases
 
-[开发顺序建议、依赖关系、风险点]
+### Phase 1: [阶段名称，如"数据模型与迁移"]
+**Tasks**:
+- [ ] [具体任务 1]
+- [ ] [具体任务 2]
+- [ ] [具体任务 3]
+
+**Gate（全部满足才算完成）**:
+- [ ] 所有 Tasks 已勾选
+- [ ] 相关测试通过
+- [ ] 无 lint errors
+
+**On Complete**: 更新 active_phase → 2，建议执行 /done
+
+### Phase 2: [阶段名称，如"API 端点实现"]
+**Tasks**:
+- [ ] [具体任务 1]
+- [ ] [具体任务 2]
+
+**Gate**:
+- [ ] 所有 Tasks 已勾选
+- [ ] API 测试通过
+- [ ] 与 Phase 1 集成验证通过
+
+**On Complete**: 更新 active_phase → 3，建议执行 /done
+
+### Phase 3: [阶段名称，如"前端 UI 集成"]
+**Tasks**:
+- [ ] [具体任务 1]
+- [ ] [具体任务 2]
+
+**Gate**:
+- [ ] 所有 Tasks 已勾选
+- [ ] 端到端测试通过
+- [ ] UI 响应式检查通过
+
+**On Complete**: 所有 Phase 完成，建议执行 /done + /release（如当前 Roadmap Phase 也完成）
 ```
 
 **增量更新模式** — 读取已有文件，将新讨论成果合并到对应模块：
@@ -730,15 +799,16 @@ phase: phase-N
 - 新增内容融入对应章节
 - 更新 frontmatter 中的 `updated` 日期
 - 如果讨论推翻了之前的结论，更新对应内容并在"讨论过的方案"中记录变更原因
+- Implementation Phases 已完成的 Phase 保留 `[x]` 状态不动
 
-## Step 3: 检查 ROADMAP 关联
+## Step 4: 检查 ROADMAP 关联
 
 如果 `docs/roadmap/` 存在：
 - 检查当前 spec 对应的功能是否在 ROADMAP 中有对应条目
 - 如有 → 在 spec 头部填写关联信息
 - 如无 → 提示用户是否需要添加到 ROADMAP
 
-## Step 4: 判断状态
+## Step 5: 判断状态
 
 根据讨论充分程度判断 frontmatter 中的 `status`：
 - `draft`：讨论还在进行中，部分模块尚未确定
@@ -761,19 +831,21 @@ draft → approved → implementing → implemented → [deprecated | superseded
 | `deprecated` | 已弃用 | 技术/业务变化 | 手动更新 |
 | `superseded` | 被替代 | 新 spec 取代 | 手动更新（在 frontmatter 中注明替代文件） |
 
-## Step 5: 输出确认
+## Step 6: 输出确认
 
 ```
 ✅ Spec 已生成/更新
 
 文件：docs/specs/<name>.md
 状态：草稿 / 已确认
+实施阶段：[N] 个 Phase，当前 Phase [active_phase]
 内容：需求 [N] 项、设计方案 [N] 个、API [N] 个、UI [N] 个页面、...
 关联 ROADMAP：[有/无]
 
 建议下一步：
 - 继续讨论 → 讨论后再次 /spec 更新
-- 开始实施 → /clear 后 "读取 docs/specs/<name>.md，开始实施"
+- 开始实施 → /clear 后 "读取 docs/specs/<name>.md，开始实施 Phase 1"
+  （每次只实施一个 Phase，完成 Gate 后再进入下一个）
 - 确认内容 → 告诉我"确认"，状态改为"已确认"
 ```
 
@@ -782,9 +854,11 @@ draft → approved → implementing → implemented → [deprecated | superseded
 
 ---
 
-### 5.4 /done — 功能完成收尾
+### 5.4 /done — 智能收尾检查（v3.9 增强）
 
-**用途**：一个功能开发完成后，执行完整的收尾检查：验证代码质量、同步文档状态（Roadmap + Spec）、检测部署配置变更、确认无遗漏。大多数情况下，完成标准会自动执行文档同步；`/done` 作为手动兜底，偶尔执行以确保没有遗漏。
+**用途**：功能或 Spec Phase 完成后，执行收尾检查。`/done` 会**自动检测完成粒度**——单个功能、Spec 某个 Phase、Spec 全部完成、Roadmap Phase 全部完成——根据粒度执行不同深度的收尾动作。
+
+**v3.9 变化**：从"固定单功能收尾"升级为"三级自动升级"——一个命令覆盖所有完成粒度，用户不需要判断该用 `/done` 还是 `/release`。
 
 **文件路径**: `.claude/skills/done/SKILL.md`
 
@@ -792,21 +866,22 @@ draft → approved → implementing → implemented → [deprecated | superseded
 ---
 name: done
 description: |
-  功能完成收尾检查。验证代码质量，同步文档状态（Roadmap + Spec），检测部署配置变更，确认无遗漏。
-  触发关键词：功能完成、收尾检查、done、wrap up
+  智能收尾检查。自动检测完成粒度（功能/Spec Phase/Spec 完成/Roadmap Phase 完成），
+  执行对应深度的验证和文档同步。
+  触发关键词：功能完成、收尾检查、done、wrap up、Phase 完成
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 disable-model-invocation: true
 ---
 
 <task>
-对刚完成的功能执行完整的收尾检查：代码验证 + 文档同步 + 状态汇总。
+智能收尾检查：自动检测完成粒度，执行对应深度的代码验证 + 文档同步 + 状态汇总。
 </task>
 
 <workflow>
 
-## Step 0: 识别刚完成的功能
+## Step 0: 识别完成范围
 
-- 查看最近的 git log 和 diff，确定刚完成了什么功能
+- 查看最近的 git log 和 diff，确定刚完成了什么
 - 如果用户提供了功能名称，以用户说明为准
 
 ```bash
@@ -842,17 +917,42 @@ ls docs/roadmap/
 - 将对应的 checkbox 从 `- [ ]` 改为 `- [x] ✅ YYYY/MM/DD`
 - 更新 `docs/roadmap/README.md` 中的进度统计
 
-## Step 3: Spec 状态更新
+## Step 3: Spec 状态智能检测
 
-如果 `docs/specs/` 存在：
+如果 `docs/specs/` 存在，找到关联的 spec 文件：
 
 ```bash
-ls docs/specs/
+# 查找状态为 implementing 的 spec
+grep -rl "status: implementing" docs/specs/ 2>/dev/null
 ```
 
-- 找到与当前功能关联的 spec 文件
-- 将 frontmatter 中的 `status` 从 `implementing` 更新为 `implemented`
-- 更新 `updated` 日期
+读取 spec 文件，检查 Implementation Phases 的完成情况：
+
+### 情况 A：Spec 有 Implementation Phases（v3.9 结构）
+
+检查当前 `active_phase` 对应的 Phase：
+- 所有 Tasks 是否已勾 `[x]`？
+- Gate 条件是否全部满足？
+
+**如果当前 Phase 的 Gate 通过**：
+1. 更新 spec frontmatter 的 `active_phase` → 下一个 Phase
+2. 检查是否所有 Phase 都已完成（`active_phase` > `total_phases`）
+   - **否（还有后续 Phase）** → 记录"Spec Phase N 完成，进入 Phase N+1"
+   - **是（Spec 全部完成）** → 进入 Step 3b
+
+### 情况 B：Spec 无 Implementation Phases（旧结构）
+
+直接进入 Step 3b（视为整体完成）
+
+### Step 3b: Spec 完全完成时的额外动作
+
+当 Spec 的所有 Phase 完成（或无 Phase 的 spec 功能完成）时：
+1. 将 frontmatter `status` 从 `implementing` 更新为 `implemented`
+2. 更新 `updated` 日期
+3. 扫描该 Spec 涉及的所有代码变更，检测是否有：
+   - 部署/配置变更 → 提示更新 deployment.md
+   - 新增依赖/启动步骤 → 提示检查 getting-started.md
+   - 新技术选型 → 提示是否需要新增 ADR
 
 ## Step 4: 开发文档检测
 
@@ -874,31 +974,60 @@ git diff --stat HEAD~3 -- '**/.env*' '**/docker*' '**/deploy*' '**/Dockerfile*' 
 
 运行 `/simplify` 进行三维并行审查（如果本次还未运行过）。
 
-## Step 6: 提交文档变更
+## Step 6: Roadmap Phase 完成检测
+
+检查当前 Roadmap Phase 的所有功能是否都已完成（所有 checkbox 已勾选）：
+
+- **否** → 记录"Roadmap Phase N 还剩 [M] 个功能未完成"
+- **是** → 建议执行 `/release` 进行全量文档刷新
+
+> `/done` 只**建议** `/release`，不自动执行。`/release` 涉及全量文档扫描和 Changelog 生成，应由用户主动触发。
+
+## Step 7: 提交文档变更
 
 如果 Step 2-4 产生了文档更新：
 
 ```bash
 git add docs/
-git commit -m "docs: 更新 [功能名] 的 roadmap、spec 状态和开发文档"
+git commit -m "docs: 更新 [功能名/spec名] 的 roadmap、spec 状态和开发文档"
 ```
 
-## Step 7: 输出状态汇总
+## Step 8: 输出状态汇总
 
+根据检测到的完成粒度，输出对应的汇总：
+
+**单功能 / Spec 单个 Phase 完成**：
 ```
 ✅ 功能收尾完成
 
 功能：[功能名称]
 代码验证：✅ 测试通过 | ✅ Lint 通过
 Roadmap：✅ Phase N — [条目] 已勾选 / ⏭️ 无关联条目
-Spec：✅ [spec名].md → implemented / ⏭️ 无关联 Spec
-部署文档：✅ deployment.md 已更新 / ⏭️ 无需更新 / ⚠️ 建议更新（用户跳过）
+Spec：✅ Phase [M/N] 完成，进入 Phase [M+1] / ⏭️ 无关联 Spec
 代码审查：✅ /simplify 已执行 / ⏭️ 之前已执行
 
-下一步建议：
-- 继续下一个功能
-- git push 推送到远程
-- /release（如果当前 Phase 接近完成）
+下一步：继续实施 Spec Phase [M+1] / 继续下一个功能
+```
+
+**Spec 全部完成**：
+```
+🎉 Spec 全部完成
+
+Spec：[spec名].md → implemented ✅
+代码验证：✅ 测试通过 | ✅ Lint 通过
+Roadmap：✅ Phase N — [条目] 已勾选
+部署文档：✅ 已更新 / ⏭️ 无需更新 / ⚠️ 建议更新
+代码审查：✅ /simplify 已执行
+
+Roadmap Phase 状态：还剩 [M] 个功能 / 🎯 全部完成，建议执行 /release
+```
+
+**Roadmap Phase 也全部完成**：
+```
+🎉 Roadmap Phase N 全部完成！
+
+所有功能已完成，所有 Spec 已 implemented。
+建议执行 /release 进行全量文档刷新（部署/上手指南/Changelog/ADR）。
 ```
 
 </workflow>
@@ -908,16 +1037,22 @@ Spec：✅ [spec名].md → implemented / ⏭️ 无关联 Spec
 
 | 方式 | 触发 | 覆盖内容 |
 |------|------|---------|
-| **自动**（推荐） | CLAUDE.md 完成标准，Claude 报告"功能完成"前自动执行 | 代码验证 + 文档同步 |
-| **手动** `/done` | 用户显式调用 | 完整检查（含 /simplify 审查 + 状态汇总） |
+| **自动**（推荐） | CLAUDE.md 完成标准，Claude 报告"功能完成"前自动执行 | 代码验证 + 文档同步 + Spec Phase 勾选 |
+| **手动** `/done` | 用户显式调用 | 完整检查（含 /simplify 审查 + Spec 完成度检测 + Roadmap Phase 检测 + 状态汇总） |
 
-日常开发中，完成标准驱动 Claude 自动完成文档同步。`/done` 用于阶段性核查，确保没有遗漏。
+**三级自动升级**：用户只需执行 `/done`，Skill 自动判断完成粒度并执行对应动作：
+
+| 检测到的完成粒度 | `/done` 自动做的事 |
+|-----------------|-------------------|
+| **Spec 单个 Phase** | 更新 active_phase，基础验证 |
+| **Spec 全部完成** | 上述 + status→implemented + 开发文档检测 + ADR 检查 |
+| **Roadmap Phase 完成** | 上述 + 建议执行 `/release` |
 
 ---
 
 ### 5.5 /release — Phase 完成文档刷新
 
-**用途**：一个 Phase 的所有功能完成后，全量扫描代码变更，自动刷新所有开发文档（API、数据库、部署、上手指南），生成 Changelog 条目，更新 Roadmap Phase 状态，检查是否需要新增 ADR。
+**用途**：一个 Phase 的所有功能完成后，全量扫描代码变更，自动刷新开发文档（部署、上手指南），生成 Changelog 条目，更新 Roadmap Phase 状态，检查是否需要新增 ADR。
 
 **文件路径**: `.claude/skills/release/SKILL.md`
 
@@ -925,7 +1060,7 @@ Spec：✅ [spec名].md → implemented / ⏭️ 无关联 Spec
 ---
 name: release
 description: |
-  Phase 完成文档刷新。全量更新开发文档（API/数据库/部署/上手指南），生成 Changelog，更新 Phase 状态。
+  Phase 完成文档刷新。全量更新开发文档（部署/上手指南），生成 Changelog，更新 Phase 状态。
   触发关键词：release、发版、Phase 完成、阶段完成、全量文档刷新
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 disable-model-invocation: true
@@ -1049,7 +1184,7 @@ git commit -m "docs: Phase N [Phase名称] 完成 — 全量更新开发文档"
 
 ## 6. Anthropic 内置命令（Bundled Skills）
 
-Claude Code 2.x 内置了两个由 Anthropic 维护的 bundled 命令，随版本自动更新，**无需手动配置，直接使用**。
+Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版本自动更新，**无需手动配置，直接使用**。
 
 ### 6.1 /simplify — 代码简化审查
 
@@ -1091,9 +1226,47 @@ Claude Code 2.x 内置了两个由 Anthropic 维护的 bundled 命令，随版�
 
 ---
 
+### 6.3 /debug — 交互式调试助手
+
+**何时用**：遇到难以定位的 Bug 时，让 Claude 引导你逐步调试。
+
+```bash
+/debug                         # 从当前错误开始调试
+/debug "TypeError in auth flow" # 指定问题描述
+```
+
+**内部机制**：Claude 会引导你设置断点、分析堆栈跟踪、检查变量状态，逐步缩小问题范围直到定位根因。
+
+---
+
+### 6.4 /loop — 定时重复执行
+
+**何时用**：需要定期检查状态或重复执行任务时。
+
+```bash
+/loop 5m /audit --quick        # 每 5 分钟跑一次快速审查
+/loop 10m "检查 CI 状态"       # 每 10 分钟检查 CI
+```
+
+**限制**：默认间隔 10 分钟，最长运行 3 天，上限 50 个任务。
+
+---
+
+### 6.5 /claude-api — Claude API 集成指导
+
+**何时用**：项目中需要使用 Claude API 或 Anthropic SDK 时。
+
+```bash
+/claude-api                    # 获取 API 集成指导
+```
+
+**内部机制**：提供 Claude API 的最佳实践、SDK 用法、Tool Use 配置等专业指导。
+
+---
+
 ### 区分 Bundled 命令 vs 自定义 Skills
 
-| 维度 | Bundled（/simplify /batch） | 自定义 Skills |
+| 维度 | Bundled（/simplify /batch /debug /loop /claude-api） | 自定义 Skills |
 |------|---------------------------|--------------|
 | 维护方 | Anthropic（随版本更新） | 你自己 |
 | 配置位置 | 无需配置，内置 | `.claude/skills/*/SKILL.md` |
@@ -1172,5 +1345,5 @@ rm -rf .claude/commands/
 
 ---
 
-**版本**: v3.8
+**版本**: v3.9
 **更新日期**: 2026-03
