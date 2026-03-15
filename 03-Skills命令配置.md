@@ -300,7 +300,8 @@ find . -name "*.md" -not -path "*/node_modules/*" | sort
 - `.claude/rules/`：路径 glob 是否仍然匹配实际文件？
 - `docs/roadmap/`：各 Phase 功能描述是否准确反映代码现状？README.md 进度统计是否正确？
 - `docs/specs/`：各 spec 的设计描述是否仍然准确反映代码现状？状态是否正确（是否有"实施中"但功能已完成的 spec）？
-- `docs/architecture/`：ADR 是否反映实际决策？
+- `docs/architecture/README.md`：架构认知地图是否与代码现状一致（模块划分、组件分层、数据流、非直觉设计）？
+- `docs/architecture/adr/`：ADR 是否反映实际决策？
 - `docs/development/`：部署文档和上手指南是否与代码同步？
 
 ## Step 3: 对比分析
@@ -426,10 +427,11 @@ git log --oneline @{u}.. 2>/dev/null || echo "（无法获取，可能没有追�
 依次读取（按重要性）：
 1. `CLAUDE.md`（项目规范）
 2. `.claude/session-notes.md`（如果存在，是压缩前保存的进度）
-3. `docs/roadmap/README.md`（如果存在，项目整体进度）
-4. 当前 Phase 文件（从 README.md 中确定当前 Phase，读取对应文件）
-5. `docs/specs/` 中状态为"实施中"或"已确认"的 spec 文件（如有，当前正在实施或待实施的设计文档）
-6. 最近修改的源文件（`git diff HEAD~3 --name-only` 列出的文件）
+3. `docs/architecture/README.md`（如果存在，项目架构认知地图）
+4. `docs/roadmap/README.md`（如果存在，项目整体进度）
+5. 当前 Phase 文件（从 README.md 中确定当前 Phase，读取对应文件）
+6. `docs/specs/` 中状态为"实施中"或"已确认"的 spec 文件（如有，当前正在实施或待实施的设计文档）
+7. 最近修改的源文件（`git diff HEAD~3 --name-only` 列出的文件）
 
 ## Step 2: 输出恢复摘要
 
@@ -956,6 +958,8 @@ grep -rl "status: implementing" docs/specs/ 2>/dev/null
 
 ## Step 4: 开发文档检测
 
+### 4a. 部署配置检测
+
 检测本次改动是否涉及部署/配置变更：
 
 ```bash
@@ -968,7 +972,25 @@ git diff --stat HEAD~3 -- '**/.env*' '**/docker*' '**/deploy*' '**/Dockerfile*' 
 - 用户确认后执行增量更新
 - 用户拒绝则跳过（不阻断流程）
 
-> 注意：API 文档和数据库文档不需要手动维护 — FastAPI/Spring Boot 自动生成 API 文档，ORM 模型定义本身就是数据库文档。此步骤仅关注代码中无法自动体现的部署信息。
+### 4b. 架构文档检测
+
+检测本次改动是否涉及结构性变更：
+
+```bash
+# 检测新增目录/模块
+git diff --stat HEAD~3 --diff-filter=A -- '*/' | head -20
+# 检测新增的顶层源文件目录
+git diff --name-only HEAD~3 --diff-filter=A | grep -E '^(apps|src|packages|modules)/' | cut -d/ -f1-2 | sort -u
+```
+
+如果 `docs/architecture/README.md` 存在且检测到以下任一：
+- 新增了顶层模块/目录
+- 新增了数据流路径（新的 middleware、新的数据源）
+- 变更了组件分层结构
+
+提示："检测到结构性变更，建议更新 `docs/architecture/README.md`，是否现在更新？"
+
+> 注意：API 文档和数据库文档不需要手动维护 — FastAPI/Spring Boot 自动生成 API 文档，ORM 模型定义本身就是数据库文档。此步骤仅关注代码中无法自动体现的部署和架构信息。
 
 ## Step 5: 代码审查
 
@@ -1133,7 +1155,19 @@ git log --oneline --no-merges --since="[Phase 开始日期]" | grep -E "^[a-f0-9
 - **Changed**: refactor/perf 类型的提交
 - **Removed**: 删除功能的提交
 
-## Step 5: 检查 ADR
+## Step 5: 检查架构文档与 ADR
+
+### 5a. 审查架构认知地图
+
+如果 `docs/architecture/README.md` 存在：
+
+- 读取文档内容，对照本 Phase 的代码变更
+- 检查模块划分是否仍然准确（有无新增/删除/重组模块）
+- 检查组件分层描述是否仍然正确
+- 检查数据流描述是否需要更新
+- 如有不一致，执行增量更新
+
+### 5b. 检查 ADR
 
 检查本 Phase 是否有需要记录的架构决策：
 

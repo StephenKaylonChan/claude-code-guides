@@ -180,11 +180,14 @@ mkdir -p docs/roadmap
 - `docs/roadmap/README.md` — 总览：Phase 列表 + 当前聚焦的 Phase + 进度统计
 - `docs/roadmap/phase-N-名称.md` — 每个 Phase 一个文件，含 checkbox 进度
 
-**在 CLAUDE.md 中添加引用**（只引用总览 + 当前 Phase）：
+**在 CLAUDE.md 中添加引用**：
 ```markdown
+@docs/architecture/README.md
 @docs/roadmap/README.md
 @docs/roadmap/phase-N-名称.md
 ```
+
+架构文档始终引用；路线图只引用总览 + 当前 Phase。
 
 ---
 
@@ -260,9 +263,11 @@ mkdir -p docs/specs docs/development docs/architecture/adr
 
 - `docs/specs/` — `/spec` Skill 生成的设计文档存放目录
 - `docs/development/` — 开发文档（参考 `04-工作流最佳实践.md` 第 7 节的模板按需生成）
-- `docs/architecture/adr/` — 架构决策记录
+- `docs/architecture/` — 架构认知地图 + 决策记录
 
 根据项目已有的代码和文档，按需生成开发文档初始文件：
+- 生成 `docs/architecture/README.md` — **架构认知地图**：根据 Explore 结果 + 旧 CONTEXT.md 中的架构信息，生成模块划分、组件分层、数据流、非直觉设计约定（30-80 行）
+- 创建 `docs/architecture/adr/README.md` — ADR 索引
 - 生成 `docs/development/getting-started.md`（新人上手指南）
 - 生成 `docs/development/deployment.md`（如有部署配置）
 - 创建 `docs/development/changelog.md` 空模板

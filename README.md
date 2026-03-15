@@ -65,6 +65,7 @@
 | GitHub Actions 集成 + Remote Control | 文档 04 |
 | `docs/roadmap/` 项目进度跟踪系统 | 文档 00、03、04 |
 | `docs/specs/` 功能设计文档目录 | 文档 03、04 |
+| `docs/architecture/README.md` 架构认知地图（模块划分/组件分层/数据流/非直觉设计） | 文档 04 |
 | `docs/development/` 开发文档体系（上手指南/部署/Changelog + 代码即文档原则） | 文档 04 |
 | `/release` Phase 完成文档刷新 Skill | 文档 03、04 |
 | `docs/architecture/adr/` ADR 模板 | 文档 04 |
@@ -172,6 +173,7 @@ project-root/
     │   ├── deployment.md          #   手写：部署流程、环境变量、回滚
     │   └── changelog.md           #   自动生成：版本发布记录
     └── architecture/
+        ├── README.md              # 架构认知地图（@引用自动加载）
         └── adr/                   # 架构决策记录（/release 检查是否需要新增）
 ```
 
@@ -193,7 +195,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
-| v3.10 | 2026-03 | 新增 `/nbp2` AI 生图 Prompt 助手 Skill（Nano Banana Pro 2 六要素公式 + 进阶技巧），Skills 总数 7→8 |
+| v3.10 | 2026-03 | 架构认知地图（`docs/architecture/README.md` — 项目组织方式/模块划分/数据流，`@`引用自动加载，`/release` 审查 + `/deep-audit` 验证 + `/done` 结构性变更检测）、`/nbp2` AI 生图 Prompt 助手 Skill、Skills 总数 7→8 |
 | v3.9 | 2026-03 | `/done` 三级智能升级（自动检测完成粒度：功能/Spec Phase/Spec 完成/Roadmap Phase）、四层收尾模型、Spec 分阶段实施（Implementation Phases + Tasks/Gate/On Complete）、Spec 进度自检协议、讨论收敛机制（共识/分歧归纳）、PreCompact Hook 增强（Spec 进度保存 + `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`）、大 Spec 实施策略、auto-compact 应对 |
 | v3.8 | 2026-03 | 开发文档体系（`docs/development/` 上手指南/部署/Changelog + 代码即文档原则 + ADR 模板）、`/release` Skill、`/done` 增强（部署配置检测）、`/voice` 语音模式、`/mcp` 对话框管理 + `list_changed`、`/rewind` 回滚模式、Worktree 声明式隔离 + Hook 状态、Remote Control `--name`、`/loop` 调度增强 |
 | v3.7 | 2026-03 | Bug 修复工作流变体（复用六步循环，侧重复现+定位+回归测试），修复子节编号错位（04/03 文档） |

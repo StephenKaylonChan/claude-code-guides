@@ -180,9 +180,16 @@ ls .claude/rules/ 2>/dev/null
 
 > 注意：不需要 api.md 和 database.md — FastAPI/Spring Boot 自动生成 API 文档，ORM 模型定义本身就是数据库文档。
 
-检查 `docs/architecture/adr/` 目录：
-- 是否存在？不存在则创建目录和 README.md 索引
-- 是否有 ADR 模板可参考
+检查 `docs/architecture/` 目录：
+
+| 文件 | 状态 | 处理方式 |
+|------|------|---------|
+| `README.md`（架构认知地图） | 不存在 | 需要新建（使用 Explore Subagent 扫描项目后生成，30-80 行） |
+| `README.md` | 存在 | 检查内容是否与代码现状一致（模块划分、组件分层、数据流） |
+| `adr/` | 不存在 | 创建目录和 README.md 索引 |
+| `adr/` | 存在 | 检查是否有 ADR 模板可参考 |
+
+检查 CLAUDE.md 中是否有 `@docs/architecture/README.md` 引用，如无则添加。
 
 检查 CLAUDE.md 完成标准是否包含开发文档检测步骤（v3.8 要求）。
 
@@ -246,7 +253,11 @@ ls .claude/rules/ 2>/dev/null
 - **讨论收敛机制**：`/spec` Step 1a 自动归纳共识与分歧，避免讨论发散。
 
 **v3.10 新增**：
+- **架构认知地图**：`docs/architecture/README.md` — 描述项目"怎么组织的"（模块划分、组件分层、数据流、非直觉设计），Claude 每次会话通过 `@` 引用自动加载，减少反复 explore。检查是否存在，不存在则新建。检查 CLAUDE.md 是否有 `@docs/architecture/README.md` 引用。
 - **`/nbp2` AI 生图 Prompt 助手**：新增 Nano Banana Pro 2 生图 Prompt Skill。检查 `.claude/skills/nbp2/SKILL.md` 是否存在，不存在则新建（参考 03-Skills 模板）。
+- **`/done` Step 4 扩展**：新增架构文档检测（结构性变更时提示更新）。
+- **`/release` Step 5 扩展**：Phase 完成时审查架构认知地图是否仍准确。
+- **`/deep-audit` 扩展**：验证架构文档与代码是否一致。
 
 **Bundled 命令**：
 - **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`** 共 5 个内置命令，无需配置，但日常使用规范中是否已知晓？

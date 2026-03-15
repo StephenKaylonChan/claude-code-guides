@@ -140,13 +140,14 @@ mkdir -p docs/roadmap
 
 #### 3.5 在 CLAUDE.md 中添加引用
 
-在后续生成的 CLAUDE.md 中加入当前 Phase 的引用：
+在后续生成的 CLAUDE.md 中加入引用：
 ```markdown
+@docs/architecture/README.md
 @docs/roadmap/README.md
 @docs/roadmap/phase-N-名称.md
 ```
 
-只引用总览 + 当前 Phase，已完成的 Phase 不引用。
+架构文档始终引用；路线图只引用总览 + 当前 Phase，已完成的 Phase 不引用。
 
 ---
 
@@ -249,14 +250,15 @@ mkdir -p docs/roadmap docs/specs docs/development docs/architecture/adr
 - `docs/roadmap/` — Phase 3 已创建路线图文件
 - `docs/specs/` — `/spec` Skill 生成的设计文档存放目录
 - `docs/development/` — 开发文档（上手指南/部署/Changelog）
-- `docs/architecture/adr/` — 架构决策记录
+- `docs/architecture/` — 架构认知地图 + 决策记录
 
 根据项目实际情况，按需生成开发文档初始文件（参考文档 `04-工作流最佳实践.md` 第 7 节的模板）：
 
+- `docs/architecture/README.md` — **架构认知地图**：根据 Phase 1 的探索结果生成，描述模块划分、组件分层、数据流、非直觉设计约定（30-80 行）
+- `docs/architecture/adr/README.md` — 创建 ADR 索引
 - `docs/development/getting-started.md` — 根据项目实际环境要求和启动步骤生成
 - `docs/development/deployment.md` — 根据项目部署方式生成
 - `docs/development/changelog.md` — 创建空模板
-- `docs/architecture/adr/README.md` — 创建 ADR 索引
 
 > 注意：不需要手写 API 文档和数据库文档 — FastAPI 自带 `/docs`（Swagger UI），Spring Boot 配合 springdoc 自动生成；数据库结构看 ORM 模型定义即可。在 CLAUDE.md 中指明源码路径（如 `apps/api/routers/`、`apps/api/models/`）让 Claude 知道去哪找。
 
