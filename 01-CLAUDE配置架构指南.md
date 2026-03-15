@@ -2,7 +2,7 @@
 
 > Claude Code 原生记忆系统 — 告别手动维护，拥抱自动化记忆
 
-**版本**: v3.9
+**版本**: v3.10
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -127,6 +127,7 @@ project-root/
     │   ├── deployment.md          #   手写：部署流程、环境变量、回滚
     │   └── changelog.md           #   自动生成：版本发布记录
     └── architecture/
+        ├── README.md              # 架构认知地图（@引用自动加载）
         └── adr/                   # 架构决策记录（/release 检查是否需要新增）
 ```
 
@@ -135,7 +136,7 @@ project-root/
 | 文件 | 目标行数 | 估算 Token |
 |------|---------|-----------|
 | 根 `CLAUDE.md` | < 150 行 | ~1200 |
-| `@` 引用文件（roadmap 总览 + 当前 Phase） | 按需 | ~800-1500 |
+| `@` 引用文件（架构文档 + roadmap 总览 + 当前 Phase） | 按需 | ~1200-2500 |
 | 子目录 `CLAUDE.md`（各） | < 100 行 | ~800 |
 | `.claude/rules/`（各） | < 60 行 | ~500 |
 | 全局 `~/.claude/CLAUDE.md` | < 60 行 | ~500 |
@@ -264,6 +265,7 @@ type: feat | fix | docs | refactor | perf | test | chore
 
 ## 引用文档
 
+@docs/architecture/README.md
 @docs/roadmap/README.md
 @docs/roadmap/phase-2-核心业务.md
 ````
@@ -455,5 +457,5 @@ rm docs/ai-context/CURRENT.md
 
 ---
 
-**版本**: v3.9
+**版本**: v3.10
 **更新日期**: 2026-03
