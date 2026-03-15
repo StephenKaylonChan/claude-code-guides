@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.9（2026-03）
+> **版本**: v3.10（2026-03）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -102,6 +102,7 @@
 | `/spec` | 讨论成果整理为设计文档 | 需求讨论后 |
 | `/done` | 智能收尾检查（自动检测粒度：功能/Spec Phase/Spec 完成/Roadmap Phase） | 功能完成后 |
 | `/release` | Phase 完成文档刷新（全量更新开发文档 + Changelog） | Phase 完成后 |
+| `/nbp2` | AI 生图 Prompt 助手（Nano Banana Pro 2） | 需要生图时 |
 | `/audit` | 项目健康检查 | 每周 |
 | `/deep-audit` | 全面深度审计 | Phase 完成后 |
 
@@ -143,7 +144,8 @@ project-root/
 │   │   ├── handoff/SKILL.md
 │   │   ├── spec/SKILL.md
 │   │   ├── done/SKILL.md
-│   │   └── release/SKILL.md
+│   │   ├── release/SKILL.md
+│   │   └── nbp2/SKILL.md
 │   ├── agents/                    # 自定义子代理（可选）
 │   └── hooks/                     # Hook 脚本
 │       ├── session-start.sh
@@ -191,6 +193,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.10 | 2026-03 | 新增 `/nbp2` AI 生图 Prompt 助手 Skill（Nano Banana Pro 2 六要素公式 + 进阶技巧），Skills 总数 7→8 |
 | v3.9 | 2026-03 | `/done` 三级智能升级（自动检测完成粒度：功能/Spec Phase/Spec 完成/Roadmap Phase）、四层收尾模型、Spec 分阶段实施（Implementation Phases + Tasks/Gate/On Complete）、Spec 进度自检协议、讨论收敛机制（共识/分歧归纳）、PreCompact Hook 增强（Spec 进度保存 + `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`）、大 Spec 实施策略、auto-compact 应对 |
 | v3.8 | 2026-03 | 开发文档体系（`docs/development/` 上手指南/部署/Changelog + 代码即文档原则 + ADR 模板）、`/release` Skill、`/done` 增强（部署配置检测）、`/voice` 语音模式、`/mcp` 对话框管理 + `list_changed`、`/rewind` 回滚模式、Worktree 声明式隔离 + Hook 状态、Remote Control `--name`、`/loop` 调度增强 |
 | v3.7 | 2026-03 | Bug 修复工作流变体（复用六步循环，侧重复现+定位+回归测试），修复子节编号错位（04/03 文档） |

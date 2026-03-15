@@ -69,7 +69,7 @@ Stop：是否需要完成通知？（macOS / Linux）
 **Skills 选择**：
 
 ```
-必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、done（功能完成收尾）、release（Phase 完成文档刷新）
+必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、done（功能完成收尾）、release（Phase 完成文档刷新）、nbp2（AI 生图 Prompt 助手）
 可选：是否有项目特定的高频操作值得封装为命令？
 ```
 
@@ -185,7 +185,8 @@ mkdir -p docs/roadmap
 │   ├── handoff/SKILL.md       # 含自动 commit 逻辑（方案B）
 │   ├── spec/SKILL.md          # 讨论成果整理为设计文档
 │   ├── done/SKILL.md          # 功能完成收尾检查
-│   └── release/SKILL.md       # Phase 完成文档刷新
+│   ├── release/SKILL.md       # Phase 完成文档刷新
+│   └── nbp2/SKILL.md          # AI 生图 Prompt 助手
 ├── agents/                    # 自定义子代理（可选）
 └── hooks/
     ├── session-start.sh
@@ -233,6 +234,7 @@ chmod +x .claude/hooks/*.sh
 - `spec/SKILL.md`：将需求讨论成果整理为结构化设计文档，写入 `docs/specs/`
 - `done/SKILL.md`：功能完成收尾检查（验证 + Roadmap 更新 + Spec 状态更新 + 部署配置检测）
 - `release/SKILL.md`：Phase 完成文档刷新（全量更新开发文档 + Changelog + ADR 检查）
+- `nbp2/SKILL.md`：AI 生图 Prompt 助手（Nano Banana Pro 2 六要素公式 + 进阶技巧）
 
 #### 5.4 创建路径感知规则（Monorepo 或前后端分离项目）
 
@@ -278,7 +280,7 @@ CLAUDE.local.md
 [✓] CLAUDE.md 中已添加 @docs/roadmap/README.md 和当前 Phase 引用
 [✓] .claude/settings.json 格式正确（可用 jq . .claude/settings.json 验证）
 [✓] .claude/hooks/ 所有脚本有执行权限（ls -la .claude/hooks/）
-[✓] .claude/skills/ 7 个 Skill 已创建（audit / deep-audit / catchup / handoff / spec / done / release）
+[✓] .claude/skills/ 8 个 Skill 已创建（audit / deep-audit / catchup / handoff / spec / done / release / nbp2）
 [✓] docs/development/ 目录已创建，按需生成初始文档
 [✓] docs/architecture/adr/ 目录已创建
 [✓] .gitignore 包含 CLAUDE.local.md、session-notes.md 等
@@ -322,7 +324,7 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 - 子目录 CLAUDE.md: [数量] 个（如有）
 - .claude/rules/: [数量] 个规则文件（如有）
 - Hooks 已启用: [SessionStart / PreToolUse / PostToolUse / Stop / UserPromptSubmit（如有）]
-- Skills: audit / deep-audit / catchup / handoff / spec / done / release
+- Skills: audit / deep-audit / catchup / handoff / spec / done / release / nbp2
 - 开发文档: docs/development/（[已生成的文档列表]）
 - Agent Teams: [已启用 / 未启用]
 

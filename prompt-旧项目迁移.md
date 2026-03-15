@@ -44,6 +44,7 @@
 | 新增 | `/spec` Skill | 讨论成果整理为设计文档 |
 | 新增 | `/done` Skill | 功能完成收尾检查（Roadmap/Spec 同步 + 部署配置检测） |
 | 新增 | `/release` Skill | Phase 完成文档刷新（全量更新开发文档 + Changelog） |
+| 新增 | `/nbp2` Skill | AI 生图 Prompt 助手（Nano Banana Pro 2） |
 
 ---
 
@@ -227,7 +228,8 @@ mkdir -p .claude
 │   ├── handoff/SKILL.md       # 新增（含自动 commit 方案 B）
 │   ├── spec/SKILL.md          # 新增（讨论成果整理为设计文档）
 │   ├── done/SKILL.md          # 新增（功能完成收尾检查）
-│   └── release/SKILL.md       # 新增（Phase 完成文档刷新）
+│   ├── release/SKILL.md       # 新增（Phase 完成文档刷新）
+│   └── nbp2/SKILL.md          # 新增（AI 生图 Prompt 助手）
 ├── agents/                    # 自定义子代理（可选）
 └── hooks/
     ├── session-start.sh
@@ -304,7 +306,7 @@ grep -q "session-notes.md" .gitignore || echo ".claude/session-notes.md" >> .git
 [✓] CLAUDE.md 中已添加 @docs/roadmap/ 引用
 [✓] .claude/settings.json 格式正确（jq . .claude/settings.json）
 [✓] .claude/hooks/ 所有脚本有执行权限
-[✓] .claude/skills/ 7 个 Skill 已创建（含 release）
+[✓] .claude/skills/ 8 个 Skill 已创建（含 release、nbp2）
 [✓] docs/development/ 目录已创建，按需生成初始文档
 [✓] docs/architecture/adr/ 目录已创建
 [✓] 旧文件已清理（docs/ai-context/、.claude/commands/）
@@ -345,7 +347,7 @@ echo "退出码: $?"
 |------|--------|--------|
 | AI 记忆 | CONTEXT.md + CURRENT.md（手动） | CLAUDE.md + Auto Memory（自动） |
 | 进度跟踪 | CURRENT.md 滚动日志（手动） | docs/roadmap/（/handoff 自动更新） |
-| 命令数量 | [X] 个 commands | 7 个 Skills |
+| 命令数量 | [X] 个 commands | 8 个 Skills |
 | 自动化程度 | 手动触发 /start /end /checkpoint | Hooks 全自动 |
 
 ### 知识迁移清单

@@ -124,6 +124,12 @@ ls .claude/rules/ 2>/dev/null
 - 是否存在？不存在则新建（参考 03-Skills 模板）
 - 步骤是否完整：Phase 范围确认 → 变更扫描 → 部署文档更新 → 上手指南更新 → Changelog 生成 → ADR 检查 → Roadmap Phase 状态更新
 
+**`nbp2/SKILL.md`**（v3.10 新增）：
+- 是否存在？不存在则新建（参考 03-Skills 模板）
+- 是否包含六要素公式（主体/动作/场景/构图/风格/光线）
+- 是否包含进阶技巧（文字渲染/负面约束/角色一致性/Image Search Grounding/Thinking Mode）
+- 是否区分 Pro（精雕单 prompt）vs NBP2（快速迭代）策略
+
 #### 2.3 项目路线图检查
 
 检查 `docs/roadmap/` 目录是否存在：
@@ -238,6 +244,9 @@ ls .claude/rules/ 2>/dev/null
 - **PreCompact Hook 增强**：`pre-compact-save.sh` 自动检测正在实施的 spec 并保存进度。检查 Hook 脚本是否已更新。
 - **`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`**：环境变量控制 auto-compact 触发阈值。是否需要在 settings.json 的 `env` 中配置？
 - **讨论收敛机制**：`/spec` Step 1a 自动归纳共识与分歧，避免讨论发散。
+
+**v3.10 新增**：
+- **`/nbp2` AI 生图 Prompt 助手**：新增 Nano Banana Pro 2 生图 Prompt Skill。检查 `.claude/skills/nbp2/SKILL.md` 是否存在，不存在则新建（参考 03-Skills 模板）。
 
 **Bundled 命令**：
 - **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`** 共 5 个内置命令，无需配置，但日常使用规范中是否已知晓？
