@@ -4,6 +4,12 @@
 
 这不是重建，不是迁移——只是**对比差距，补充缺失，修正过时**。
 
+**执行规则**：
+1. 每个 Phase 按顺序执行，遇到 **⛔ 检查点** 必须暂停，输出结果等用户确认后再继续
+2. Phase 3 输出差距清单后**必须等确认**，不可直接开始修改
+3. 升级 Skill 时从指南中**完整复制**最新内容再调整，不要只改 frontmatter
+4. 最终验证必须**实际运行命令**
+
 首先阅读以下所有指南，了解最新版本的完整内容：
 
 - `~/Downloads/00_project/guides/README.md`（目录结构、命令体系、版本记录）
@@ -43,7 +49,8 @@ ls .claude/rules/ 2>/dev/null
 6. `.claude/skills/handoff/SKILL.md`
 7. `.claude/skills/spec/SKILL.md`
 8. `.claude/skills/done/SKILL.md`
-9. `.claude/hooks/session-start.sh`
+9. `.claude/skills/docs/SKILL.md`
+10. `.claude/hooks/session-start.sh`
 10. `.claude/hooks/pre-commit-check.sh`
 11. `.claude/hooks/post-write.sh`
 12. `.claude/hooks/on-stop.sh`
@@ -113,12 +120,11 @@ ls .claude/rules/ 2>/dev/null
 - 是否包含 Implementation Phases 结构（Tasks/Gate/On Complete）？（v3.9 新增）
 - frontmatter 是否包含 `total_phases` 和 `active_phase` 字段？（v3.9 新增）
 
-**`done/SKILL.md`**（v3.6 新增，v3.8 增强，v3.9 增强）：
+**`done/SKILL.md`**（v3.6 新增，v3.11 改进）：
 - 是否存在？不存在则新建（参考 03-Skills 模板）
-- 步骤是否完整：代码验证 → Roadmap checkbox 更新 → Spec 状态智能检测 → **开发文档智能检测** → /simplify 审查 → Roadmap Phase 完成检测
-- 是否包含 Step 4 部署配置检测逻辑？（v3.8 新增：检测部署/环境变量变更，提示更新 deployment.md）
-- 是否包含三级自动升级逻辑？（v3.9 新增：自动检测 Spec Phase 完成 / Spec 全部完成 / Roadmap Phase 完成）
-- Spec 状态更新是否区分"单 Phase 完成"（更新 active_phase）和"全部完成"（status→implemented）？（v3.9 新增）
+- 是否有 `argument-hint` 字段？（v3.11：用户附描述，如 `/done 完成了用户登录`）
+- 步骤是否完整：解析用户描述 → 代码验证 → Roadmap 更新 → Spec 状态更新 → /simplify 审查 → Roadmap Phase 完成检测（注意：**不含**开发文档检测，v3.11 移至 `/docs`）
+- Spec 状态更新是否区分"单 Phase 完成"（更新 active_phase）和"全部完成"（status→implemented）？
 
 **`release/SKILL.md`**（v3.8 新增）：
 - 是否存在？不存在则新建（参考 03-Skills 模板）
@@ -191,10 +197,9 @@ ls .claude/rules/ 2>/dev/null
 
 检查 CLAUDE.md 中是否有 `@docs/architecture/README.md` 引用，如无则添加。
 
-检查 CLAUDE.md 完成标准是否包含开发文档检测步骤（v3.8 要求）。
-
-检查 Skills 是否已包含开发文档联动逻辑：
-- `done/SKILL.md`：是否有 Step 4 开发文档智能检测？
+检查 Skills 是否包含最新逻辑：
+- `done/SKILL.md`：是否支持显式描述参数（v3.11）？
+- `docs/SKILL.md`：是否存在（v3.11 新增，开发文档梳理）？
 - `release/SKILL.md`：是否存在？
 
 ---
@@ -207,57 +212,37 @@ ls .claude/rules/ 2>/dev/null
 - 是否有过时的内容需要清理？
 - **是否有"完成标准"章节**？应包含两部分：
   - 代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）
-  - 文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 检测开发文档更新需求 + 确认代码注释）
+  - 文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 确认代码注释）
 
 #### 2.7 新功能知识
 
-以下是 v3.5-v3.8 guide 新增的内容，检查是否需要加入项目配置或文档：
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.9-v3.11），更早版本的功能如果项目已配置到位则跳过。
 
-**v3.5 新增**：
-- **六步开发循环**：`Explore → Plan → Code → Verify → Simplify → Commit`（旧版可能是五步，缺 Verify）。检查 CLAUDE.md 或团队文档中的开发循环描述是否已更新。
-- **复杂度分级**：简单（Code→Commit）/ 中等（六步）/ 复杂（六步 + Clear 主动策略）/ Bug 修复（变体）。
-- **Clear 主动策略**：复杂功能的 Explore+Plan 消耗大量上下文后，主动 `/clear` 后带 plan 文件开新会话编码。
+**v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
+- 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
+- `/done` Skill、Spec 生命周期 frontmatter、Hook 高级能力（updatedInput/CLAUDE_ENV_FILE/Frontmatter Hooks）、GitHub Actions 集成、Remote Control（v3.6）
+- Bug 修复工作流变体（v3.7）
+- 开发文档体系 `docs/development/`+`docs/architecture/adr/`、`/release` Skill、`/voice`、`/mcp` 对话框管理、`/rewind`、Worktree 声明式隔离、`/loop` 增强（v3.8）
 
-**v3.6 新增**：
-- **三层收尾模型**：Commit 级（Hooks 自动门禁）→ 功能级（完成标准 + /done 手动兜底）→ Phase 级（/deep-audit）。v3.8 扩展为 /release + /deep-audit。
-- **`/done` Skill**：功能完成收尾检查，是否已创建？
-- **Spec 生命周期 YAML frontmatter**：`draft → approved → implementing → implemented → [deprecated | superseded]`。
-- **Hook 高级能力**：`updatedInput`（修改用户输入）、`CLAUDE_ENV_FILE`（SessionStart 环境变量持久化）、Frontmatter Hooks（在 SKILL.md/agent 配置中内嵌 Hook）。
-- **GitHub Actions 集成**：`/install-github-app` 安装 claude-code-action。
-- **Remote Control**：`claude remote-control` 远程控制 Claude Code 实例。
+**v3.9 新增**（重点检查）：
+- **`/done` 三级智能升级**：自动检测完成粒度（Spec 单 Phase / Spec 全部完成 / Roadmap Phase 完成）。检查 `/done` Skill 是否已更新。
+- **Spec 分阶段实施**：`/spec` 输出包含 Implementation Phases（Tasks/Gate/On Complete），支持分阶段实施和 auto-compact 后进度恢复。检查 `/spec` Skill 是否已更新。
+- **Spec 进度自检协议**：CLAUDE.md 完成标准中应有"Spec 实施自检"小节（每完成 task 勾 [x] → 检查 Gate → 提醒 /done）。
+- **PreCompact Hook 增强**：`pre-compact-save.sh` 自动检测正在实施的 spec 并保存进度。
+- **`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`**：环境变量控制 auto-compact 触发阈值，是否需要在 settings.json 的 `env` 中配置？
+- **讨论收敛机制**：`/spec` Step 1a 自动归纳共识与分歧。
 
-**v3.7 新增**：
-- **Bug 修复工作流变体**：复用六步循环，侧重复现+定位+回归测试。Explore=复现 Bug，Code=先写复现测试再修复，Commit=`fix:` 前缀。
+**v3.10 新增**（重点检查）：
+- **架构认知地图**：`docs/architecture/README.md`，Claude 通过 `@` 引用自动加载。检查是否存在，不存在则新建。
+- **`/nbp2` AI 生图 Prompt 助手**：检查 `.claude/skills/nbp2/SKILL.md` 是否存在。
 
-**v3.8 新增**：
-- **开发文档体系**：`docs/development/` 目录（getting-started / deployment / changelog），`docs/architecture/adr/` 模板。
-- **`/release` Skill**：Phase 完成后全量刷新开发文档 + 生成 Changelog + ADR 检查。
-- **`/done` 增强**：新增 Step 4 部署配置检测（检测部署/环境变量变更，提示更新 deployment.md）。
-- **三层收尾模型更新**：Phase 级从 `/deep-audit` 扩展为 `/release`（文档刷新）+ `/deep-audit`（代码审计）。
-- **CLAUDE.md 完成标准更新**：文档同步步骤新增开发文档检测。
-- **`/voice` 语音模式**：Push-to-talk（空格键），支持 20 种语言。检查日常使用说明是否提及。
-- **`/mcp` 对话框管理**：在聊天中直接启用/禁用 MCP 服务器、重连、OAuth 授权。
-- **MCP `list_changed` 通知**：MCP 服务器动态更新工具/资源时无需重连。
-- **`/rewind` 回滚模式**：可选仅回滚对话、仅回滚代码、或两者同时。
-- **Worktree 增强**：`isolation: worktree` 声明式隔离（Agent 定义中使用），Hook 状态扩展（name/path/branch/原始仓库路径）。
-- **Remote Control `--name`**：`claude remote-control --name "会话名"` 自定义远程会话标题。
-- **`/loop` 定时调度增强**：最长 3 天过期、上限 50 个任务。
-
-**v3.9 新增**：
-- **`/done` 三级智能升级**：`/done` 自动检测完成粒度（Spec 单 Phase / Spec 全部完成 / Roadmap Phase 完成），执行对应深度的收尾动作。检查 `/done` Skill 是否已更新。
-- **四层收尾模型**：从三层（Commit/功能/Phase）扩展为四层（Commit/功能·Spec Phase/Spec 完成/Roadmap Phase）。检查 CLAUDE.md 完成标准和工作流文档是否已更新。
-- **Spec 分阶段实施**：`/spec` 输出的 spec 包含 Implementation Phases（Tasks/Gate/On Complete 结构），支持分阶段实施和 auto-compact 后进度恢复。检查 `/spec` Skill 是否已更新。
-- **Spec 进度自检协议**：CLAUDE.md 完成标准中新增"Spec 实施自检"小节（每完成 task 勾 [x] → 检查 Gate → 提醒 /done）。检查 CLAUDE.md 是否已包含。
-- **PreCompact Hook 增强**：`pre-compact-save.sh` 自动检测正在实施的 spec 并保存进度。检查 Hook 脚本是否已更新。
-- **`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`**：环境变量控制 auto-compact 触发阈值。是否需要在 settings.json 的 `env` 中配置？
-- **讨论收敛机制**：`/spec` Step 1a 自动归纳共识与分歧，避免讨论发散。
-
-**v3.10 新增**：
-- **架构认知地图**：`docs/architecture/README.md` — 描述项目"怎么组织的"（模块划分、组件分层、数据流、非直觉设计），Claude 每次会话通过 `@` 引用自动加载，减少反复 explore。检查是否存在，不存在则新建。检查 CLAUDE.md 是否有 `@docs/architecture/README.md` 引用。
-- **`/nbp2` AI 生图 Prompt 助手**：新增 Nano Banana Pro 2 生图 Prompt Skill。检查 `.claude/skills/nbp2/SKILL.md` 是否存在，不存在则新建（参考 03-Skills 模板）。
-- **`/done` Step 4 扩展**：新增架构文档检测（结构性变更时提示更新）。
-- **`/release` Step 5 扩展**：Phase 完成时审查架构认知地图是否仍准确。
-- **`/deep-audit` 扩展**：验证架构文档与代码是否一致。
+**v3.11 新增**（重点检查）：
+- **`/docs` 开发文档梳理 Skill**（新增）：深度探索代码刷新开发文档，支持按范围指定（`/docs`、`/docs architecture`、`/docs frontend`、`/docs backend`、`/docs getting-started`、`/docs deployment`）。检查 `.claude/skills/docs/SKILL.md` 是否存在。
+- **`/done` 改进**：改为"用户显式描述 + Claude 匹配"（如 `/done 完成了用户登录`），开发文档检测移至 `/docs`。检查 `done/SKILL.md` 是否有 `argument-hint` 字段。
+- **`/release` 调整**：内部引用 `/docs` 全量流程 + Changelog + ADR。
+- **架构文档拆分**：`docs/architecture/` 扩展为 README.md（30-50 行）+ `frontend.md`（50-100 行）+ `backend.md`（50-100 行）。
+- **五层收尾模型**：Commit → 功能/Spec Phase → Spec 完成 → 文档同步（`/docs`）→ Roadmap Phase（`/release`）。
+- **CLAUDE.md 完成标准简化**：文档同步步骤只保留 Roadmap/Spec 状态更新，开发文档检测移至 `/docs`。
 
 **Bundled 命令**：
 - **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`** 共 5 个内置命令，无需配置，但日常使用规范中是否已知晓？
@@ -305,7 +290,7 @@ grep "session-notes.md" .gitignore
 - [ ] ...
 ```
 
-确认差距清单后，开始执行修改。
+**⛔ 检查点 — 输出完整差距清单后暂停，等我确认后再开始执行修改。不要跳过此步骤直接修改。**
 
 ---
 
@@ -343,19 +328,24 @@ chmod +x .claude/hooks/*.sh
 
 ### Phase 5：验证
 
+**⛔ 运行以下命令验证，输出完整结果**（不可跳过）：
+
 ```bash
-# 验证 settings.json 格式
-jq . .claude/settings.json
-
-# 验证 hooks 权限
-ls -la .claude/hooks/
-
-# 验证 CLAUDE.md 行数
-wc -l CLAUDE.md
-
-# 手动测试新增的 Hook
-bash .claude/hooks/on-prompt-submit.sh 2>/dev/null
+echo "=== Skills (应为 9 个) ==="
+for f in audit deep-audit catchup handoff spec done docs release nbp2; do
+  echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
+done
+echo "=== Hooks ==="
+ls -la .claude/hooks/*.sh 2>/dev/null || echo "  ❌ 无 hook 脚本"
+echo "=== Settings ==="
+jq . .claude/settings.json > /dev/null 2>&1 && echo "  ✅ JSON 格式正确" || echo "  ❌ JSON 格式错误"
+echo "=== CLAUDE.md ==="
+echo "  $(wc -l < CLAUDE.md 2>/dev/null || echo '0') 行"
+echo "=== Docs ==="
+find docs -type f -name "*.md" 2>/dev/null | sort
 ```
+
+**如有 ❌ 项，对照差距清单补充后重新运行。**
 
 ---
 

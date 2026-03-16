@@ -2,6 +2,11 @@
 
 当前项目使用的是**旧版 AI 协作文档系统（v2.x）**，基于 `CONTEXT.md` + `CURRENT.md` + `.claude/commands/` 手动维护体系。需要迁移到新版系统（v3.x），基于 CLAUDE.md 层级 + Auto Memory + Hooks + Skills 自动化体系。
 
+**执行规则**：
+1. 每个 Phase 按顺序执行，遇到 **⛔ 检查点** 必须暂停，输出结果等用户确认后再继续
+2. 创建 Skill 文件时从指南中**完整复制**内容再调整，不要只写框架或省略步骤
+3. 最终验证必须**实际运行命令**，不能只打勾
+
 首先阅读以下所有指南，完整理解新系统理念，再开始执行：
 
 - `~/Downloads/00_project/guides/README.md`（目录结构、命令体系、废弃对照表）
@@ -42,8 +47,9 @@
 | 新增 | `/catchup` Skill | 清空上下文后恢复状态 |
 | 新增 | `/handoff` Skill | 提交变更 + 生成交接文档 |
 | 新增 | `/spec` Skill | 讨论成果整理为设计文档 |
-| 新增 | `/done` Skill | 功能完成收尾检查（Roadmap/Spec 同步 + 部署配置检测） |
-| 新增 | `/release` Skill | Phase 完成文档刷新（全量更新开发文档 + Changelog） |
+| 新增 | `/done` Skill | 功能完成收尾检查（附描述，Roadmap/Spec 状态更新） |
+| 新增 | `/docs` Skill | 深度探索代码，梳理更新开发文档（架构/上手/部署） |
+| 新增 | `/release` Skill | Phase 完成系统性文档刷新（`/docs` 全量 + Changelog） |
 | 新增 | `/nbp2` Skill | AI 生图 Prompt 助手（Nano Banana Pro 2） |
 
 ---
@@ -106,6 +112,8 @@ cat pyproject.toml 2>/dev/null | head -30
 未完成任务: [如果有仍然有效的未完成工作]
 ```
 
+**⛔ 检查点 — 输出项目画像 + 旧系统内容提取分类后暂停，等我确认再继续。**
+
 ---
 
 ### Phase 2：设计迁移方案
@@ -127,6 +135,7 @@ SessionStart：启动检查脚本需要什么内容？
 UserPromptSubmit：是否需要自动注入 session-notes 上下文？
 PreToolUse（git commit）：测试命令是什么？
 PostToolUse（Write/Edit）：格式化工具和命令是什么？
+PreCompact（推荐）：auto-compact 前自动保存 Spec 进度和工作状态
 Stop：是否需要完成通知？
 ```
 
@@ -151,7 +160,7 @@ docs/ai-context/（整个目录）: → 删除
 - 将旧规范改写为 `MUST` / `MUST NOT` 语言（参考文档 01 的模板）
 - 删除进度信息、协作日志等动态内容
 - 技术栈版本对照实际代码确认准确
-- 确保包含**完成标准**章节，分三部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 检测部署/环境变量变更并提示更新 deployment.md + 确认代码注释）（3）Spec 实施自检（基于 spec 开发时：每完成 task 勾 `[x]` → 检查 Phase Gate → 提醒 `/done` → 所有 Phase 完成提醒 `/release`）
+- 确保包含**完成标准**章节，分三部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 确认代码注释）（3）Spec 实施自检（基于 spec 开发时：每完成 task 勾 `[x]` → 检查 Phase Gate → 提醒 `/done` → 所有 Phase 完成提醒 `/release`）
 - 控制在 **150 行以内**
 
 #### 3.2 生成项目路线图（ROADMAP）
@@ -230,19 +239,36 @@ mkdir -p .claude
 │   ├── catchup/SKILL.md       # 新增
 │   ├── handoff/SKILL.md       # 新增（含自动 commit 方案 B）
 │   ├── spec/SKILL.md          # 新增（讨论成果整理为设计文档）
-│   ├── done/SKILL.md          # 新增（功能完成收尾检查）
-│   ├── release/SKILL.md       # 新增（Phase 完成文档刷新）
+│   ├── done/SKILL.md          # 新增（功能完成收尾检查，附描述参数）
+│   ├── docs/SKILL.md          # 新增（开发文档梳理）
+│   ├── release/SKILL.md       # 新增（Phase 完成系统性文档刷新）
 │   └── nbp2/SKILL.md          # 新增（AI 生图 Prompt 助手）
 ├── agents/                    # 自定义子代理（可选）
 └── hooks/
     ├── session-start.sh
     ├── pre-commit-check.sh
     ├── post-write.sh
+    ├── pre-compact-save.sh    # 推荐，auto-compact 前保存进度
     ├── on-stop.sh
     └── on-prompt-submit.sh    # 可选
 ```
 
-参考文档 `02-Hooks自动化配置.md` 和 `03-Skills命令配置.md` 中的完整模板，根据项目实际技术栈调整所有命令。
+**逐个创建** 9 个 Skill，内容从 `03-Skills命令配置.md` 中对应章节**完整复制**后按项目调整。
+
+每个 SKILL.md 的 frontmatter **必须包含**：
+```yaml
+---
+name: <与目录名一致>
+description: |
+  <功能描述，含触发关键词>
+allowed-tools: Read, Bash, Glob   # 根据需要扩展
+disable-model-invocation: true    # 除非需要自动触发
+---
+```
+
+重点：`done/SKILL.md` 必须有 `argument-hint: "<完成了什么功能的描述>"`。
+
+同时参考 `02-Hooks自动化配置.md` 中的 Hook 模板，根据项目实际技术栈调整所有命令。
 
 重点：`handoff/SKILL.md` 使用**方案 B**：
 - 先尝试正常 commit（走测试门禁）
@@ -303,32 +329,34 @@ grep -q "session-notes.md" .gitignore || echo ".claude/session-notes.md" >> .git
 
 ### Phase 4：验证
 
-**结构验证**：
+**⛔ 运行以下命令验证，输出完整结果**（不可跳过）：
 
-```
-[✓] 根 CLAUDE.md 存在，内容准确，< 150 行
-[✓] docs/roadmap/ 目录已创建，README.md + Phase 文件已生成
-[✓] CLAUDE.md 中已添加 @docs/roadmap/ 引用
-[✓] .claude/settings.json 格式正确（jq . .claude/settings.json）
-[✓] .claude/hooks/ 所有脚本有执行权限
-[✓] .claude/skills/ 8 个 Skill 已创建（含 release、nbp2）
-[✓] docs/development/ 目录已创建，按需生成初始文档
-[✓] docs/architecture/adr/ 目录已创建
-[✓] 旧文件已清理（docs/ai-context/、.claude/commands/）
-[✓] .gitignore 已更新
-```
-
-**知识迁移验证**：
-
-```
-[✓] 旧 CONTEXT.md 中的技术栈信息已在新 CLAUDE.md 中体现（版本号准确）
-[✓] 旧 CONTEXT.md 中的开发规范已改写为 MUST/MUST NOT 语言
-[✓] 旧 CONTEXT.md 中的常用命令已在新 CLAUDE.md 中体现
-[✓] 无价值内容（进度日志、过时信息）已清理
-[✓] 有效的未完成任务已保存到 .claude/session-notes.md（如有）
+```bash
+echo "=== Skills (应为 9 个) ==="
+for f in audit deep-audit catchup handoff spec done docs release nbp2; do
+  echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
+done
+echo "=== Hooks ==="
+ls -la .claude/hooks/*.sh 2>/dev/null || echo "  ❌ 无 hook 脚本"
+echo "=== Settings ==="
+jq . .claude/settings.json > /dev/null 2>&1 && echo "  ✅ JSON 格式正确" || echo "  ❌ JSON 格式错误"
+echo "=== CLAUDE.md ==="
+echo "  $(wc -l < CLAUDE.md 2>/dev/null || echo '0') 行"
+echo "=== Docs ==="
+find docs -type f -name "*.md" 2>/dev/null | sort
+echo "=== 旧文件清理 ==="
+test -d docs/ai-context && echo "  ❌ docs/ai-context/ 未删除" || echo "  ✅ 旧文件已清理"
+test -d .claude/commands && echo "  ❌ .claude/commands/ 未删除" || echo "  ✅ 旧命令已清理"
 ```
 
-手动测试 Hook：
+**如有 ❌ 项，立即补充后重新运行。全部 ✅ 后继续。**
+
+**知识迁移验证**（人工核对）：
+- 旧 CONTEXT.md 中的技术栈 → 新 CLAUDE.md 中是否体现（版本号准确）？
+- 旧开发规范 → 是否已改写为 MUST/MUST NOT 语言？
+- 旧常用命令 → 新 CLAUDE.md 中是否体现？
+
+**Hook 功能测试**：
 
 ```bash
 bash .claude/hooks/session-start.sh
@@ -337,6 +365,8 @@ echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' \
   | bash .claude/hooks/pre-commit-check.sh
 echo "退出码: $?"
 ```
+
+输出所有验证结果后等我确认。
 
 ---
 
@@ -352,7 +382,7 @@ echo "退出码: $?"
 |------|--------|--------|
 | AI 记忆 | CONTEXT.md + CURRENT.md（手动） | CLAUDE.md + Auto Memory（自动） |
 | 进度跟踪 | CURRENT.md 滚动日志（手动） | docs/roadmap/（/handoff 自动更新） |
-| 命令数量 | [X] 个 commands | 8 个 Skills |
+| 命令数量 | [X] 个 commands | 9 个 Skills |
 | 自动化程度 | 手动触发 /start /end /checkpoint | Hooks 全自动 |
 
 ### 知识迁移清单
@@ -373,8 +403,9 @@ echo "退出码: $?"
 ### 日常使用变化
 - 不再需要：/start、/end、/checkpoint、/weekly、/monthly、/fix
 - 新的工作流：功能完成 → /simplify → Claude 自动 commit（Hook 验证后）→ 你确认 push
-- 功能收尾：/done（手动兜底检查：Roadmap/Spec 状态同步 + 部署配置检测）
-- 阶段完成：/release（全量刷新开发文档）→ /deep-audit（代码审计）
+- 功能收尾：/done 完成了XX（代码验证 + Roadmap/Spec 状态更新）
+- 文档更新：/docs（深度探索代码 → 刷新开发文档）
+- 阶段完成：/release（系统性文档刷新）→ /deep-audit（代码审计）
 - 批量变更：/batch "描述"
 - 需求讨论后：/spec（整理讨论成果为设计文档）
 - 中断前：/handoff（自动 commit + 写交接文档）

@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.10（2026-03）
+> **版本**: v3.11（2026-03）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -65,9 +65,10 @@
 | GitHub Actions 集成 + Remote Control | 文档 04 |
 | `docs/roadmap/` 项目进度跟踪系统 | 文档 00、03、04 |
 | `docs/specs/` 功能设计文档目录 | 文档 03、04 |
-| `docs/architecture/README.md` 架构认知地图（模块划分/组件分层/数据流/非直觉设计） | 文档 04 |
+| `docs/architecture/` 架构文档体系（README 总览 + frontend.md + backend.md） | 文档 04 |
 | `docs/development/` 开发文档体系（上手指南/部署/Changelog + 代码即文档原则） | 文档 04 |
-| `/release` Phase 完成文档刷新 Skill | 文档 03、04 |
+| `/docs` 开发文档梳理 Skill（深度探索代码→刷新文档，日常高频使用） | 文档 03、04 |
+| `/release` Phase 完成系统性文档刷新 Skill | 文档 03、04 |
 | `docs/architecture/adr/` ADR 模板 | 文档 04 |
 | `/voice` 语音模式（Push-to-talk，20 种语言） | 文档 00 |
 | `/mcp` 对话框式 MCP 管理 + `list_changed` 动态更新 | 文档 00、04 |
@@ -101,8 +102,9 @@
 | `/catchup` | 清空上下文后快速恢复 | 按需 |
 | `/handoff` | 提交变更 + 生成交接文档 | 中断前 |
 | `/spec` | 讨论成果整理为设计文档 | 需求讨论后 |
-| `/done` | 智能收尾检查（自动检测粒度：功能/Spec Phase/Spec 完成/Roadmap Phase） | 功能完成后 |
-| `/release` | Phase 完成文档刷新（全量更新开发文档 + Changelog） | Phase 完成后 |
+| `/done` | 智能收尾检查（附描述：`/done 完成了XX`） | 功能完成后 |
+| `/docs` | 深度探索代码，梳理更新开发文档（架构/上手/部署） | 日常高频 |
+| `/release` | Phase 完成系统性文档刷新（`/docs` 全量 + Changelog + ADR） | Phase 完成后 |
 | `/nbp2` | AI 生图 Prompt 助手（Nano Banana Pro 2） | 需要生图时 |
 | `/audit` | 项目健康检查 | 每周 |
 | `/deep-audit` | 全面深度审计 | Phase 完成后 |
@@ -145,6 +147,7 @@ project-root/
 │   │   ├── handoff/SKILL.md
 │   │   ├── spec/SKILL.md
 │   │   ├── done/SKILL.md
+│   │   ├── docs/SKILL.md
 │   │   ├── release/SKILL.md
 │   │   └── nbp2/SKILL.md
 │   ├── agents/                    # 自定义子代理（可选）
@@ -173,7 +176,9 @@ project-root/
     │   ├── deployment.md          #   手写：部署流程、环境变量、回滚
     │   └── changelog.md           #   自动生成：版本发布记录
     └── architecture/
-        ├── README.md              # 架构认知地图（@引用自动加载）
+        ├── README.md              # 架构总览（@引用自动加载，/docs 刷新）
+        ├── frontend.md            # 前端架构详细（/docs frontend 刷新）
+        ├── backend.md             # 后端架构详细（/docs backend 刷新）
         └── adr/                   # 架构决策记录（/release 检查是否需要新增）
 ```
 
@@ -195,6 +200,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.11 | 2026-03 | `/done` 改进（显式描述参数，去掉自动猜测）、新增 `/docs` 开发文档梳理 Skill（深度探索代码→刷新架构/上手/部署文档，支持按范围指定）、`/release` 调整为 Phase 系统性梳理（含 `/docs` 全量）、架构文档拆分为 README+frontend.md+backend.md、Skills 总数 8→9 |
 | v3.10 | 2026-03 | 架构认知地图（`docs/architecture/README.md` — 项目组织方式/模块划分/数据流，`@`引用自动加载，`/release` 审查 + `/deep-audit` 验证 + `/done` 结构性变更检测）、`/nbp2` AI 生图 Prompt 助手 Skill、Skills 总数 7→8 |
 | v3.9 | 2026-03 | `/done` 三级智能升级（自动检测完成粒度：功能/Spec Phase/Spec 完成/Roadmap Phase）、四层收尾模型、Spec 分阶段实施（Implementation Phases + Tasks/Gate/On Complete）、Spec 进度自检协议、讨论收敛机制（共识/分歧归纳）、PreCompact Hook 增强（Spec 进度保存 + `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`）、大 Spec 实施策略、auto-compact 应对 |
 | v3.8 | 2026-03 | 开发文档体系（`docs/development/` 上手指南/部署/Changelog + 代码即文档原则 + ADR 模板）、`/release` Skill、`/done` 增强（部署配置检测）、`/voice` 语音模式、`/mcp` 对话框管理 + `list_changed`、`/rewind` 回滚模式、Worktree 声明式隔离 + Hook 状态、Remote Control `--name`、`/loop` 调度增强 |

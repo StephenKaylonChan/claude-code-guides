@@ -2,6 +2,11 @@
 
 你正在为一个**全新项目**配置 Claude Code 协作系统。项目此前没有任何 AI 协作配置。
 
+**执行规则**：
+1. 每个 Phase 按顺序执行，遇到 **⛔ 检查点** 必须暂停，输出结果等用户确认后再继续
+2. 创建文件时从指南中**完整复制**内容再调整，不要只写框架或省略步骤
+3. 最终验证必须**实际运行命令**，不能只打勾
+
 首先阅读以下所有指南，完整理解整套体系，再开始执行：
 
 - `~/Downloads/00_project/guides/README.md`（目录结构、命令体系、废弃对照表）
@@ -42,6 +47,8 @@
 特殊之处: [任何需要特殊处理的地方]
 ```
 
+**⛔ 检查点 — 输出项目画像后暂停，等我确认再继续。**
+
 ---
 
 ### Phase 2：设计适配方案
@@ -63,13 +70,14 @@ SessionStart：启动时检查 git 状态？检查 .env 文件存在？
 UserPromptSubmit：是否需要每次 prompt 自动注入 session-notes 上下文？
 PostToolUse（Write/Edit）：需要自动格式化吗？格式化工具和命令是什么？
 PreToolUse（Bash git commit）：测试门禁命令是什么？
+PreCompact（推荐）：auto-compact 前自动保存 Spec 进度和工作状态
 Stop：是否需要完成通知？（macOS / Linux）
 ```
 
 **Skills 选择**：
 
 ```
-必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、done（功能完成收尾）、release（Phase 完成文档刷新）、nbp2（AI 生图 Prompt 助手）
+必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、done（功能完成收尾）、docs（开发文档梳理）、release（Phase 完成系统性文档刷新）、nbp2（AI 生图 Prompt 助手）
 可选：是否有项目特定的高频操作值得封装为命令？
 ```
 
@@ -149,22 +157,23 @@ mkdir -p docs/roadmap
 
 架构文档始终引用；路线图只引用总览 + 当前 Phase，已完成的 Phase 不引用。
 
+**⛔ 检查点 — 输出路线图内容摘要（Phase 列表 + 各 Phase 条目数），等我确认再继续。**
+
 ---
 
 ### Phase 4：生成并精简 CLAUDE.md
 
-运行内置命令生成草稿：
+生成 CLAUDE.md 草稿（两种方式任选）：
 
-```bash
-/init
-```
+- **方式 A**：运行 `/init` 让 Claude Code 自动扫描生成草稿
+- **方式 B**（Agent 模式或 `/init` 不可用时）：根据 Phase 1 探索结果 + 文档 01 的模板直接创建
 
-对生成的草稿进行精简和改造：
+对草稿进行精简和改造：
 
 - 删除泛化内容，只保留项目特有的信息
 - 将规范语言改为 `MUST` / `MUST NOT` 表述（参考文档 01 的语言规范）
 - 确保包含：项目结构说明、常用命令（含测试/构建/启动）、技术栈（含版本号）、关键约束、Git 提交规范（Conventional Commits）、关键架构决策
-- **完成标准**章节分三部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 检测部署/环境变量变更并提示更新 deployment.md + 确认代码注释）（3）Spec 实施自检（基于 spec 开发时：每完成 task 勾 `[x]` → 检查 Phase Gate → 提醒 `/done` → 所有 Phase 完成提醒 `/release`）
+- **完成标准**章节分三部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 确认代码注释）（3）Spec 实施自检（基于 spec 开发时：每完成 task 勾 `[x]` → 检查 Phase Gate → 提醒 `/done` → 所有 Phase 完成提醒 `/release`）
 - 控制在 **150 行以内**
 - Monorepo 则还需为各 app 子目录创建专属 CLAUDE.md（< 100 行）
 
@@ -186,6 +195,7 @@ mkdir -p docs/roadmap
 │   ├── handoff/SKILL.md       # 含自动 commit 逻辑（方案B）
 │   ├── spec/SKILL.md          # 讨论成果整理为设计文档
 │   ├── done/SKILL.md          # 功能完成收尾检查
+│   ├── docs/SKILL.md          # 开发文档梳理
 │   ├── release/SKILL.md       # Phase 完成文档刷新
 │   └── nbp2/SKILL.md          # AI 生图 Prompt 助手
 ├── agents/                    # 自定义子代理（可选）
@@ -193,6 +203,7 @@ mkdir -p docs/roadmap
     ├── session-start.sh
     ├── pre-commit-check.sh
     ├── post-write.sh
+    ├── pre-compact-save.sh    # 推荐，auto-compact 前保存进度
     ├── on-stop.sh
     └── on-prompt-submit.sh    # 可选，自动注入 session-notes
 ```
@@ -215,6 +226,7 @@ mkdir -p docs/roadmap
 - `session-start.sh`：显示 git 状态、检查 .env 文件、显示未推送 commit 数
 - `pre-commit-check.sh`：提交前运行测试（用 Phase 1 确认的测试命令）
 - `post-write.sh`：写文件后自动格式化（用 Phase 1 确认的格式化工具）
+- `pre-compact-save.sh`（推荐）：auto-compact 前保存 Spec 进度和工作状态到 session-notes.md
 - `on-stop.sh`：完成通知（macOS 用 osascript，Linux 用 notify-send）
 - `on-prompt-submit.sh`（如需要）：读取 .claude/session-notes.md 注入为上下文
 
@@ -226,16 +238,31 @@ chmod +x .claude/hooks/*.sh
 
 #### 5.3 创建 Skills
 
-参考文档 `03-Skills命令配置.md` 中的完整内容，按项目调整：
+**逐个创建**以下 9 个 Skill，内容从 `03-Skills命令配置.md` 中对应章节**完整复制**后按项目调整。
 
-- `audit/SKILL.md`：检查命令用项目实际的 lint/test 命令
-- `deep-audit/SKILL.md`：扫描路径用项目实际目录结构
-- `catchup/SKILL.md`：读取 CLAUDE.md 和 session-notes.md 恢复状态
-- `handoff/SKILL.md`：**使用方案 B** — 先尝试正常 commit（走测试门禁），失败则降级为 `wip:` 前缀 + `--no-verify`，然后写 session-notes.md
-- `spec/SKILL.md`：将需求讨论成果整理为结构化设计文档，写入 `docs/specs/`
-- `done/SKILL.md`：功能完成收尾检查（验证 + Roadmap 更新 + Spec 状态更新 + 部署配置检测）
-- `release/SKILL.md`：Phase 完成文档刷新（全量更新开发文档 + Changelog + ADR 检查）
-- `nbp2/SKILL.md`：AI 生图 Prompt 助手（Nano Banana Pro 2 六要素公式 + 进阶技巧）
+每个 SKILL.md 的 frontmatter **必须包含**：
+```yaml
+---
+name: <与目录名一致>
+description: |
+  <功能描述，含触发关键词>
+argument-hint: "<参数说明>"        # 无参数可省略
+allowed-tools: Read, Bash, Glob   # 根据需要扩展
+disable-model-invocation: true    # 除非需要自动触发
+---
+```
+
+逐个创建（确保 workflow 步骤完整，不要只复制 frontmatter）：
+
+1. `audit/SKILL.md`：检查命令替换为项目实际的 lint/test 命令
+2. `deep-audit/SKILL.md`：扫描路径替换为项目实际目录结构
+3. `catchup/SKILL.md`：读取 CLAUDE.md 和 session-notes.md 恢复状态
+4. `handoff/SKILL.md`：**使用方案 B** — 先尝试正常 commit → 失败则 `wip:` + `--no-verify` → 写 session-notes.md
+5. `spec/SKILL.md`：讨论成果整理为设计文档，含 Implementation Phases 结构
+6. `done/SKILL.md`：**注意 argument-hint 必须有**（`<完成了什么功能的描述>`），用户显式描述完成内容
+7. `docs/SKILL.md`：深度探索代码，梳理更新开发文档，支持按范围指定
+8. `release/SKILL.md`：Phase 完成系统性文档刷新（引用 `/docs` 全量 + Changelog + ADR）
+9. `nbp2/SKILL.md`：AI 生图 Prompt 助手（六要素公式 + 进阶技巧）
 
 #### 5.4 创建路径感知规则（Monorepo 或前后端分离项目）
 
@@ -254,7 +281,9 @@ mkdir -p docs/roadmap docs/specs docs/development docs/architecture/adr
 
 根据项目实际情况，按需生成开发文档初始文件（参考文档 `04-工作流最佳实践.md` 第 7 节的模板）：
 
-- `docs/architecture/README.md` — **架构认知地图**：根据 Phase 1 的探索结果生成，描述模块划分、组件分层、数据流、非直觉设计约定（30-80 行）
+- `docs/architecture/README.md` — **架构总览**：模块划分、整体数据流、非直觉设计决策（30-50 行）
+- `docs/architecture/frontend.md` — **前端架构**：路由结构、组件分层、状态流转、交互模式（50-100 行，无前端可跳过）
+- `docs/architecture/backend.md` — **后端架构**：请求链路、认证流程、状态机、异步任务（50-100 行，无后端可跳过）
 - `docs/architecture/adr/README.md` — 创建 ADR 索引
 - `docs/development/getting-started.md` — 根据项目实际环境要求和启动步骤生成
 - `docs/development/deployment.md` — 根据项目部署方式生成
@@ -272,25 +301,30 @@ CLAUDE.local.md
 .claude/session-notes.md
 ```
 
+**⛔ 检查点 — Phase 5 是最容易遗漏的阶段。运行以下命令验证，输出完整结果后等我确认：**
+
+```bash
+echo "=== Skills (应为 9 个) ==="
+for f in audit deep-audit catchup handoff spec done docs release nbp2; do
+  echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
+done
+echo "=== Hooks ==="
+ls -la .claude/hooks/*.sh 2>/dev/null || echo "  ❌ 无 hook 脚本"
+echo "=== Settings ==="
+jq . .claude/settings.json > /dev/null 2>&1 && echo "  ✅ JSON 格式正确" || echo "  ❌ JSON 格式错误"
+echo "=== CLAUDE.md ==="
+echo "  $(wc -l < CLAUDE.md 2>/dev/null || echo '0') 行"
+echo "=== Docs ==="
+find docs -type f -name "*.md" 2>/dev/null | sort
+```
+
+**如有 ❌ 项，立即补充后重新运行验证命令。全部 ✅ 后等我确认再继续。**
+
 ---
 
-### Phase 6：验证
+### Phase 6：Hook 功能测试
 
-```
-[✓] CLAUDE.md 存在，内容准确，行数 < 150
-[✓] docs/roadmap/ 目录已创建，README.md + Phase 文件已生成
-[✓] CLAUDE.md 中已添加 @docs/roadmap/README.md 和当前 Phase 引用
-[✓] .claude/settings.json 格式正确（可用 jq . .claude/settings.json 验证）
-[✓] .claude/hooks/ 所有脚本有执行权限（ls -la .claude/hooks/）
-[✓] .claude/skills/ 8 个 Skill 已创建（audit / deep-audit / catchup / handoff / spec / done / release / nbp2）
-[✓] docs/development/ 目录已创建，按需生成初始文档
-[✓] docs/architecture/adr/ 目录已创建
-[✓] .gitignore 包含 CLAUDE.local.md、session-notes.md 等
-[✓] Monorepo：各子目录 CLAUDE.md 已创建
-[✓] 按需：.claude/rules/ 路径配置正确
-```
-
-手动测试 Hook 脚本是否正常运行：
+运行以下命令测试 Hook 脚本是否正常工作：
 
 ```bash
 # 测试 session-start
@@ -305,6 +339,8 @@ echo "退出码: $?"
 echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
   | bash .claude/hooks/post-write.sh
 ```
+
+输出测试结果后等我确认。
 
 ---
 
@@ -325,8 +361,8 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 - 路线图: docs/roadmap/（[N] 个 Phase 文件）
 - 子目录 CLAUDE.md: [数量] 个（如有）
 - .claude/rules/: [数量] 个规则文件（如有）
-- Hooks 已启用: [SessionStart / PreToolUse / PostToolUse / Stop / UserPromptSubmit（如有）]
-- Skills: audit / deep-audit / catchup / handoff / spec / done / release / nbp2
+- Hooks 已启用: [SessionStart / PreToolUse / PostToolUse / PreCompact / Stop / UserPromptSubmit（如有）]
+- Skills: audit / deep-audit / catchup / handoff / spec / done / docs / release / nbp2
 - 开发文档: docs/development/（[已生成的文档列表]）
 - Agent Teams: [已启用 / 未启用]
 
@@ -336,14 +372,15 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 ### 日常使用
 - 开始开发：直接说需求（Hook 自动运行）
 - 功能完成：/simplify 审查 → Claude 自动 commit（Hook 验证后）→ 你确认 push
-- 功能收尾：/done（手动兜底检查：Roadmap/Spec 同步 + 部署配置检测）
+- 功能收尾：/done 完成了XX（代码验证 + Roadmap/Spec 状态更新）
+- 文档更新：/docs（深度探索代码 → 刷新开发文档）
 - 批量跨文件变更：/batch "描述"
 - 需求讨论后：/spec（整理讨论成果为设计文档）
 - 中断前：/handoff（自动 commit + 写交接文档）
 - 接续任务：/catchup
 - 上下文接近 70%：/handoff → /clear → /catchup
 - 每周：/audit
-- 阶段完成：/release（全量刷新开发文档）→ /deep-audit（代码审计）
+- 阶段完成：/release（系统性文档刷新）→ /deep-audit（代码审计）
 
 ### 参考
 完整使用说明：~/Downloads/00_project/guides/00-日常使用说明.md

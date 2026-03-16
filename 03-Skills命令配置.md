@@ -2,7 +2,7 @@
 
 > Slash Commands 的进化版 — 更强大的自定义工作流命令
 
-**版本**: v3.10
+**版本**: v3.11
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -68,8 +68,9 @@ Skills 是 Claude Code 2.x 中 Slash Commands 的升级版（文件位置从 `.c
 | `/catchup` | 执行 `/clear` 后快速恢复工作上下文 |
 | `/handoff` | 会话结束前生成结构化交接文档 |
 | `/spec` | 讨论成果整理为设计文档 |
-| `/done` | 功能完成收尾检查（Roadmap/Spec/开发文档同步） |
-| `/release` | Phase 完成：全量刷新开发文档 + 生成 Changelog |
+| `/done` | 功能完成收尾检查（Roadmap/Spec 状态更新） |
+| `/docs` | 深度探索代码，梳理更新开发文档（架构/上手/部署） |
+| `/release` | Phase 完成：系统性文档刷新 + 生成 Changelog |
 
 ---
 
@@ -856,11 +857,11 @@ draft → approved → implementing → implemented → [deprecated | superseded
 
 ---
 
-### 5.4 /done — 智能收尾检查（v3.9 增强）
+### 5.4 /done — 智能收尾检查（v3.11 改进）
 
-**用途**：功能或 Spec Phase 完成后，执行收尾检查。`/done` 会**自动检测完成粒度**——单个功能、Spec 某个 Phase、Spec 全部完成、Roadmap Phase 全部完成——根据粒度执行不同深度的收尾动作。
+**用途**：功能或 Spec Phase 完成后，执行收尾检查。用户**显式描述完成了什么**，Claude 据此匹配 Roadmap 条目和 Spec 文件，更新状态。
 
-**v3.9 变化**：从"固定单功能收尾"升级为"三级自动升级"——一个命令覆盖所有完成粒度，用户不需要判断该用 `/done` 还是 `/release`。
+**v3.11 变化**：从"自动猜测完成范围"改为"用户显式描述 + Claude 匹配"，提高可靠性。开发文档更新职责移至独立的 `/docs` Skill。
 
 **文件路径**: `.claude/skills/done/SKILL.md`
 
@@ -868,28 +869,34 @@ draft → approved → implementing → implemented → [deprecated | superseded
 ---
 name: done
 description: |
-  智能收尾检查。自动检测完成粒度（功能/Spec Phase/Spec 完成/Roadmap Phase 完成），
-  执行对应深度的验证和文档同步。
+  智能收尾检查。用户描述完成了什么功能，自动匹配 Roadmap/Spec 并更新状态。
   触发关键词：功能完成、收尾检查、done、wrap up、Phase 完成
+argument-hint: "<完成了什么功能的描述>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 disable-model-invocation: true
 ---
 
 <task>
-智能收尾检查：自动检测完成粒度，执行对应深度的代码验证 + 文档同步 + 状态汇总。
+智能收尾检查：根据用户描述的完成内容，执行代码验证 + Roadmap/Spec 状态更新 + 代码审查。
 </task>
 
 <workflow>
 
-## Step 0: 识别完成范围
+## Step 0: 解析完成范围
 
-- 查看最近的 git log 和 diff，确定刚完成了什么
-- 如果用户提供了功能名称，以用户说明为准
+读取 `$ARGUMENTS`，确定刚完成了什么。
+
+**有描述**（推荐）：根据用户描述匹配 `docs/roadmap/` 中的条目和 `docs/specs/` 中的文件。
 
 ```bash
+# 辅助信息
 git log --oneline -5
 git diff --stat HEAD~3
 ```
+
+**无描述**：查看最近 git log 和 diff 推断（不推荐，可能不准确）。
+
+如果匹配不到明确的 roadmap 条目或 spec 文件，**直接询问用户确认**，不要猜测跳过。
 
 ## Step 1: 代码验证
 
@@ -951,82 +958,41 @@ grep -rl "status: implementing" docs/specs/ 2>/dev/null
 当 Spec 的所有 Phase 完成（或无 Phase 的 spec 功能完成）时：
 1. 将 frontmatter `status` 从 `implementing` 更新为 `implemented`
 2. 更新 `updated` 日期
-3. 扫描该 Spec 涉及的所有代码变更，检测是否有：
-   - 部署/配置变更 → 提示更新 deployment.md
-   - 新增依赖/启动步骤 → 提示检查 getting-started.md
-   - 新技术选型 → 提示是否需要新增 ADR
+3. 提示用户：建议执行 `/docs` 刷新开发文档
 
-## Step 4: 开发文档检测
-
-### 4a. 部署配置检测
-
-检测本次改动是否涉及部署/配置变更：
-
-```bash
-# 检测配置/环境/部署变更
-git diff --stat HEAD~3 -- '**/.env*' '**/docker*' '**/deploy*' '**/Dockerfile*' '**/nginx*' '**/ci*' '**/cd*'
-```
-
-如果 `docs/development/deployment.md` 存在且检测到变更：
-- 提示："检测到部署/配置变更，建议更新 `docs/development/deployment.md`，是否现在更新？"
-- 用户确认后执行增量更新
-- 用户拒绝则跳过（不阻断流程）
-
-### 4b. 架构文档检测
-
-检测本次改动是否涉及结构性变更：
-
-```bash
-# 检测新增目录/模块
-git diff --stat HEAD~3 --diff-filter=A -- '*/' | head -20
-# 检测新增的顶层源文件目录
-git diff --name-only HEAD~3 --diff-filter=A | grep -E '^(apps|src|packages|modules)/' | cut -d/ -f1-2 | sort -u
-```
-
-如果 `docs/architecture/README.md` 存在且检测到以下任一：
-- 新增了顶层模块/目录
-- 新增了数据流路径（新的 middleware、新的数据源）
-- 变更了组件分层结构
-
-提示："检测到结构性变更，建议更新 `docs/architecture/README.md`，是否现在更新？"
-
-> 注意：API 文档和数据库文档不需要手动维护 — FastAPI/Spring Boot 自动生成 API 文档，ORM 模型定义本身就是数据库文档。此步骤仅关注代码中无法自动体现的部署和架构信息。
-
-## Step 5: 代码审查
+## Step 4: 代码审查
 
 运行 `/simplify` 进行三维并行审查（如果本次还未运行过）。
 
-## Step 6: Roadmap Phase 完成检测
+## Step 5: Roadmap Phase 完成检测
 
 检查当前 Roadmap Phase 的所有功能是否都已完成（所有 checkbox 已勾选）：
 
 - **否** → 记录"Roadmap Phase N 还剩 [M] 个功能未完成"
-- **是** → 建议执行 `/release` 进行全量文档刷新
+- **是** → 建议执行 `/release` 进行系统性文档刷新
 
-> `/done` 只**建议** `/release`，不自动执行。`/release` 涉及全量文档扫描和 Changelog 生成，应由用户主动触发。
+> `/done` 只**建议** `/release`，不自动执行。`/release` 涉及系统性文档扫描和 Changelog 生成，应由用户主动触发。
 
-## Step 7: 提交文档变更
+## Step 6: 提交文档变更
 
-如果 Step 2-4 产生了文档更新：
+如果 Step 2-3 产生了文档更新：
 
 ```bash
 git add docs/
-git commit -m "docs: 更新 [功能名/spec名] 的 roadmap、spec 状态和开发文档"
+git commit -m "docs: 更新 [功能名] 的 roadmap 和 spec 状态"
 ```
 
-## Step 8: 输出状态汇总
-
-根据检测到的完成粒度，输出对应的汇总：
+## Step 7: 输出状态汇总
 
 **单功能 / Spec 单个 Phase 完成**：
 ```
 ✅ 功能收尾完成
 
-功能：[功能名称]
+功能：[用户描述的功能]
 代码验证：✅ 测试通过 | ✅ Lint 通过
 Roadmap：✅ Phase N — [条目] 已勾选 / ⏭️ 无关联条目
 Spec：✅ Phase [M/N] 完成，进入 Phase [M+1] / ⏭️ 无关联 Spec
-代码审查：✅ /simplify 已执行 / ⏭️ 之前已执行
+代码审查：✅ /simplify 已执行
 
 下一步：继续实施 Spec Phase [M+1] / 继续下一个功能
 ```
@@ -1038,43 +1004,199 @@ Spec：✅ Phase [M/N] 完成，进入 Phase [M+1] / ⏭️ 无关联 Spec
 Spec：[spec名].md → implemented ✅
 代码验证：✅ 测试通过 | ✅ Lint 通过
 Roadmap：✅ Phase N — [条目] 已勾选
-部署文档：✅ 已更新 / ⏭️ 无需更新 / ⚠️ 建议更新
 代码审查：✅ /simplify 已执行
 
 Roadmap Phase 状态：还剩 [M] 个功能 / 🎯 全部完成，建议执行 /release
 ```
 
-**Roadmap Phase 也全部完成**：
+**Roadmap Phase 全部完成**：
 ```
 🎉 Roadmap Phase N 全部完成！
 
 所有功能已完成，所有 Spec 已 implemented。
-建议执行 /release 进行全量文档刷新（部署/上手指南/Changelog/ADR）。
+建议执行 /release 进行系统性文档刷新。
 ```
 
 </workflow>
 ````
 
+**用法示例**：
+
+```bash
+/done 完成了用户登录功能
+/done 完成了 user-auth spec 的 Phase 2
+/done 修复了移动端按钮无响应的 bug
+```
+
 **自动 vs 手动**：
 
 | 方式 | 触发 | 覆盖内容 |
 |------|------|---------|
-| **自动**（推荐） | CLAUDE.md 完成标准，Claude 报告"功能完成"前自动执行 | 代码验证 + 文档同步 + Spec Phase 勾选 |
-| **手动** `/done` | 用户显式调用 | 完整检查（含 /simplify 审查 + Spec 完成度检测 + Roadmap Phase 检测 + 状态汇总） |
+| **自动**（推荐） | CLAUDE.md 完成标准，Claude 报告"功能完成"前自动执行 | 代码验证 + Roadmap/Spec 状态更新 |
+| **手动** `/done` | 用户显式调用（附描述） | 完整检查（含 /simplify 审查 + Spec 完成度检测 + Roadmap Phase 检测） |
 
-**三级自动升级**：用户只需执行 `/done`，Skill 自动判断完成粒度并执行对应动作：
+**三级自动升级**：
 
-| 检测到的完成粒度 | `/done` 自动做的事 |
-|-----------------|-------------------|
+| 检测到的完成粒度 | `/done` 做的事 |
+|-----------------|---------------|
 | **Spec 单个 Phase** | 更新 active_phase，基础验证 |
-| **Spec 全部完成** | 上述 + status→implemented + 开发文档检测 + ADR 检查 |
+| **Spec 全部完成** | 上述 + status→implemented |
 | **Roadmap Phase 完成** | 上述 + 建议执行 `/release` |
 
 ---
 
-### 5.5 /release — Phase 完成文档刷新
+### 5.5 /docs — 开发文档梳理（v3.11 新增）
 
-**用途**：一个 Phase 的所有功能完成后，全量扫描代码变更，自动刷新开发文档（部署、上手指南），生成 Changelog 条目，更新 Roadmap Phase 状态，检查是否需要新增 ADR。
+**用途**：深度探索项目代码，梳理并更新开发文档。可全量刷新，也可按范围指定。日常高频使用，保持文档与代码同步。
+
+**文件路径**: `.claude/skills/docs/SKILL.md`
+
+````markdown
+---
+name: docs
+description: |
+  深度探索代码逻辑，梳理并更新开发文档（架构、上手指南、部署）。
+  当用户说"更新文档"、"梳理架构"、"写一下开发文档"时使用。
+  触发关键词：更新文档、梳理文档、docs、架构梳理、文档同步
+argument-hint: "[architecture | frontend | backend | getting-started | deployment | 空=全量]"
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
+disable-model-invocation: true
+---
+
+<task>
+深度探索项目代码，对比现有开发文档，增量更新。保持文档准确反映代码现状。
+</task>
+
+<workflow>
+
+## Step 0: 确定范围
+
+解析 `$ARGUMENTS`：
+
+| 参数 | 更新范围 |
+|------|---------|
+| 无参数 | 全量：architecture + getting-started + deployment |
+| `architecture` | `docs/architecture/` 全部（README + frontend + backend） |
+| `frontend` | `docs/architecture/frontend.md` |
+| `backend` | `docs/architecture/backend.md` |
+| `getting-started` | `docs/development/getting-started.md` |
+| `deployment` | `docs/development/deployment.md` |
+
+```bash
+mkdir -p docs/architecture docs/development
+```
+
+## Step 1: 深度探索代码
+
+根据范围，使用 Explore subagent 或直接读取关键文件：
+
+**架构相关**（architecture / frontend / backend）：
+- 扫描顶层目录结构和模块划分
+- 读取路由/控制器，梳理请求完整链路
+- 读取中间件/拦截器，梳理横切关注点
+- 读取 service/repository 层，梳理业务逻辑链路
+- 识别状态机、异步任务、定时任务等复杂流程
+- 读取组件目录结构，梳理分层和复用模式
+- 特别关注跨多文件才能串起来的逻辑链路
+
+**上手指南相关**（getting-started）：
+- 读取 package.json / pyproject.toml（依赖和脚本）
+- 读取 .env.example（环境变量）
+- 读取 Docker 配置（如有）
+- 验证启动步骤是否仍然有效
+
+**部署相关**（deployment）：
+- 读取 CI/CD 配置
+- 读取 Dockerfile / docker-compose
+- 读取环境变量使用情况（grep 所有 process.env / os.environ）
+- 检查部署脚本
+
+## Step 2: 读取现有文档
+
+读取对应的现有文档文件（如存在），标记：
+- ✅ 仍然准确的内容
+- ⚠️ 需要更新的内容（代码已变但文档未同步）
+- ❌ 已过时需删除的内容
+- 🆕 代码中有但文档中缺失的内容
+
+## Step 3: 增量更新
+
+按以下规范写入/更新文档：
+
+### `docs/architecture/README.md` — 架构总览（30-50 行）
+- 顶层模块职责和边界
+- 模块间依赖关系
+- 前后端通信方式
+- 关键技术选型一句话理由
+- 非直觉的全局设计决策
+
+### `docs/architecture/frontend.md` — 前端架构（50-100 行）
+- 路由结构（哪些页面用模板布局、哪些独立）
+- 组件分层规则（ui / business / page）
+- 全局状态流转（store → component → API 调用）
+- 表单/列表/弹窗等通用交互模式
+- 样式约定（全局 vs 组件级 vs 共享）
+
+### `docs/architecture/backend.md` — 后端架构（50-100 行）
+- 请求完整链路：Router → Middleware → Service → Repository → DB
+- 认证/鉴权链路（token 解析 → 权限判断 → 端点保护）
+- 业务逻辑中的状态机流转（如订单、审批流程）
+- 异步任务/定时任务的触发条件和执行路径
+- 错误处理和统一响应格式
+- 数据处理约定（Converter/Transformer 位置、事务管理）
+
+### `docs/development/getting-started.md` — 上手指南
+- 环境要求（语言/包管理器/数据库版本）
+- 从 clone 到跑通的完整步骤
+- 关键 URL（本地服务地址、API 文档地址）
+- 项目结构概览
+
+### `docs/development/deployment.md` — 部署文档
+- 环境变量表（名称、必填、说明、示例）
+- 部署流程步骤
+- 回滚方案
+
+**写入原则**：
+- 写代码里看不出来的：模块为什么这样划分、数据为什么这样流转
+- 写跨多文件才能串起来的逻辑链路（请求链路、认证流程、状态机等）
+- 不写具体函数签名、props 列表（看代码）
+- 不写 API 端点列表（看自动生成的 API 文档）
+- 不写数据库表结构（看 ORM 模型）
+- 已有内容只增量更新，不全量重写
+
+## Step 4: 提交
+
+```bash
+git add docs/architecture/ docs/development/
+git commit -m "docs: 更新开发文档 — [更新范围描述]"
+```
+
+## Step 5: 输出报告
+
+```
+✅ 开发文档已更新
+
+更新范围：[全量 / architecture / frontend / backend / getting-started / deployment]
+
+变更摘要：
+- docs/architecture/README.md: [新建 / 更新 N 处 / 无变更]
+- docs/architecture/frontend.md: [新建 / 更新 N 处 / 无变更]
+- docs/architecture/backend.md: [新建 / 更新 N 处 / 无变更]
+- docs/development/getting-started.md: [新建 / 更新 N 处 / 无变更]
+- docs/development/deployment.md: [新建 / 更新 N 处 / 无变更]
+
+主要变更：
+- [列出 2-3 个最重要的文档变更]
+```
+
+</workflow>
+````
+
+---
+
+### 5.6 /release — Phase 完成系统性文档刷新（v3.11 调整）
+
+**用途**：一个 Roadmap Phase 的所有功能完成后，进行**系统性文档刷新**——全量执行 `/docs`、生成 Changelog、检查 ADR、更新 Phase 状态。与 `/docs` 的区别：`/docs` 是日常随时可用的轻量更新，`/release` 是 Phase 里程碑节点的全面梳理。
 
 **文件路径**: `.claude/skills/release/SKILL.md`
 
@@ -1082,14 +1204,14 @@ Roadmap Phase 状态：还剩 [M] 个功能 / 🎯 全部完成，建议执行 /
 ---
 name: release
 description: |
-  Phase 完成文档刷新。全量更新开发文档（部署/上手指南），生成 Changelog，更新 Phase 状态。
-  触发关键词：release、发版、Phase 完成、阶段完成、全量文档刷新
+  Phase 完成系统性文档刷新。全量执行 /docs + 生成 Changelog + 检查 ADR + 更新 Phase 状态。
+  触发关键词：release、发版、Phase 完成、阶段完成、系统性文档刷新
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 disable-model-invocation: true
 ---
 
 <task>
-Phase 完成后的全量文档刷新：扫描所有代码变更，自动更新开发文档，生成 Changelog，更新 Roadmap Phase 状态。
+Phase 完成后的系统性文档刷新：全量执行 /docs（架构+上手+部署），生成 Changelog，检查 ADR，更新 Roadmap Phase 状态。
 </task>
 
 <workflow>
@@ -1105,42 +1227,16 @@ cat docs/roadmap/README.md
 ls docs/roadmap/
 ```
 
-## Step 1: 分析 Phase 变更范围
+## Step 1: 全量文档刷新（等同 /docs 全量）
 
-使用 Explore Subagent 全面扫描当前 Phase 期间的所有变更：
+执行与 `/docs` 相同的全量更新流程：
+- 深度探索代码，刷新 `docs/architecture/`（README + frontend + backend）
+- 刷新 `docs/development/getting-started.md`
+- 刷新 `docs/development/deployment.md`
 
-```bash
-# 查看 Phase 期间的所有提交
-git log --oneline --since="[Phase 开始日期]"
+详细规范见 `/docs` Skill。
 
-# 分析变更涉及的文件类型
-git diff --stat [Phase 起始 commit]..HEAD
-```
-
-分类整理：
-- **配置变更**：新增/修改了哪些环境变量、部署配置
-- **依赖变更**：新增/升级/移除了哪些依赖
-- **架构变更**：是否有重大架构决策
-
-> 注意：API 接口和数据库结构不需要手动维护文档 — FastAPI/Spring Boot 自动生成 API 文档，ORM 模型定义本身就是数据库文档。
-
-## Step 2: 更新部署文档
-
-如果有配置/部署变更且 `docs/development/deployment.md` 存在：
-
-- 更新环境变量列表
-- 更新部署流程（如有变化）
-- 更新依赖版本要求
-
-## Step 3: 更新上手指南
-
-如果 `docs/development/getting-started.md` 存在：
-
-- 检查环境要求是否仍然准确（对照 package.json / pyproject.toml）
-- 检查首次运行步骤是否需要更新（新增的初始化步骤）
-- 更新项目结构概览（如有新增目录）
-
-## Step 4: 生成 Changelog
+## Step 2: 生成 Changelog
 
 更新 `docs/development/changelog.md`（如不存在则新建）：
 
@@ -1155,19 +1251,7 @@ git log --oneline --no-merges --since="[Phase 开始日期]" | grep -E "^[a-f0-9
 - **Changed**: refactor/perf 类型的提交
 - **Removed**: 删除功能的提交
 
-## Step 5: 检查架构文档与 ADR
-
-### 5a. 审查架构认知地图
-
-如果 `docs/architecture/README.md` 存在：
-
-- 读取文档内容，对照本 Phase 的代码变更
-- 检查模块划分是否仍然准确（有无新增/删除/重组模块）
-- 检查组件分层描述是否仍然正确
-- 检查数据流描述是否需要更新
-- 如有不一致，执行增量更新
-
-### 5b. 检查 ADR
+## Step 3: 检查 ADR
 
 检查本 Phase 是否有需要记录的架构决策：
 
@@ -1178,7 +1262,7 @@ git log --oneline --no-merges --since="[Phase 开始日期]" | grep -E "^[a-f0-9
 如有，提示用户："检测到 [变更描述]，建议新增 ADR，是否创建？"
 用户确认后，按 ADR 模板在 `docs/architecture/adr/` 中新建。
 
-## Step 6: 更新 Roadmap Phase 状态
+## Step 4: 更新 Roadmap Phase 状态
 
 ```bash
 # 将当前 Phase 文件中的所有 checkbox 状态确认
@@ -1186,27 +1270,28 @@ git log --oneline --no-merges --since="[Phase 开始日期]" | grep -E "^[a-f0-9
 # 更新进度统计
 ```
 
-## Step 7: 提交所有文档变更
+## Step 5: 提交所有文档变更
 
 ```bash
 git add docs/
-git commit -m "docs: Phase N [Phase名称] 完成 — 全量更新开发文档"
+git commit -m "docs: Phase N [Phase名称] 完成 — 系统性文档刷新"
 ```
 
-## Step 8: 输出 Release 报告
+## Step 6: 输出 Release 报告
 
 ```
-🎉 Phase N [Phase名称] 文档刷新完成
+🎉 Phase N [Phase名称] 系统性文档刷新完成
 
 文档更新摘要：
-- 部署文档：✅ 新增 N 个环境变量 / ⏭️ 无变更
+- 架构文档：✅ 已刷新（README/frontend/backend） / ⏭️ 无变更
 - 上手指南：✅ 已更新 / ⏭️ 无需更新
+- 部署文档：✅ 已更新 / ⏭️ 无变更
 - Changelog：✅ 新增 [版本号] 条目
 - ADR：✅ 新增 N 条 / ⏭️ 无需新增
 - Roadmap：✅ Phase N 标记为完成
 
 下一步建议：
-- git push 推送文档更新
+- git push 推送更新
 - /deep-audit 全面代码审计
 - 开始规划 Phase N+1
 ```
@@ -1216,7 +1301,7 @@ git commit -m "docs: Phase N [Phase名称] 完成 — 全量更新开发文档"
 
 ---
 
-### 5.6 /nbp2 — AI 生图 Prompt 助手（Nano Banana Pro 2）
+### 5.7 /nbp2 — AI 生图 Prompt 助手（Nano Banana Pro 2）
 
 **用途**：帮助编写针对 Google Nano Banana Pro / Nano Banana 2 优化的高质量图片生成 Prompt。不同 AI 生图模型有不同的 prompt 写法，此 Skill 内嵌 NBP2 最佳实践，直接输出可用 prompt。
 
@@ -1537,6 +1622,7 @@ mkdir -p .claude/skills/catchup
 mkdir -p .claude/skills/handoff
 mkdir -p .claude/skills/spec
 mkdir -p .claude/skills/done
+mkdir -p .claude/skills/docs
 mkdir -p .claude/skills/release
 mkdir -p .claude/skills/nbp2
 ```
@@ -1550,6 +1636,7 @@ mkdir -p .claude/skills/nbp2
 - `.claude/skills/handoff/SKILL.md`
 - `.claude/skills/spec/SKILL.md`
 - `.claude/skills/done/SKILL.md`
+- `.claude/skills/docs/SKILL.md`
 - `.claude/skills/release/SKILL.md`
 - `.claude/skills/nbp2/SKILL.md`
 
@@ -1577,9 +1664,12 @@ mkdir -p .claude/skills/nbp2
 /spec               # 将讨论成果整理为设计文档
 /spec user-auth     # 指定功能名称
 
-/done               # 功能完成收尾检查（手动兜底）
+/done 完成了用户登录    # 功能完成收尾检查（附描述）
 
-/release            # Phase 完成文档刷新
+/docs               # 全量刷新开发文档
+/docs backend       # 只刷新后端架构文档
+
+/release            # Phase 完成系统性文档刷新
 
 /nbp2               # AI 生图 Prompt 助手
 /nbp2 一只猫在雨中的东京街头   # 指定描述
@@ -1600,5 +1690,5 @@ rm -rf .claude/commands/
 
 ---
 
-**版本**: v3.10
+**版本**: v3.11
 **更新日期**: 2026-03

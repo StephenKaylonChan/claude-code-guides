@@ -2,7 +2,7 @@
 
 > Claude Code 原生记忆系统 — 告别手动维护，拥抱自动化记忆
 
-**版本**: v3.10
+**版本**: v3.11
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -105,7 +105,7 @@ project-root/
 │   ├── rules/
 │   │   ├── frontend.md            # 仅编辑 apps/web/** 时加载
 │   │   └── backend.md             # 仅编辑 apps/api/** 时加载
-│   ├── skills/                    # 自定义命令（见《03-Skills命令配置》）
+│   ├── skills/                    # 自定义命令（9 个，见《03-Skills命令配置》）
 │   ├── agents/                    # 自定义子代理
 │   └── hooks/                     # Hook 脚本目录（见《02-Hooks自动化配置》）
 │
@@ -127,7 +127,9 @@ project-root/
     │   ├── deployment.md          #   手写：部署流程、环境变量、回滚
     │   └── changelog.md           #   自动生成：版本发布记录
     └── architecture/
-        ├── README.md              # 架构认知地图（@引用自动加载）
+        ├── README.md              # 架构总览（@引用自动加载，/docs 刷新）
+        ├── frontend.md            # 前端架构详细（/docs frontend 刷新）
+        ├── backend.md             # 后端架构详细（/docs backend 刷新）
         └── adr/                   # 架构决策记录（/release 检查是否需要新增）
 ```
 
@@ -238,14 +240,13 @@ pnpm build            # 生产构建
    - Spec 有 Implementation Phases → 更新 `active_phase`（仅当前 Phase 完成时）
    - Spec 所有 Phase 完成 → 更新 status 为 `implemented`
    - Spec 无 Phases（旧结构）→ 直接更新 status 为 `implemented`
-7. 检测是否涉及部署配置/环境变量变更，如涉及则提示更新 `docs/development/deployment.md`
-8. 确认代码注释反映最终实现
+7. 确认代码注释反映最终实现
 
 ### Spec 实施自检（基于 spec 开发时）
-9. 每完成一个 task → 在 spec 文件中勾选 `[x]`
-10. 当前 Phase 所有 Tasks 勾完 → 逐条检查 Gate 条件
-11. Gate 全通过 → 更新 spec frontmatter 的 `active_phase`，提醒执行 `/done`
-12. `/done` 会自动检测：Spec 是否全部完成、Roadmap Phase 是否全部完成
+8. 每完成一个 task → 在 spec 文件中勾选 `[x]`
+9. 当前 Phase 所有 Tasks 勾完 → 逐条检查 Gate 条件
+10. Gate 全通过 → 更新 spec frontmatter 的 `active_phase`，提醒执行 `/done`
+11. `/done` 检测：Spec 是否全部完成、Roadmap Phase 是否全部完成
 
 ## Git 提交规范
 
@@ -457,5 +458,5 @@ rm docs/ai-context/CURRENT.md
 
 ---
 
-**版本**: v3.10
+**版本**: v3.11
 **更新日期**: 2026-03
