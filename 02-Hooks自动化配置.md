@@ -2,7 +2,7 @@
 
 > 用 Claude Code 原生钩子替代手动工作流，实现零干预的开发自动化
 
-**版本**: v3.12
+**版本**: v3.13
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -394,9 +394,11 @@ exit 0
 
 ---
 
-### 5.4 Stop：完成通知
+### 5.4 Stop：完成通知 + 质量门禁（v3.13 增强）
 
-**用途**：Claude 完成响应时发送桌面通知（适合 Claude 处理长任务时去做其他事）。
+**用途**：Claude 完成响应时发送桌面通知，**同时检查本轮修改的文件是否有质量问题**。这是防止代码劣化的关键防线——Hook 是确定性的，不受上下文劣化影响，每次都会执行。
+
+> **为什么 Stop 比 PostToolUse 更适合做质量门禁？** PostToolUse 在每次写文件时触发，适合格式化单个文件。Stop 在一轮响应结束时触发，可以对本轮所有改动做整体检查，避免重复执行。
 
 ```bash
 #!/bin/bash
@@ -405,13 +407,44 @@ exit 0
 INPUT=$(cat)
 LAST_MSG=$(echo "$INPUT" | jq -r '.last_assistant_message // ""' | head -c 100)
 
-# macOS 桌面通知
+# === 质量门禁：检查本轮修改的文件 ===
+CHANGED_FILES=$(git diff --name-only 2>/dev/null)
+
+if [ -n "$CHANGED_FILES" ]; then
+  ISSUES=""
+
+  # 前端：检测内联样式
+  for f in $(echo "$CHANGED_FILES" | grep -E '\.(tsx|jsx)$'); do
+    if [ -f "$f" ] && grep -q 'style={{' "$f" 2>/dev/null; then
+      ISSUES="${ISSUES}\n⚠️ $f: 检测到内联样式 style={{}}，请使用项目样式方案"
+    fi
+  done
+
+  # 前端：检测 @ts-ignore
+  for f in $(echo "$CHANGED_FILES" | grep -E '\.(ts|tsx)$'); do
+    if [ -f "$f" ] && grep -qE '@ts-ignore|@ts-expect-error' "$f" 2>/dev/null; then
+      ISSUES="${ISSUES}\n⚠️ $f: 检测到 @ts-ignore，请修复类型错误"
+    fi
+  done
+
+  # 通用：检测 TODO hack
+  for f in $CHANGED_FILES; do
+    if [ -f "$f" ] && grep -qi 'TODO.*hack\|FIXME.*hack\|HACK:' "$f" 2>/dev/null; then
+      ISSUES="${ISSUES}\n⚠️ $f: 检测到 HACK 标记，请使用正式方案"
+    fi
+  done
+
+  if [ -n "$ISSUES" ]; then
+    echo -e "🔍 代码质量检查：$ISSUES"
+    echo ""
+    echo "请修复上述问题后再继续。"
+  fi
+fi
+
+# === 桌面通知 ===
 if command -v osascript &>/dev/null; then
   osascript -e "display notification \"$LAST_MSG\" with title \"Claude Code 完成\" sound name \"Glass\""
 fi
-
-# Linux 通知（需要 notify-send）
-# notify-send "Claude Code 完成" "$LAST_MSG"
 
 exit 0
 ```
@@ -424,6 +457,8 @@ exit 0
   }
 ]
 ```
+
+> **自定义检查项**：根据你的技术栈调整检查逻辑。上面是前端示例，后端可以检测裸写 SQL、Controller 中的业务逻辑等。关键是只检查**最致命的几项**，不要把 Stop Hook 变成完整 linter（那样每次响应都会慢）。
 
 ---
 
@@ -941,5 +976,5 @@ echo "退出码: $?"
 
 ---
 
-**版本**: v3.12
+**版本**: v3.13
 **更新日期**: 2026-03

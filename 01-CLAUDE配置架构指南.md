@@ -2,7 +2,7 @@
 
 > Claude Code 原生记忆系统 — 告别手动维护，拥抱自动化记忆
 
-**版本**: v3.12
+**版本**: v3.13
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -224,6 +224,14 @@ pnpm build            # 生产构建
 - MUST NOT 自造已有成熟库的功能
 - SHOULD 每个 PR 只做一件事，保持 diff 可读
 
+## 编码红线（任何场景，包括修 Bug，MUST NOT 违反）
+
+- MUST NOT 复制现有函数并微调来修复问题，MUST 修改原函数或提取公共逻辑
+- MUST NOT 绕过现有组件/工具函数封装，直接实现重复功能
+- MUST NOT 引入临时方案（hardcode、magic number、TODO hack）
+
+> 技术栈专属红线放 `.claude/rules/`，按路径自动加载，不占 CLAUDE.md 行数预算。
+
 ## 完成标准
 
 功能实现后，MUST 按顺序完成以下验证再报告"完成"：
@@ -307,6 +315,8 @@ type: feat | fix | docs | refactor | perf | test | chore
 
 > **已知限制**：`paths` 规则仅在 Read 操作时触发加载，Write 操作不触发。重要规则不要完全依赖 `paths` 条件，关键约束应放在根 CLAUDE.md 或直接放在 rules 文件中不设 paths 条件。
 
+Rules 文件承担两个职责：**编码规范**（应该怎么写）和**编码红线**（绝对不能怎么写）。红线是代码质量防御的关键层（详见文档 04 Section 10），规范可能被遗忘但 Hook 会兜底，红线则是 CLAUDE.md + Hook 双重保障。
+
 ### 前端规则示例 `.claude/rules/frontend.md`
 
 ```markdown
@@ -316,18 +326,25 @@ paths:
   - "apps/web/src/**/*.ts"
 ---
 
+## 前端红线（修 Bug 时同样适用）
+
+- MUST NOT 使用 style={{}}，MUST 使用 Tailwind / CSS Modules
+- MUST NOT 使用 any / @ts-ignore / @ts-expect-error
+- MUST NOT 在组件内定义一次性工具函数，MUST 提取到 hooks/ 或 utils/
+- MUST NOT 直接操作 DOM（querySelector 等），MUST 使用 React ref
+- MUST NOT 在组件内写数据请求逻辑，MUST 通过 API layer / hooks 封装
+
 ## 前端规范
 
 - MUST 使用函数式组件（禁止 class 组件）
 - MUST 使用 Zustand 管理全局状态（禁止 Redux 或 React Context）
 - MUST 将 API 调用封装在 `hooks/` 目录的自定义 Hook 中
-- MUST NOT 在组件内直接调用 fetch/axios
 - SHOULD 组件文件不超过 200 行，超过则拆分
 - 命名：组件 PascalCase，文件名与组件名一致
 - 样式：Tailwind CSS utility-first，避免自定义 CSS
 ```
 
-### 后端规则示例 `.claude/rules/backend.md`
+### 后端规则示例 `.claude/rules/backend.md`（FastAPI）
 
 ```markdown
 ---
@@ -335,15 +352,49 @@ paths:
   - "apps/api/**/*.py"
 ---
 
+## 后端红线（修 Bug 时同样适用）
+
+- MUST NOT 在 router 中写业务逻辑，MUST 放 service 层
+- MUST NOT 裸写 SQL，MUST 使用 SQLAlchemy ORM
+- MUST NOT 在函数内 hardcode 配置值，MUST 使用 Settings / 环境变量
+- MUST NOT 用 dict 传递结构化数据，MUST 使用 Pydantic model
+- MUST NOT 吞异常（bare except / except Exception: pass）
+
 ## 后端规范
 
 - MUST 使用 async/await（禁止同步阻塞函数）
 - MUST 在 router 层用 Pydantic schema 做参数校验
 - MUST 使用 FastAPI Depends 做依赖注入
-- MUST NOT 在 router 中直接写 SQL（封装到 repository 层）
 - SHOULD 每个 API 模块有对应的 pytest 测试文件
 - 错误响应统一格式：`{"error": {"code": str, "message": str}}`
 ```
+
+### 后端规则示例 `.claude/rules/backend-spring.md`（Spring Boot）
+
+```markdown
+---
+paths:
+  - "src/**/*.java"
+---
+
+## 后端红线（修 Bug 时同样适用）
+
+- MUST NOT 在 Controller 中写业务逻辑，MUST 放 Service 层
+- MUST NOT 裸写 SQL，MUST 使用 JPA / MyBatis 映射
+- MUST NOT 在代码中 hardcode 配置值，MUST 使用 @Value / application.yml
+- MUST NOT 用 Map 传递结构化数据，MUST 使用 DTO/VO
+- MUST NOT 吞异常（catch + 空处理 / 仅打日志不抛出）
+```
+
+### 红线编写原则
+
+| 原则 | 说明 |
+|------|------|
+| **少** | 每个技术栈 5-8 条，不要写成规范手册 |
+| **硬** | 用 MUST NOT，不是 SHOULD NOT |
+| **具体** | `MUST NOT 使用 style={{}}`，不是"保持代码整洁" |
+| **含修 Bug 场景** | 明确写"修 Bug 时同样适用"，否则 Claude 在修 Bug 时会自动"豁免" |
+| **配合 Hook** | 最关键的红线在 Stop Hook 中用脚本检查（详见文档 02 Section 5.4），双重保障 |
 
 ---
 
@@ -458,5 +509,5 @@ rm docs/ai-context/CURRENT.md
 
 ---
 
-**版本**: v3.12
+**版本**: v3.13
 **更新日期**: 2026-03

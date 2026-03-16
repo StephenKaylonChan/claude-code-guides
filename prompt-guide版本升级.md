@@ -216,7 +216,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.10-v3.12），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.11-v3.13），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -251,6 +251,12 @@ ls .claude/rules/ 2>/dev/null
 - **Chrome 浏览器集成**：`claude --chrome` / `/chrome`，前端调试/UI 验证场景。
 - **Plugin 插件系统**：`/plugin install`，团队共享的扩展生态。
 - **模型更新**：Opus 4.6 为默认模型，Sonnet 4.6 替换 4.5，Opus 4/4.1 已下线。
+
+**v3.13 新增**（重点检查）：
+- **Stop Hook 质量门禁**：`on-stop.sh` 增加代码质量检查（检测 inline style / @ts-ignore / HACK 标记等）。检查项目 `on-stop.sh` 是否已升级。
+- **CLAUDE.md 编码红线**：CLAUDE.md 模板新增"编码红线"区块（修 Bug 时同样适用的 MUST NOT 规则）。检查项目 CLAUDE.md 是否有编码红线。
+- **`.claude/rules/` 红线增强**：rules 文件新增"红线"区块（技术栈专属的 MUST NOT 规则），与编码规范分开。检查 `frontend.md` / `backend.md` 是否已补充红线。
+- **代码质量防御章节**（文档 04 Section 10）：分层防御模型（Hook 硬拦 > 上下文纪律 > CLAUDE.md 红线 > /simplify 兜底）、上下文劣化认知更新。
 
 **Bundled 命令**：
 - **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`** 共 5 个内置命令，无需配置，但日常使用规范中是否已知晓？

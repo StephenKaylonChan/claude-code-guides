@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.12（2026-03）
+> **版本**: v3.13（2026-03）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -203,6 +203,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.13 | 2026-03 | 代码质量防御体系：Stop Hook 质量门禁（响应结束后自动检查致命问题）、分层防御模型（Hook 硬拦 > 上下文纪律 > CLAUDE.md 红线 > /simplify 兜底）、CLAUDE.md 编码红线模板 + `.claude/rules/` 技术栈专属红线（含 React/FastAPI/Spring Boot 示例）、红线编写原则（少/硬/具体/含修 Bug 场景）、上下文劣化认知更新 |
 | v3.12 | 2026-03 | Hook 事件 18→21（新增 PostCompact/Elicitation/ElicitationResult）、Hook Handler 类型补全（prompt/agent 支持更多事件）、PostCompact 模板、Skills/Agent frontmatter 新字段（memory/mcpServers/maxTurns/permissionMode/disallowedTools/`${CLAUDE_SKILL_DIR}`/`${CLAUDE_SESSION_ID}`）、Chrome 浏览器集成、Plugin 插件系统、`/effort` 命令、模型更新（Opus 4.6 默认/Sonnet 4.6/Effort 级别简化） |
 | v3.11 | 2026-03 | `/done` 改进（显式描述参数，去掉自动猜测）、新增 `/docs` 开发文档梳理 Skill（深度探索代码→刷新架构/上手/部署文档，支持按范围指定）、`/release` 调整为 Phase 系统性梳理（含 `/docs` 全量）、架构文档拆分为 README+frontend.md+backend.md、Skills 总数 8→9 |
 | v3.10 | 2026-03 | 架构认知地图（`docs/architecture/README.md` — 项目组织方式/模块划分/数据流，`@`引用自动加载，`/release` 审查 + `/deep-audit` 验证 + `/done` 结构性变更检测）、`/nbp2` AI 生图 Prompt 助手 Skill、Skills 总数 7→8 |
@@ -224,4 +225,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-03（v3.12）
+**最后更新**: 2026-03（v3.13）
