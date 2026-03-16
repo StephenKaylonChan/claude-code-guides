@@ -2,7 +2,7 @@
 
 > Slash Commands 的进化版 — 更强大的自定义工作流命令
 
-**版本**: v3.11
+**版本**: v3.12
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -84,12 +84,49 @@ description: |                        # Claude 自动检测触发的描述（重
   触发关键词：X、Y、Z
 argument-hint: "[参数说明]"           # 命令行自动补全提示
 allowed-tools: Read, Grep, Bash       # 此 Skill 可用的工具列表
+disallowed-tools: Edit, Write         # 工具黑名单（与 allowed-tools 二选一）
 model: haiku                          # 模型覆盖（haiku/sonnet/opus/inherit）
 context: fork                         # fork = 在隔离子代理中运行
 disable-model-invocation: false       # true = 只能用户触发，Claude 不能自动调用
 user-invocable: true                  # false = 隐藏，只能 Claude 内部调用
+# --- 以下为 v3.12 新增字段 ---
+memory: project                       # 子代理持久记忆作用域（user/project/local）
+maxTurns: 30                          # 限制最大代理轮次
+permissionMode: default               # 权限模式（default/acceptEdits/dontAsk/bypassPermissions/plan）
+mcpServers:                           # 为此 Skill 限定可用的 MCP 服务器
+  - context7
+skills:                               # 预加载其他 Skills 到子代理上下文
+  - audit
+hooks:                                # Skill 作用域内的生命周期 Hooks（详见文档 02）
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "./scripts/check.sh"
 ---
 ```
+
+### v3.12 新增字段说明
+
+| 字段 | 用途 | 说明 |
+|------|------|------|
+| `memory` | 子代理跨会话记忆 | `user`（用户级）、`project`（项目级）、`local`（本地级），Skill 运行结束后记忆持久化 |
+| `maxTurns` | 限制代理轮次 | 防止 Skill 无限循环，超过轮次自动停止 |
+| `permissionMode` | 权限模式 | `plan` 模式下只分析不修改文件，适合审查类 Skill |
+| `disallowed-tools` | 工具黑名单 | 与 `allowed-tools` 互斥，用于禁止特定工具 |
+| `mcpServers` | MCP 服务器限定 | 只有列出的 MCP 服务器对此 Skill 可用，支持内联定义或引用名称 |
+| `skills` | 预加载 Skills | 将其他 Skill 注入子代理上下文 |
+| `hooks` | Skill 作用域 Hooks | 仅在此 Skill 执行期间生效，完成后自动清理（详见文档 02 Section 6.3） |
+
+### 动态变量
+
+Skill 内容中可使用以下变量：
+
+| 变量 | 说明 |
+|------|------|
+| `$ARGUMENTS` / `$1` `$2` | 用户传入的参数 |
+| `${CLAUDE_SKILL_DIR}` | Skill 所在目录的绝对路径，用于引用同目录下的脚本或资源文件 |
+| `${CLAUDE_SESSION_ID}` | 当前会话 ID，适合日志记录和会话级数据隔离 |
 
 ### `description` 的重要性
 
@@ -1690,5 +1727,5 @@ rm -rf .claude/commands/
 
 ---
 
-**版本**: v3.11
+**版本**: v3.12
 **更新日期**: 2026-03

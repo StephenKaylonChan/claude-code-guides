@@ -216,7 +216,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.9-v3.11），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.10-v3.12），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -243,6 +243,14 @@ ls .claude/rules/ 2>/dev/null
 - **架构文档拆分**：`docs/architecture/` 扩展为 README.md（30-50 行）+ `frontend.md`（50-100 行）+ `backend.md`（50-100 行）。
 - **五层收尾模型**：Commit → 功能/Spec Phase → Spec 完成 → 文档同步（`/docs`）→ Roadmap Phase（`/release`）。
 - **CLAUDE.md 完成标准简化**：文档同步步骤只保留 Roadmap/Spec 状态更新，开发文档检测移至 `/docs`。
+
+**v3.12 新增**（重点检查）：
+- **Hook 事件 18→21**：新增 `PostCompact`（压缩完成后）、`Elicitation`（MCP 请求用户输入）、`ElicitationResult`（用户响应 MCP Elicitation）。检查 `settings.json` 是否已添加 `PostCompact` Hook（与 `PreCompact` 配对使用）。
+- **Skills/Agent frontmatter 新字段**：`memory`（跨会话记忆）、`mcpServers`（限定 MCP）、`maxTurns`（轮次限制）、`permissionMode`（权限模式）、`disallowed-tools`（工具黑名单）、`${CLAUDE_SKILL_DIR}`（Skill 目录变量）、`${CLAUDE_SESSION_ID}`（会话 ID 变量）。检查自定义 Skills 是否有使用新字段的需求。
+- **`/effort` 命令**：模型思考深度控制（low/medium/high/max/auto），日常使用说明中是否已知晓？
+- **Chrome 浏览器集成**：`claude --chrome` / `/chrome`，前端调试/UI 验证场景。
+- **Plugin 插件系统**：`/plugin install`，团队共享的扩展生态。
+- **模型更新**：Opus 4.6 为默认模型，Sonnet 4.6 替换 4.5，Opus 4/4.1 已下线。
 
 **Bundled 命令**：
 - **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`** 共 5 个内置命令，无需配置，但日常使用规范中是否已知晓？

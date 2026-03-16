@@ -2,7 +2,7 @@
 
 > 用 Claude Code 原生钩子替代手动工作流，实现零干预的开发自动化
 
-**版本**: v3.11
+**版本**: v3.12
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -45,9 +45,9 @@ Hooks 是 Claude Code 的生命周期钩子系统，允许你在 AI 操作的关
 
 ## 2. 核心 Hook 事件
 
-Claude Code 当前支持 **18 个** Hook 事件：
+Claude Code 当前支持 **21 个** Hook 事件：
 
-### 支持 matcher 的事件（11 个）
+### 支持 matcher 的事件（12 个）
 
 | 事件 | 触发时机 | matcher 匹配对象 | 典型用途 |
 |------|---------|-----------------|---------|
@@ -56,20 +56,23 @@ Claude Code 当前支持 **18 个** Hook 事件：
 | `PostToolUse` | 工具调用**成功后** | 工具名 | 自动格式化、自动测试 |
 | `PostToolUseFailure` | 工具调用**失败后** | 工具名 | 错误处理、自动恢复 |
 | `PermissionRequest` | 权限请求时（可阻断） | 工具名 | 编程化自动审批/拒绝权限 |
-| `Notification` | 需要用户注意时 | 通知类型：`permission_prompt`/`idle_prompt` 等 | 桌面通知、TTS 提醒 |
+| `Notification` | 需要用户注意时 | 通知类型：`permission_prompt`/`idle_prompt`/`elicitation_dialog` 等 | 桌面通知、TTS 提醒 |
 | `SubagentStart` | 子代理启动时 | 代理类型：`Bash`/`Explore`/`Plan` 或自定义名 | 监控子代理生命周期 |
 | `SubagentStop` | 子代理完成时 | 代理类型（同 SubagentStart） | 汇总子代理结果 |
 | `PreCompact` | 上下文压缩前 | 触发方式：`manual`/`auto` | 保存关键信息 |
+| `PostCompact` | 上下文压缩**完成后** | 触发方式：`manual`/`auto` | 压缩后恢复检查、日志记录 |
 | `SessionEnd` | 会话终止时 | 终止原因：`clear`/`logout`/`other` 等 | 清理资源、记录会话统计 |
 | `ConfigChange` | 配置文件变更时（可阻断） | 配置来源：`user_settings`/`project_settings` 等 | 企业安全审计、防止配置篡改 |
 
-### 不支持 matcher（每次必触发，共 7 个）
+### 不支持 matcher（每次必触发，共 9 个）
 
 | 事件 | 触发时机 | 典型用途 |
 |------|---------|---------|
 | `UserPromptSubmit` | 用户提交 prompt**前** | 注入额外上下文、校验 prompt |
 | `Stop` | Claude 完成响应时 | 完成通知、状态验证 |
 | `TaskCompleted` | 任务被标记为完成时 | 强制完成标准（测试通过、lint 通过） |
+| `Elicitation` | MCP 服务端请求用户输入时（表单/浏览器 URL） | 自动应答、跳过对话框、日志记录 |
+| `ElicitationResult` | 用户响应 MCP Elicitation 后、发送回服务端前 | 校验/修改/拦截用户响应 |
 | `TeammateIdle` | Agent Teams 中 teammate 空闲时 | 控制 teammate 继续还是停止 |
 | `WorktreeCreate` | 创建 worktree 时（替换默认 git 行为） | 自定义 VCS 初始化（SVN/Perforce） |
 | `WorktreeRemove` | 删除 worktree 时 | 清理 worktree 相关资源 |
@@ -79,8 +82,8 @@ Claude Code 当前支持 **18 个** Hook 事件：
 
 并非所有事件都支持全部 Handler 类型（详见 [Section 3](#3-handler-类型)）：
 
-- **全部 4 种（command + http + prompt + agent）**：PreToolUse、PostToolUse、PostToolUseFailure、PermissionRequest、Stop、SubagentStop、TaskCompleted、UserPromptSubmit
-- **仅 command**：SessionStart、SessionEnd、Notification、PreCompact、SubagentStart、ConfigChange、WorktreeCreate、WorktreeRemove、TeammateIdle、InstructionsLoaded
+- **全部 4 种（command + http + prompt + agent）**：PreToolUse、PostToolUse、PostToolUseFailure、PermissionRequest、Stop、SubagentStop、TaskCompleted、UserPromptSubmit、Elicitation、ElicitationResult
+- **仅 command**：SessionStart、SessionEnd、Notification、PreCompact、PostCompact、SubagentStart、ConfigChange、WorktreeCreate、WorktreeRemove、TeammateIdle、InstructionsLoaded
 
 ### SessionStart 的 matcher 值
 
@@ -561,6 +564,59 @@ export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=90
 
 ---
 
+### 5.8 PostCompact：压缩后恢复验证（v3.12 新增）
+
+**用途**：上下文压缩完成后，验证关键信息是否保留，提醒 Claude 重新读取 spec 文件恢复进度。与 PreCompact 配对使用。
+
+```bash
+#!/bin/bash
+# .claude/hooks/post-compact-check.sh
+
+INPUT=$(cat)
+TRIGGER=$(echo "$INPUT" | jq -r '.trigger // "unknown"')
+
+echo "📦 上下文已压缩（触发方式: $TRIGGER）"
+echo ""
+
+# 检查是否有正在实施的 spec
+if [ -d "docs/specs" ]; then
+  ACTIVE_SPECS=$(grep -rl "status: implementing" docs/specs/ 2>/dev/null)
+  if [ -n "$ACTIVE_SPECS" ]; then
+    echo "⚠️ 检测到正在实施的 Spec："
+    for spec in $ACTIVE_SPECS; do
+      PHASE=$(grep "active_phase:" "$spec" 2>/dev/null | head -1)
+      echo "  - $spec ($PHASE)"
+    done
+    echo ""
+    echo "请读取上述 spec 文件，确认 active_phase 和 Tasks 勾选状态，恢复实施进度。"
+  fi
+fi
+
+# 检查 session-notes 是否存在
+if [ -f ".claude/session-notes.md" ]; then
+  echo "📋 发现 session-notes.md，建议读取以恢复会话上下文。"
+fi
+
+exit 0
+```
+
+在 `settings.json` 中配置：
+```json
+"PostCompact": [
+  {
+    "matcher": "auto",
+    "hooks": [
+      {
+        "type": "command",
+        "command": "bash .claude/hooks/post-compact-check.sh"
+      }
+    ]
+  }
+]
+```
+
+---
+
 ## 6. 高级 Hook 能力
 
 ### 6.1 Input Modification（updatedInput）
@@ -778,6 +834,14 @@ HTTP 类型 Hook 支持在 headers 中使用环境变量，通过 `allowedEnvVar
         ]
       }
     ],
+    "PostCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {"type": "command", "command": "bash .claude/hooks/post-compact-check.sh"}
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
@@ -789,7 +853,7 @@ HTTP 类型 Hook 支持在 headers 中使用环境变量，通过 `allowedEnvVar
 }
 ```
 
-> **注意**：`UserPromptSubmit`、`Stop`、`TaskCompleted`、`TeammateIdle`、`WorktreeCreate`、`WorktreeRemove`、`InstructionsLoaded` 共 7 个事件不支持 `matcher` 字段，每次触发必定执行。其余 11 个事件均支持 matcher（详见 Section 2）。
+> **注意**：`UserPromptSubmit`、`Stop`、`TaskCompleted`、`Elicitation`、`ElicitationResult`、`TeammateIdle`、`WorktreeCreate`、`WorktreeRemove`、`InstructionsLoaded` 共 9 个事件不支持 `matcher` 字段，每次触发必定执行。其余 12 个事件均支持 matcher（详见 Section 2）。
 
 ### Hooks 脚本目录结构
 
@@ -800,6 +864,7 @@ HTTP 类型 Hook 支持在 headers 中使用环境变量，通过 `allowedEnvVar
     ├── pre-commit-check.sh   # 提交前测试门禁
     ├── post-write.sh         # 写文件后自动格式化
     ├── pre-compact-save.sh   # 压缩前保存 Spec 进度和工作状态
+    ├── post-compact-check.sh # 压缩后恢复验证（读取 spec 恢复进度）
     ├── on-stop.sh            # 完成通知
     ├── on-notification.sh    # 等待输入提醒
     └── on-prompt-submit.sh   # 每次 prompt 前注入上下文（可选）
@@ -876,5 +941,5 @@ echo "退出码: $?"
 
 ---
 
-**版本**: v3.11
+**版本**: v3.12
 **更新日期**: 2026-03

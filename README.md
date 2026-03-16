@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.11（2026-03）
+> **版本**: v3.12（2026-03）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -28,7 +28,7 @@
 | 文档 | 说明 | 优先阅读 |
 |------|------|-----------|
 | [01-CLAUDE配置架构指南.md](./01-CLAUDE配置架构指南.md) | CLAUDE.md 层级结构 + Auto Memory 管理 | 配置参考 |
-| [02-Hooks自动化配置.md](./02-Hooks自动化配置.md) | 18个 Hook 事件 + 实用模板（测试门禁/自动格式化/通知） | 配置参考 |
+| [02-Hooks自动化配置.md](./02-Hooks自动化配置.md) | 21个 Hook 事件 + 实用模板（测试门禁/自动格式化/通知/压缩恢复） | 配置参考 |
 | [03-Skills命令配置.md](./03-Skills命令配置.md) | 替代旧 Slash Commands 的 Skills 系统配置 | 第三读 |
 | [04-工作流最佳实践.md](./04-工作流最佳实践.md) | Explore→Plan→Code→Verify→Simplify→Commit、Worktrees、MCP 选型、反模式 | 随时参考 |
 
@@ -55,7 +55,7 @@
 | CLAUDE.md 层级结构（子目录懒加载） | 文档 01 |
 | `.claude/rules/` 路径感知规则 | 文档 01 |
 | Auto Memory 系统 | 文档 01 |
-| Hooks 自动化（含 UserPromptSubmit 等新事件） | 文档 02 |
+| Hooks 自动化（21 个事件，含 PostCompact/Elicitation 等） | 文档 02 |
 | Skills 系统（升级版 Commands）| 文档 03 |
 | `/simplify` `/batch` `/debug` `/loop` `/claude-api` Bundled 内置命令 | 文档 03 |
 | `/catchup` `/handoff` 自定义命令（handoff 含自动 commit） | 文档 03 |
@@ -73,6 +73,9 @@
 | `/voice` 语音模式（Push-to-talk，20 种语言） | 文档 00 |
 | `/mcp` 对话框式 MCP 管理 + `list_changed` 动态更新 | 文档 00、04 |
 | `/rewind` 回滚模式（仅对话/仅代码/两者） | 文档 00 |
+| Chrome 浏览器集成（前端调试/UI 验证/表单测试） | 文档 04 |
+| Plugin 插件系统（市场生态/命名空间隔离） | 文档 04 |
+| `/effort` 模型思考深度控制（low/medium/high/max/auto） | 文档 00 |
 | Worktree `isolation: worktree` 声明式隔离 + Hook 状态扩展 | 文档 04 |
 | Remote Control `--name` 自定义会话名称 | 文档 04 |
 | `/loop` 定时调度增强（3 天过期、50 任务上限） | 文档 00、04 |
@@ -200,6 +203,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.12 | 2026-03 | Hook 事件 18→21（新增 PostCompact/Elicitation/ElicitationResult）、Hook Handler 类型补全（prompt/agent 支持更多事件）、PostCompact 模板、Skills/Agent frontmatter 新字段（memory/mcpServers/maxTurns/permissionMode/disallowedTools/`${CLAUDE_SKILL_DIR}`/`${CLAUDE_SESSION_ID}`）、Chrome 浏览器集成、Plugin 插件系统、`/effort` 命令、模型更新（Opus 4.6 默认/Sonnet 4.6/Effort 级别简化） |
 | v3.11 | 2026-03 | `/done` 改进（显式描述参数，去掉自动猜测）、新增 `/docs` 开发文档梳理 Skill（深度探索代码→刷新架构/上手/部署文档，支持按范围指定）、`/release` 调整为 Phase 系统性梳理（含 `/docs` 全量）、架构文档拆分为 README+frontend.md+backend.md、Skills 总数 8→9 |
 | v3.10 | 2026-03 | 架构认知地图（`docs/architecture/README.md` — 项目组织方式/模块划分/数据流，`@`引用自动加载，`/release` 审查 + `/deep-audit` 验证 + `/done` 结构性变更检测）、`/nbp2` AI 生图 Prompt 助手 Skill、Skills 总数 7→8 |
 | v3.9 | 2026-03 | `/done` 三级智能升级（自动检测完成粒度：功能/Spec Phase/Spec 完成/Roadmap Phase）、四层收尾模型、Spec 分阶段实施（Implementation Phases + Tasks/Gate/On Complete）、Spec 进度自检协议、讨论收敛机制（共识/分歧归纳）、PreCompact Hook 增强（Spec 进度保存 + `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`）、大 Spec 实施策略、auto-compact 应对 |
@@ -220,4 +224,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-03
+**最后更新**: 2026-03（v3.12）
