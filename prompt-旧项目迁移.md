@@ -332,8 +332,8 @@ grep -q "session-notes.md" .gitignore || echo ".claude/session-notes.md" >> .git
 **⛔ 运行以下命令验证，输出完整结果**（不可跳过）：
 
 ```bash
-echo "=== Skills (应为 9 个) ==="
-for f in audit deep-audit catchup handoff spec done docs release nbp2; do
+echo "=== Skills (应为 10 个) ==="
+for f in audit deep-audit catchup handoff spec task done docs release nbp2; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 echo "=== Hooks ==="
@@ -382,7 +382,7 @@ echo "退出码: $?"
 |------|--------|--------|
 | AI 记忆 | CONTEXT.md + CURRENT.md（手动） | CLAUDE.md + Auto Memory（自动） |
 | 进度跟踪 | CURRENT.md 滚动日志（手动） | docs/roadmap/（/handoff 自动更新） |
-| 命令数量 | [X] 个 commands | 9 个 Skills |
+| 命令数量 | [X] 个 commands | 10 个 Skills |
 | 自动化程度 | 手动触发 /start /end /checkpoint | Hooks 全自动 |
 
 ### 知识迁移清单
@@ -402,6 +402,7 @@ echo "退出码: $?"
 
 ### 日常使用变化
 - 不再需要：/start、/end、/checkpoint、/weekly、/monthly、/fix
+- 小任务/小 Bug：/task 描述（评估→执行→验证→commit）
 - 新的工作流：功能完成 → /simplify → Claude 自动 commit（Hook 验证后）→ 你确认 push
 - 功能收尾：/done 完成了XX（代码验证 + Roadmap/Spec 状态更新）
 - 文档更新：/docs（深度探索代码 → 刷新开发文档）

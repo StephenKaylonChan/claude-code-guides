@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.13（2026-03）
+> **版本**: v3.14（2026-03）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -60,6 +60,7 @@
 | `/simplify` `/batch` `/debug` `/loop` `/claude-api` Bundled 内置命令 | 文档 03 |
 | `/catchup` `/handoff` 自定义命令（handoff 含自动 commit） | 文档 03 |
 | `/spec` 讨论成果整理为设计文档 | 文档 03、04 |
+| `/task` 日常小任务执行（小需求/小 Bug/微调，支持批量） | 文档 03、04 |
 | `/done` 功能完成收尾检查（Roadmap/Spec 自动同步） | 文档 03、04 |
 | Hook 高级能力（updatedInput、CLAUDE_ENV_FILE、Frontmatter Hooks） | 文档 02 |
 | GitHub Actions 集成 + Remote Control | 文档 04 |
@@ -105,6 +106,7 @@
 | `/catchup` | 清空上下文后快速恢复 | 按需 |
 | `/handoff` | 提交变更 + 生成交接文档 | 中断前 |
 | `/spec` | 讨论成果整理为设计文档 | 需求讨论后 |
+| `/task` | 日常小任务执行（小需求/小 Bug/微调，支持批量） | 随时 |
 | `/done` | 智能收尾检查（附描述：`/done 完成了XX`） | 功能完成后 |
 | `/docs` | 深度探索代码，梳理更新开发文档（架构/上手/部署） | 日常高频 |
 | `/release` | Phase 完成系统性文档刷新（`/docs` 全量 + Changelog + ADR） | Phase 完成后 |
@@ -149,6 +151,7 @@ project-root/
 │   │   ├── catchup/SKILL.md
 │   │   ├── handoff/SKILL.md
 │   │   ├── spec/SKILL.md
+│   │   ├── task/SKILL.md
 │   │   ├── done/SKILL.md
 │   │   ├── docs/SKILL.md
 │   │   ├── release/SKILL.md
@@ -203,6 +206,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.14 | 2026-03 | `/task` 日常小任务 Skill：补齐 Spec 与"改 typo"之间的空白、自动复杂度分流（太大→建议 /spec）、支持批量模式、六层收尾模型新增"小任务级"、Skills 总数 9→10 |
 | v3.13 | 2026-03 | 代码质量防御体系：Stop Hook 质量门禁（响应结束后自动检查致命问题）、分层防御模型（Hook 硬拦 > 上下文纪律 > CLAUDE.md 红线 > /simplify 兜底）、CLAUDE.md 编码红线模板 + `.claude/rules/` 技术栈专属红线（含 React/FastAPI/Spring Boot 示例）、红线编写原则（少/硬/具体/含修 Bug 场景）、上下文劣化认知更新 |
 | v3.12 | 2026-03 | Hook 事件 18→21（新增 PostCompact/Elicitation/ElicitationResult）、Hook Handler 类型补全（prompt/agent 支持更多事件）、PostCompact 模板、Skills/Agent frontmatter 新字段（memory/mcpServers/maxTurns/permissionMode/disallowedTools/`${CLAUDE_SKILL_DIR}`/`${CLAUDE_SESSION_ID}`）、Chrome 浏览器集成、Plugin 插件系统、`/effort` 命令、模型更新（Opus 4.6 默认/Sonnet 4.6/Effort 级别简化） |
 | v3.11 | 2026-03 | `/done` 改进（显式描述参数，去掉自动猜测）、新增 `/docs` 开发文档梳理 Skill（深度探索代码→刷新架构/上手/部署文档，支持按范围指定）、`/release` 调整为 Phase 系统性梳理（含 `/docs` 全量）、架构文档拆分为 README+frontend.md+backend.md、Skills 总数 8→9 |
@@ -225,4 +229,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-03（v3.13）
+**最后更新**: 2026-03（v3.14）

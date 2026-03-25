@@ -115,4 +115,19 @@ Roadmap 更新: [已更新 / 跳过]
 
 如有不一致项，**立即修复**，然后重新运行检查确认全部通过。
 
+## Step 8: 提交
+
+检查全部通过后，将所有未提交的变更一次性提交：
+
+```bash
+git add -A
+git commit -m "feat: vX.Y 一句话概括本次改动
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>"
+```
+
+- commit message 从 `$ARGUMENTS` 和实际改动中提炼
+- 格式遵循项目规范：`feat: vX.Y 一句话概括` 或 `fix: vX.Y 修复内容`
+- 如果有 roadmap 文件变更，一并包含在同一个 commit 中
+
 </workflow>

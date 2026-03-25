@@ -216,7 +216,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.11-v3.13），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.12-v3.14），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -257,6 +257,11 @@ ls .claude/rules/ 2>/dev/null
 - **CLAUDE.md 编码红线**：CLAUDE.md 模板新增"编码红线"区块（修 Bug 时同样适用的 MUST NOT 规则）。检查项目 CLAUDE.md 是否有编码红线。
 - **`.claude/rules/` 红线增强**：rules 文件新增"红线"区块（技术栈专属的 MUST NOT 规则），与编码规范分开。检查 `frontend.md` / `backend.md` 是否已补充红线。
 - **代码质量防御章节**（文档 04 Section 10）：分层防御模型（Hook 硬拦 > 上下文纪律 > CLAUDE.md 红线 > /simplify 兜底）、上下文劣化认知更新。
+
+**v3.14 新增**（重点检查）：
+- **`/task` 日常小任务 Skill**：`.claude/skills/task/SKILL.md`，处理不需要 Spec 的小功能、小 Bug、微调。检查是否已安装。自动分流复杂度（太大→建议 /spec），支持批量模式。
+- **六层收尾模型**：五层→六层，新增"小任务级"（`/task` 执行，不需要 `/done`）。
+- **Skills 总数 9→10**：新增 `/task`。
 
 **Bundled 命令**：
 - **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`** 共 5 个内置命令，无需配置，但日常使用规范中是否已知晓？
@@ -345,8 +350,8 @@ chmod +x .claude/hooks/*.sh
 **⛔ 运行以下命令验证，输出完整结果**（不可跳过）：
 
 ```bash
-echo "=== Skills (应为 9 个) ==="
-for f in audit deep-audit catchup handoff spec done docs release nbp2; do
+echo "=== Skills (应为 10 个) ==="
+for f in audit deep-audit catchup handoff spec task done docs release nbp2; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 echo "=== Hooks ==="

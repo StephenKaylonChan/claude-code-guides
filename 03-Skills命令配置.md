@@ -2,7 +2,7 @@
 
 > Slash Commands 的进化版 — 更强大的自定义工作流命令
 
-**版本**: v3.13
+**版本**: v3.14
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -68,6 +68,7 @@ Skills 是 Claude Code 2.x 中 Slash Commands 的升级版（文件位置从 `.c
 | `/catchup` | 执行 `/clear` 后快速恢复工作上下文 |
 | `/handoff` | 会话结束前生成结构化交接文档 |
 | `/spec` | 讨论成果整理为设计文档 |
+| `/task` | 日常小任务执行（小需求/小 Bug/微调，支持批量） |
 | `/done` | 功能完成收尾检查（Roadmap/Spec 状态更新） |
 | `/docs` | 深度探索代码，梳理更新开发文档（架构/上手/部署） |
 | `/release` | Phase 完成：系统性文档刷新 + 生成 Changelog |
@@ -894,7 +895,148 @@ draft → approved → implementing → implemented → [deprecated | superseded
 
 ---
 
-### 5.4 /done — 智能收尾检查（v3.11 改进）
+### 5.4 /task — 日常小任务执行（v3.14 新增）
+
+**用途**：处理不需要 Spec 的日常小任务——业务方的小需求、小 Bug、功能微调、技术改进。与 `/spec` 互补：`/spec` 是复杂功能的"先讨论再实施"，`/task` 是明确任务的"直接做"。支持批量模式，一个会话连续处理多个小任务。
+
+**设计参考**：社区 [shinpr/claude-code-workflows](https://github.com/shinpr/claude-code-workflows) 的 `/recipe-task`（自动分流复杂度）+ [Pimzino/claude-code-spec-workflow](https://github.com/Pimzino/claude-code-spec-workflow) 的双轨制（Spec 线 + Bug-fix 线），结合本指南现有的复杂度分级体系。
+
+**文件路径**: `.claude/skills/task/SKILL.md`
+
+````markdown
+---
+name: task
+description: |
+  处理不需要 Spec 的日常小任务（小功能、小 Bug、功能微调、技术改进）。
+  当用户有明确的小改动需求，不需要多轮讨论时使用。
+  支持批量模式：`/task` 无参数时进入批量模式。
+  触发关键词：小需求、快速修复、改一下、调整、小 bug
+argument-hint: "<任务描述> 或留空进入批量模式"
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
+---
+
+<task>
+评估并执行日常小任务，确保质量的同时避免过度流程。
+</task>
+
+<workflow>
+
+## Step 0: 接收任务
+
+**单任务模式**（有参数）：
+- `/task 列表页加排序功能`
+- 直接进入 Step 1
+
+**批量模式**（无参数）：
+- 询问用户要处理哪些任务
+- 用户列出编号列表
+- 按顺序逐个处理，每个走完整 Step 1-4 后独立 commit
+
+## Step 1: 评估复杂度
+
+快速判断任务规模：
+
+| 信号 | 判断 | 动作 |
+|------|------|------|
+| 需要多轮讨论才能明确需求 | 太大 | 建议 `/spec` |
+| 涉及架构变更或新模块 | 太大 | 建议 `/spec` |
+| 改动预估 > 5 个文件 | 偏大 | 提醒用户确认，或建议 `/spec` |
+| 改动范围可预估，方向明确 | 合适 | 继续执行 |
+| 能一句话描述改动 | 合适 | 继续执行 |
+
+如果判断太大，输出：
+"这个任务涉及 [原因]，建议用 `/spec` 先讨论设计再实施。要继续还是切到 /spec？"
+
+用户坚持继续 → 继续执行（尊重用户判断）。
+
+## Step 2: 按复杂度执行
+
+根据评估结果选择开发循环：
+
+**简单**（1-2 文件，改动明确）：
+→ Code → Verify → Commit
+
+**中等**（3-5 文件，方向明确）：
+→ Explore → Code → Verify → Commit
+
+**Bug 修复**：
+→ Explore（复现+定位）→ Code（回归测试+修复）→ Verify → Commit
+
+遵循项目 CLAUDE.md 中的完成标准和编码红线。
+
+## Step 3: 验证
+
+- 运行相关测试，确认通过
+- 检查 lint / 类型检查
+- 边界条件（如适用）
+- 回归验证（确认不影响现有功能）
+
+如果项目没有测试 → 跳过测试步骤，但 lint 和类型检查仍执行。
+
+## Step 4: 提交
+
+- commit message 使用 Conventional Commits（`feat:`/`fix:`/`refactor:`/`chore:`）
+- message 包含足够上下文（改了什么、为什么）
+- 如果任务关联 Roadmap 条目 → 提醒用户是否更新 checkbox
+
+**不需要 /done**：小任务的 commit message 即文档，不需要额外收尾流程。
+
+## Step 5: 下一个（批量模式）
+
+批量模式下，每完成一个任务：
+- 报告完成状态
+- 自动开始下一个（不询问，除非遇到需要 /spec 的任务）
+- 全部完成后输出汇总
+
+## 输出格式
+
+**单任务完成**：
+```
+✓ [hash] fix(list): 修复日期格式显示不正确
+  改动: src/utils/date.ts, src/components/List.tsx
+```
+
+**批量完成汇总**：
+```
+✅ 完成 3/4 个任务：
+1. ✓ [hash] feat(list): 添加列表排序功能
+2. ✓ [hash] fix(date): 修复日期格式显示
+3. ✓ [hash] chore: 默认分页数从 10 改为 20
+4. ⏭️ 跳过 — 建议用 /spec（涉及新增权限模块）
+```
+
+</workflow>
+````
+
+**用法示例**：
+
+```bash
+# 单任务
+/task 列表页加个按名称排序的功能
+/task 日期显示格式从 MM/DD 改成 YYYY-MM-DD
+/task 首页加载慢，商品列表查询需要加索引
+
+# 批量模式
+/task
+# Claude: 请列出要处理的任务
+# 你：
+# 1. 列表加排序
+# 2. 日期格式修复
+# 3. 默认分页改成 20
+```
+
+**与其他命令的关系**：
+
+| 场景 | 用什么 |
+|------|--------|
+| 需要多轮讨论的复杂功能 | `/spec` → 实施 → `/done` |
+| 方向明确、直接能做的小任务 | **`/task`** |
+| 功能完成后的收尾检查（有 Spec/Roadmap） | `/done` |
+| PR 前的代码审查 | `/simplify` |
+
+---
+
+### 5.5 /done — 智能收尾检查（v3.11 改进）
 
 **用途**：功能或 Spec Phase 完成后，执行收尾检查。用户**显式描述完成了什么**，Claude 据此匹配 Roadmap 条目和 Spec 文件，更新状态。
 
@@ -1082,7 +1224,7 @@ Roadmap Phase 状态：还剩 [M] 个功能 / 🎯 全部完成，建议执行 /
 
 ---
 
-### 5.5 /docs — 开发文档梳理（v3.11 新增）
+### 5.6 /docs — 开发文档梳理（v3.11 新增）
 
 **用途**：深度探索项目代码，梳理并更新开发文档。可全量刷新，也可按范围指定。日常高频使用，保持文档与代码同步。
 
@@ -1231,7 +1373,7 @@ git commit -m "docs: 更新开发文档 — [更新范围描述]"
 
 ---
 
-### 5.6 /release — Phase 完成系统性文档刷新（v3.11 调整）
+### 5.7 /release — Phase 完成系统性文档刷新（v3.11 调整）
 
 **用途**：一个 Roadmap Phase 的所有功能完成后，进行**系统性文档刷新**——全量执行 `/docs`、生成 Changelog、检查 ADR、更新 Phase 状态。与 `/docs` 的区别：`/docs` 是日常随时可用的轻量更新，`/release` 是 Phase 里程碑节点的全面梳理。
 
@@ -1338,7 +1480,7 @@ git commit -m "docs: Phase N [Phase名称] 完成 — 系统性文档刷新"
 
 ---
 
-### 5.7 /nbp2 — AI 生图 Prompt 助手（Nano Banana Pro 2）
+### 5.8 /nbp2 — AI 生图 Prompt 助手（Nano Banana Pro 2）
 
 **用途**：帮助编写针对 Google Nano Banana Pro / Nano Banana 2 优化的高质量图片生成 Prompt。不同 AI 生图模型有不同的 prompt 写法，此 Skill 内嵌 NBP2 最佳实践，直接输出可用 prompt。
 
@@ -1727,5 +1869,5 @@ rm -rf .claude/commands/
 
 ---
 
-**版本**: v3.13
+**版本**: v3.14
 **更新日期**: 2026-03

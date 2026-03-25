@@ -77,7 +77,7 @@ Stop：是否需要完成通知？（macOS / Linux）
 **Skills 选择**：
 
 ```
-必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、done（功能完成收尾）、docs（开发文档梳理）、release（Phase 完成系统性文档刷新）、nbp2（AI 生图 Prompt 助手）
+必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、task（日常小任务执行）、done（功能完成收尾）、docs（开发文档梳理）、release（Phase 完成系统性文档刷新）、nbp2（AI 生图 Prompt 助手）
 可选：是否有项目特定的高频操作值得封装为命令？
 ```
 
@@ -304,8 +304,8 @@ CLAUDE.local.md
 **⛔ 检查点 — Phase 5 是最容易遗漏的阶段。运行以下命令验证，输出完整结果后等我确认：**
 
 ```bash
-echo "=== Skills (应为 9 个) ==="
-for f in audit deep-audit catchup handoff spec done docs release nbp2; do
+echo "=== Skills (应为 10 个) ==="
+for f in audit deep-audit catchup handoff spec task done docs release nbp2; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 echo "=== Hooks ==="
@@ -362,7 +362,7 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 - 子目录 CLAUDE.md: [数量] 个（如有）
 - .claude/rules/: [数量] 个规则文件（如有）
 - Hooks 已启用: [SessionStart / PreToolUse / PostToolUse / PreCompact / Stop / UserPromptSubmit（如有）]
-- Skills: audit / deep-audit / catchup / handoff / spec / done / docs / release / nbp2
+- Skills: audit / deep-audit / catchup / handoff / spec / task / done / docs / release / nbp2
 - 开发文档: docs/development/（[已生成的文档列表]）
 - Agent Teams: [已启用 / 未启用]
 
@@ -371,6 +371,7 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 
 ### 日常使用
 - 开始开发：直接说需求（Hook 自动运行）
+- 小任务/小 Bug：/task 描述（评估→执行→验证→commit）
 - 功能完成：/simplify 审查 → Claude 自动 commit（Hook 验证后）→ 你确认 push
 - 功能收尾：/done 完成了XX（代码验证 + Roadmap/Spec 状态更新）
 - 文档更新：/docs（深度探索代码 → 刷新开发文档）
