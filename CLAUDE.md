@@ -8,6 +8,11 @@
 - `prompt-*.md`: 执行用 prompt（初始化/迁移/升级/更新）
 - `README.md`: 目录总览 + 版本记录
 - `research/`: 调研资料（不随版本更新）
+- `docs/roadmap/`: 项目路线图（进度跟踪）
+- `docs/specs/`: 功能设计文档（/spec 生成）
+
+@docs/roadmap/README.md
+@docs/roadmap/phase-4-持续演进.md
 
 ## 版本规范
 
