@@ -2,3 +2,4 @@ CLAUDE.local.md
 .claude/settings.local.json
 .claude/session-notes.md
 .DS_Store
+.codex-task.md
