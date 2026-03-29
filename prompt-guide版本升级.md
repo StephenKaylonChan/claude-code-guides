@@ -218,7 +218,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.13-v3.15），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.14-v3.16），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -271,6 +271,12 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.16 新增**（重点检查）：
+- **Testing Trophy 测试策略**：测试重心从单元测试转向集成测试。检查 CLAUDE.md 完成标准是否要求"关键用户交互 MUST 有集成测试"。
+- **前端测试规则**：`.claude/rules/frontend.md` 增加测试规则区块（RTL + MSW + userEvent）。检查 rules 文件是否已补充。
+- **后端测试规则**：`.claude/rules/backend.md`（FastAPI: TestClient）和 `backend-spring.md`（Spring Boot: MockMvc）增加测试规则区块。检查是否已补充。
+- **`/diagnose` D9 维度扩展**：从"可测试性"扩展为"测试覆盖"——检查关键用户交互是否有集成测试、是否存在"假覆盖"（单元测试全过但链路没测）。
 
 **Bundled 命令**：
 - **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`** 共 5 个内置命令，无需配置，但日常使用规范中是否已知晓？

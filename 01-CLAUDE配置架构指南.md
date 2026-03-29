@@ -2,7 +2,7 @@
 
 > Claude Code 原生记忆系统 — 告别手动维护，拥抱自动化记忆
 
-**版本**: v3.15
+**版本**: v3.16
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -236,11 +236,15 @@ pnpm build            # 生产构建
 
 功能实现后，MUST 按顺序完成以下验证再报告"完成"：
 
-### 代码验证
-1. 运行 `pnpm test`，所有测试通过
-2. 运行 `pnpm lint`，无 error
-3. 检查边界条件：空值、异常输入、权限不足
-4. 确认改动不影响现有功能（回归验证）
+### 测试验证
+1. 关键用户交互 MUST 有集成测试（测完整操作链路：渲染页面→模拟操作→验证结果）
+   - 前端：用 React Testing Library + MSW（MUST NOT mock fetch/axios，MUST 用 MSW 拦截网络层）
+   - 后端：用 TestClient（FastAPI）/ MockMvc（Spring Boot）测完整请求链路
+2. 纯计算逻辑（日期格式化、金额计算等）有单元测试
+3. 运行 `pnpm test`，所有测试通过
+4. 运行 `pnpm lint`，无 error
+5. 检查边界条件：空值、异常输入、权限不足
+6. 确认改动不影响现有功能（回归验证）
 
 ### 文档同步（功能完成时）
 5. 更新 `docs/roadmap/` 对应条目的 checkbox 状态
@@ -334,6 +338,14 @@ paths:
 - MUST NOT 直接操作 DOM（querySelector 等），MUST 使用 React ref
 - MUST NOT 在组件内写数据请求逻辑，MUST 通过 API layer / hooks 封装
 
+## 前端测试规则
+
+- MUST 为关键用户交互写集成测试（渲染完整页面，模拟用户操作，验证页面结果）
+- MUST 用 React Testing Library 测用户行为，MUST NOT 测实现细节（state 值、hook 内部）
+- MUST 用 MSW mock API 请求，MUST NOT 直接 mock fetch/axios
+- MUST 用 userEvent（非 fireEvent）模拟用户操作
+- 集成测试覆盖：分页、搜索、筛选、排序、表单提交、CRUD、状态切换、错误提示、空状态
+
 ## 前端规范
 
 - MUST 使用函数式组件（禁止 class 组件）
@@ -360,6 +372,12 @@ paths:
 - MUST NOT 用 dict 传递结构化数据，MUST 使用 Pydantic model
 - MUST NOT 吞异常（bare except / except Exception: pass）
 
+## 后端测试规则
+
+- MUST 为每个 API 端点写集成测试（用 TestClient 走完整 路由→依赖注入→service→DB→响应 链路）
+- MUST NOT 只测 service 函数就当"API 测过了"
+- MUST 测试错误场景（参数校验失败、权限不足、资源不存在）的响应格式和状态码
+
 ## 后端规范
 
 - MUST 使用 async/await（禁止同步阻塞函数）
@@ -384,6 +402,12 @@ paths:
 - MUST NOT 在代码中 hardcode 配置值，MUST 使用 @Value / application.yml
 - MUST NOT 用 Map 传递结构化数据，MUST 使用 DTO/VO
 - MUST NOT 吞异常（catch + 空处理 / 仅打日志不抛出）
+
+## 后端测试规则
+
+- MUST 为每个 API 端点写集成测试（用 MockMvc/WebTestClient 走完整请求链路）
+- MUST NOT 只测 Service 方法就当"API 测过了"
+- MUST 测试错误场景的响应格式和 HTTP 状态码
 ```
 
 ### 红线编写原则
@@ -509,5 +533,5 @@ rm docs/ai-context/CURRENT.md
 
 ---
 
-**版本**: v3.15
-**更新日期**: 2026-03（v3.15）
+**版本**: v3.16
+**更新日期**: 2026-03（v3.16）
