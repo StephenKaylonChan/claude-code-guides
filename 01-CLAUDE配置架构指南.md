@@ -2,7 +2,7 @@
 
 > Claude Code 原生记忆系统 — 告别手动维护，拥抱自动化记忆
 
-**版本**: v3.14
+**版本**: v3.15
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -105,7 +105,7 @@ project-root/
 │   ├── rules/
 │   │   ├── frontend.md            # 仅编辑 apps/web/** 时加载
 │   │   └── backend.md             # 仅编辑 apps/api/** 时加载
-│   ├── skills/                    # 自定义命令（9 个，见《03-Skills命令配置》）
+│   ├── skills/                    # 自定义命令（11 个，见《03-Skills命令配置》）
 │   ├── agents/                    # 自定义子代理
 │   └── hooks/                     # Hook 脚本目录（见《02-Hooks自动化配置》）
 │
@@ -509,5 +509,5 @@ rm docs/ai-context/CURRENT.md
 
 ---
 
-**版本**: v3.14
-**更新日期**: 2026-03
+**版本**: v3.15
+**更新日期**: 2026-03（v3.15）

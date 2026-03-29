@@ -50,7 +50,9 @@ ls .claude/rules/ 2>/dev/null
 7. `.claude/skills/spec/SKILL.md`
 8. `.claude/skills/done/SKILL.md`
 9. `.claude/skills/docs/SKILL.md`
-10. `.claude/hooks/session-start.sh`
+10. `.claude/skills/task/SKILL.md`
+11. `.claude/skills/diagnose/SKILL.md`
+12. `.claude/hooks/session-start.sh`
 10. `.claude/hooks/pre-commit-check.sh`
 11. `.claude/hooks/post-write.sh`
 12. `.claude/hooks/on-stop.sh`
@@ -216,7 +218,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.12-v3.14），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.13-v3.15），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -262,6 +264,13 @@ ls .claude/rules/ 2>/dev/null
 - **`/task` 日常小任务 Skill**：`.claude/skills/task/SKILL.md`，处理不需要 Spec 的小功能、小 Bug、微调。检查是否已安装。自动分流复杂度（太大→建议 /spec），支持批量模式。
 - **六层收尾模型**：五层→六层，新增"小任务级"（`/task` 执行，不需要 `/done`）。
 - **Skills 总数 9→10**：新增 `/task`。
+
+**v3.15 新增**（重点检查）：
+- **`/diagnose` 全维度代码健康诊断 Skill**：`.claude/skills/diagnose/SKILL.md`，四层 13 维度系统性扫描（结构层：耦合度/职责划分/模块边界/依赖方向；实现层：代码重复/错误处理/类型安全/性能隐患/可测试性；卫生层：死代码/一致性；战略层：代码热点/知识孤岛）。检查是否已安装。
+- **诊断报告**：输出 `docs/reports/diagnose-YYYY-MM-DD.md`，含量化评分（0-10）和分批重构计划。检查 `docs/reports/` 目录是否存在。
+- **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
+- **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
+- **Skills 总数 10→11**：新增 `/diagnose`。
 
 **Bundled 命令**：
 - **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`** 共 5 个内置命令，无需配置，但日常使用规范中是否已知晓？
@@ -350,8 +359,8 @@ chmod +x .claude/hooks/*.sh
 **⛔ 运行以下命令验证，输出完整结果**（不可跳过）：
 
 ```bash
-echo "=== Skills (应为 10 个) ==="
-for f in audit deep-audit catchup handoff spec task done docs release nbp2; do
+echo "=== Skills (应为 11 个) ==="
+for f in audit deep-audit catchup handoff spec task done docs release nbp2 diagnose; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 echo "=== Hooks ==="

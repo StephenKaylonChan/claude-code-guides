@@ -332,8 +332,8 @@ grep -q "session-notes.md" .gitignore || echo ".claude/session-notes.md" >> .git
 **⛔ 运行以下命令验证，输出完整结果**（不可跳过）：
 
 ```bash
-echo "=== Skills (应为 10 个) ==="
-for f in audit deep-audit catchup handoff spec task done docs release nbp2; do
+echo "=== Skills (应为 11 个) ==="
+for f in audit deep-audit catchup handoff spec task done docs release nbp2 diagnose; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 echo "=== Hooks ==="

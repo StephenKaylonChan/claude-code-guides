@@ -2,7 +2,7 @@
 
 > Slash Commands 的进化版 — 更强大的自定义工作流命令
 
-**版本**: v3.14
+**版本**: v3.15
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -1696,6 +1696,338 @@ No watermark, no text overlays.
 
 ---
 
+### 5.9 /diagnose — 全维度代码健康诊断（v3.15 新增）
+
+**用途**：独立于功能开发的系统性代码健康诊断。覆盖结构、实现、卫生、战略四层共 13 个维度，输出量化评分 + 完整问题清单 + 分批重构计划。与 `/audit`（项目卫生检查）和 `/deep-audit`（文档一致性审计）互补——`/diagnose` 关注代码架构与长期可维护性。
+
+**设计依据**：CodeScene 热点分析 + ISO 25010 质量模型 + SonarQube 三维度体系 + Martin Fowler 重构方法论。核心原则——全维度扫描确保无死角，热点分析决定执行优先级。
+
+**文件路径**: `.claude/skills/diagnose/SKILL.md`
+
+````markdown
+---
+name: diagnose
+description: |
+  全维度代码健康诊断。系统性扫描代码结构、耦合度、可维护性等 13 个维度，输出诊断报告和重构计划。
+  独立于功能开发，专门用于发现和规划代码优化。
+  触发关键词：代码诊断、代码健康、重构评估、全面审查、code health、技术债
+argument-hint: "[frontend | backend | <模块名> | 空=全项目]"
+allowed-tools: Read, Bash, Glob, Grep, Agent
+disable-model-invocation: true
+---
+
+<task>
+对项目进行全维度代码健康诊断（13 个维度），输出量化评分、完整问题清单和分批重构计划。
+**只诊断不改代码**——改代码在后续用 `/task` 批量模式按计划执行。
+</task>
+
+<dimensions>
+
+## 诊断维度（四层 13 维度）
+
+### 结构层（影响面大，优先级高）
+
+**D1 耦合度** — 改 A 会不会崩 B？
+- 检查组件/模块间的导入依赖数量和深度
+- 查找跨模块直接引用内部状态或私有方法
+- 前端：组件是否依赖过多不相关 store；CSS 样式是否穿透到其他组件
+- 后端：Service 之间是否有非接口级的直接调用
+
+**D2 职责划分** — 每个单元是否只做一件事？
+- 查找"万能文件"（> 300 行的组件 / > 500 行的 Service）
+- 前端：组件内是否直接调 API、处理数据转换、包含业务逻辑
+- 后端：Controller/Router 内是否有业务逻辑；Service 是否混合了多个业务域
+
+**D3 模块边界** — 模块之间是通过接口通信还是深入内部？
+- 查找被 > 10 个文件导入的"上帝模块"
+- 检查模块是否暴露了内部实现（应只暴露公共接口/index）
+- 前后端 API 契约是否清晰（请求/响应类型定义）
+
+**D4 依赖方向** — 依赖关系是否合理？
+- 检查循环依赖（A→B→C→A）
+- 检查是否有下层依赖上层（data 层引用 UI 层）
+- 检查共享代码是否独立（不依赖任何业务模块）
+
+### 实现层（局部优化，逐步改进）
+
+**D5 代码重复** — 近似逻辑是否散落多处？
+- grep 相似的函数签名和代码块
+- 重点关注 80% 相似但略有不同的代码（比完全相同更危险）
+- 应该抽成公共 hook/util/service 但没有的
+
+**D6 错误处理** — 是否一致且完整？
+- 检查 try-catch 使用是否一致
+- 查找静默失败（catch 了但空处理 / 仅 console.log）
+- 检查错误响应格式是否统一
+
+**D7 类型安全** — 类型系统是否被正确使用？
+- 前端：grep `any`、`@ts-ignore`、`@ts-expect-error`、类型断言 `as`
+- 后端（Python）：关键函数是否有类型注解；Pydantic model 是否覆盖 API 边界
+- 后端（Java）：是否用 Map 代替 DTO；泛型是否正确使用
+
+**D8 性能隐患** — 是否有明显的性能反模式？
+- 前端：组件内创建对象/函数导致不必要 re-render；缺少 key 或 key 使用 index
+- 后端：循环内 DB 查询（N+1）；同步阻塞调用；缺少分页
+- 通用：未清理的定时器/订阅（内存泄漏风险）
+
+**D9 可测试性** — 代码是否容易写测试？
+- 紧耦合导致无法单独测试的模块
+- 关键业务路径是否有测试覆盖
+- 测试是否在测实现细节而非行为（脆弱测试）
+
+### 卫生层（认知负担）
+
+**D10 死代码** — 是否有不再使用的代码？
+- 未使用的函数、组件、导入、变量
+- 注释掉的代码块（应删除，git 有历史）
+- 已废弃但未清理的功能
+
+**D11 一致性** — 同一件事是否用同一种方式做？
+- 同一功能多种实现（如 HTTP 客户端既用 fetch 又用 axios）
+- 命名风格不统一（camelCase 和 snake_case 混用）
+- 错误处理/日志格式不统一
+
+### 战略层（投入产出比）
+
+**D12 代码热点** — 哪些代码改动最频繁且质量最差？
+- 分析 git log 找改动频率最高的文件
+- 交叉对比代码质量（文件大小、复杂度、问题密度）
+- 热点 = 改动频繁 × 质量差 = 最值得重构的地方
+
+**D13 知识孤岛** — 是否有只有一个人碰过的关键模块？
+- 分析 git blame/log 的作者分布
+- 标记 bus factor = 1 的模块（只有一个贡献者）
+- 单人项目跳过此维度
+
+</dimensions>
+
+<workflow>
+
+## Step 0: 读取项目上下文
+
+```bash
+echo "=== 代码健康诊断 $(date '+%Y-%m-%d %H:%M') ==="
+```
+
+读取（如存在）：
+1. `CLAUDE.md`（技术栈、约束、完成标准）
+2. `docs/architecture/`（设计意图基准，对比实际代码偏差）
+3. 上一次诊断报告 `docs/reports/diagnose-*.md`（用于对比改善）
+
+## Step 1: 探索项目结构 → 决定扫描策略
+
+```bash
+# 源文件统计（排除依赖和构建产物）
+find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.java" \) \
+  -not -path "*/node_modules/*" -not -path "*/.next/*" -not -path "*/dist/*" -not -path "*/__pycache__/*" | wc -l
+
+# 顶层目录结构
+ls -d */ 2>/dev/null
+```
+
+- 从 `package.json` / `pyproject.toml` / `pom.xml` 识别技术栈
+- 识别模块边界（目录划分方式）
+- 检查 `$ARGUMENTS`，限定扫描范围
+
+**扫描策略**：
+
+| 条件 | 策略 |
+|------|------|
+| < 50 源文件 或 scope 指定了具体模块 | 主 Agent 直接扫全维度 |
+| ≥ 50 源文件，前后端分离 | SubAgent: 前端 + 后端 + 跨模块 |
+| ≥ 50 源文件，按业务域划分 | SubAgent: 每个业务域 + 跨域 |
+
+SubAgent 指令要点：
+> 扫描 [范围] 下的所有源文件，按 13 个维度逐一检查。
+> 每个问题输出：维度编号、文件路径:行号、严重性(P0-P3)、置信度(高/中/低)、问题描述、判断依据。
+> **不改代码，只输出发现。**
+
+## Step 2: 热点分析（可选）
+
+**前置条件**：git 历史 ≥ 1 个月且 commit ≥ 30 个。不满足则跳过，标记"热点分析: 跳过（历史不足）"。
+
+```bash
+# 最近 3 个月文件改动频率 Top 20
+git log --since="3 months ago" --name-only --pretty=format: | sort | uniq -c | sort -rn | head -20
+
+# 文件行数排序（大文件 = 复杂度信号）
+find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.py" -o -name "*.java" \) \
+  -not -path "*/node_modules/*" -exec wc -l {} \; | sort -rn | head -20
+```
+
+改动频率高 × 文件大 = 热点候选，在最终报告中标记。
+
+## Step 3: 全维度扫描
+
+按 D1-D13 逐维度扫描。对每个维度：
+
+1. 用 Grep/Glob 做模式匹配（快速发现明显问题）
+2. 读取关键文件做语义分析（发现需要理解上下文的问题）
+3. 每个问题记录：`[维度] [文件:行号] [P0-P3] [置信度] 描述 | 依据`
+
+**技术栈专项**（根据 Step 1 识别结果自动追加）：
+
+| 技术栈 | 追加检查 |
+|--------|---------|
+| React/Next.js | 组件 > 200 行、`style={{}}`、props drilling > 3 层、Server/Client 分界 |
+| FastAPI | 路由函数 > 30 行、async/sync 混用、缺少 Pydantic 校验 |
+| Spring Boot | Controller 业务逻辑、字段注入 `@Autowired`、Entity 直接作响应 |
+
+## Step 4: 汇总评分
+
+每维度评分 0-10（10 = 完美）：
+
+| 评分 | 含义 |
+|------|------|
+| 8-10 | 优秀，无需处理 |
+| 5-7 | 可接受，有改进空间 |
+| 3-4 | 需要关注，建议本月处理 |
+| 0-2 | 严重，建议立即处理 |
+
+综合健康度 = 13 维度加权平均（结构层权重 ×1.5，其余 ×1.0）。
+如有上次诊断报告，输出对比变化。
+
+## Step 5: 生成重构计划
+
+将 P0-P2 问题分批：
+1. **同一模块的问题合并到同一 Batch**（减少上下文切换）
+2. **有依赖关系的 Batch 标注前置条件**
+3. **每个 Batch 预估不超过 1 个会话**
+4. **每个 Batch 有明确验收标准**
+
+P3 观察项单独列出，不进入重构计划。
+
+## Step 6: 输出报告
+
+```bash
+mkdir -p docs/reports
+```
+
+写入 `docs/reports/diagnose-YYYY-MM-DD.md`：
+
+```markdown
+---
+date: YYYY-MM-DD
+scope: [full | frontend | backend | 模块名]
+tech_stack: [识别到的技术栈]
+files_scanned: [数量]
+issues_found: [数量]
+health_score: [0-10]
+previous_score: [上次得分，如有]
+---
+
+# 代码健康诊断报告
+
+## 健康度评分
+
+| 维度 | 得分 | 说明 |
+|------|------|------|
+| D1 耦合度 | X/10 | ... |
+| D2 职责划分 | X/10 | ... |
+| ... | | |
+| **综合** | **X.X/10** | [与上次对比] |
+
+## 热点文件
+[Top 10 热点文件表，或"跳过（历史不足）"]
+
+## 问题清单
+
+### 🔴 P0 — 结构性问题
+[编号]. [D维度] [文件:行号] [置信度:高/中/低]
+  描述: ...
+  依据: ...
+
+### 🟡 P1 — 实现质量问题
+...
+
+### 🟢 P2 — 卫生问题
+...
+
+### ℹ️ P3 — 观察项
+...
+
+## 跨边界观察
+[scope 限定时检测到的跨边界问题，注明对侧未完整分析]
+
+## 重构计划
+
+### Batch 1: [名称]（预估 [N] 个会话）
+- **前置**: 无 / Batch N
+- **范围**: [涉及的文件/模块]
+- **解决问题**: #1, #3, #7
+- **验收标准**: [具体可验证条件]
+
+### Batch 2: ...
+
+## 执行建议
+
+按 Batch 顺序执行，每个 Batch 用 `/task` 批量模式：
+1. 先补测试锁定现有行为
+2. 重构
+3. 跑测试确认不破坏
+4. commit
+
+全部完成后再次运行 `/diagnose` 验证改善效果。
+```
+
+## Step 7: 输出确认
+
+```
+✅ 代码健康诊断完成
+
+综合健康度: X.X/10 [与上次对比]
+扫描范围: [scope]
+扫描文件: [N] 个
+发现问题: P0 [N] 个 | P1 [N] 个 | P2 [N] 个 | P3 [N] 个
+重构计划: [N] 个 Batch，预估 [N] 个会话
+
+报告: docs/reports/diagnose-YYYY-MM-DD.md
+
+下一步：
+- 查看报告，确认优先级排序
+- 按 Batch 顺序用 /task 批量模式执行重构
+- 全部完成后再次 /diagnose 验证改善
+```
+
+</workflow>
+````
+
+**用法示例**：
+
+```bash
+# 全项目诊断
+/diagnose
+
+# 仅前端
+/diagnose frontend
+
+# 仅后端
+/diagnose backend
+
+# 指定模块
+/diagnose auth
+```
+
+**与其他命令的关系**：
+
+| 命令 | 关注点 | 何时用 |
+|------|--------|--------|
+| `/simplify` | 本次改动的代码质量 | 功能完成后、PR 前 |
+| `/audit` | 项目卫生（lint/依赖/文档） | 每周 |
+| `/deep-audit` | 文档与代码一致性 | Phase 完成后 |
+| **`/diagnose`** | **代码架构与可维护性** | **独立会话，定期或迭代前** |
+
+**推荐频率**：
+
+| 项目阶段 | 建议频率 |
+|----------|---------|
+| 快速迭代期 | 每月 1 次 |
+| 稳定维护期 | 每季度 1 次 |
+| 大功能开发前 | 开发前跑一次，识别要碰的区域的健康度 |
+| 技术债感觉积累了 | 随时 |
+
+---
+
 ## 6. Anthropic 内置命令（Bundled Skills）
 
 Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版本自动更新，**无需手动配置，直接使用**。
@@ -1800,10 +2132,12 @@ mkdir -p .claude/skills/deep-audit
 mkdir -p .claude/skills/catchup
 mkdir -p .claude/skills/handoff
 mkdir -p .claude/skills/spec
+mkdir -p .claude/skills/task
 mkdir -p .claude/skills/done
 mkdir -p .claude/skills/docs
 mkdir -p .claude/skills/release
 mkdir -p .claude/skills/nbp2
+mkdir -p .claude/skills/diagnose
 ```
 
 ### 7.2 文件创建
@@ -1814,10 +2148,12 @@ mkdir -p .claude/skills/nbp2
 - `.claude/skills/catchup/SKILL.md`
 - `.claude/skills/handoff/SKILL.md`
 - `.claude/skills/spec/SKILL.md`
+- `.claude/skills/task/SKILL.md`
 - `.claude/skills/done/SKILL.md`
 - `.claude/skills/docs/SKILL.md`
 - `.claude/skills/release/SKILL.md`
 - `.claude/skills/nbp2/SKILL.md`
+- `.claude/skills/diagnose/SKILL.md`
 
 ### 7.3 查看已安装的 Skills
 
@@ -1852,6 +2188,10 @@ mkdir -p .claude/skills/nbp2
 
 /nbp2               # AI 生图 Prompt 助手
 /nbp2 一只猫在雨中的东京街头   # 指定描述
+
+/diagnose            # 全项目代码健康诊断
+/diagnose frontend   # 仅前端
+/diagnose auth       # 指定模块
 ```
 
 ### 7.5 旧 commands/ 迁移
@@ -1869,5 +2209,5 @@ rm -rf .claude/commands/
 
 ---
 
-**版本**: v3.14
-**更新日期**: 2026-03
+**版本**: v3.15
+**更新日期**: 2026-03（v3.15）
