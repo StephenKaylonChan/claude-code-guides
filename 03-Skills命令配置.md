@@ -315,9 +315,21 @@ AUDIT_TIME=$(date +%H:%M)
 echo "=== 深度审计开始 $AUDIT_DATE $AUDIT_TIME ==="
 ```
 
-## Step 1: 代码结构全面扫描
+## Step 1: 变更摘要 + 代码结构扫描
 
-扫描所有源文件，记录实际状态：
+先定位"上次审计以来改了什么"，再全量扫描：
+
+```bash
+# 最近变更摘要（优先扫描这些区域）
+echo "=== 最近 30 个 commit ==="
+git log --oneline -30
+echo "=== 变更密集的文件 ==="
+git log --since="1 month ago" --name-only --pretty=format: | sort | uniq -c | sort -rn | head -20
+echo "=== 新增的文件 ==="
+git log --since="1 month ago" --diff-filter=A --name-only --pretty=format: | sort -u
+```
+
+然后全量扫描所有源文件，记录实际状态：
 
 ```bash
 # 前端文件统计
@@ -330,6 +342,8 @@ find apps/api -name "*.py" | wc -l
 # 所有文档文件
 find . -name "*.md" -not -path "*/node_modules/*" | sort
 ```
+
+**审计优先级**：Step 2-3 MUST 优先检查上方标记的变更密集区域和新增文件，确保这些区域的文档覆盖完整。
 
 ## Step 2: 文档系统检查
 
@@ -1443,14 +1457,15 @@ cat docs/roadmap/README.md
 ls docs/roadmap/
 ```
 
-## Step 1: 全量文档刷新（等同 /docs 全量）
+## Step 1: 全量文档刷新（按 /docs Skill 完整流程）
 
-执行与 `/docs` 相同的全量更新流程：
-- 深度探索代码，刷新 `docs/architecture/`（README + frontend + backend）
-- 刷新 `docs/development/getting-started.md`
-- 刷新 `docs/development/deployment.md`
+执行 `/docs` Skill 的完整 6 步流程（MUST 包含变更锚定）：
+1. **变更锚定**：`git diff` 定位上次文档更新以来的变更文件，按模块分组
+2. **深度探索**：优先探索变更模块，再补充全量
+3. **文档对比 + 变更覆盖检查**：现有文档准确性 + 变更模块是否有文档覆盖
+4. **增量更新**：刷新 `docs/architecture/`（README + frontend + backend）、`getting-started.md`、`deployment.md`
 
-详细规范见 `/docs` Skill。
+详细规范见 `/docs` Skill（Step 1-6）。
 
 ## Step 2: 生成 Changelog
 
