@@ -274,6 +274,8 @@ ls .claude/rules/ 2>/dev/null
 
 **v3.17 新增**（重点检查）：
 - **`/docs` Skill 变更锚定**：工作流从 5 步扩展为 6 步。新增 Step 1 用 `git diff` 定位"上次文档更新以来改了什么"，Step 3 增加变更覆盖检查。如项目已安装 `/docs` Skill，需更新 `.claude/skills/docs/SKILL.md` 模板。
+- **`/deep-audit` 变更摘要优先扫描**：Step 1 增加 `git log` 变更摘要，标记变更密集区域和新增文件，要求优先检查这些区域的文档覆盖。需更新 `deep-audit/SKILL.md`。
+- **`/release` 显式引用 /docs 完整流程**：Step 1 从"详细规范见 /docs"展开为 4 步摘要（变更锚定→深度探索→文档对比→增量更新），避免跳过变更锚定。需更新 `release/SKILL.md`。
 
 **v3.16 新增**：
 - **Testing Trophy 测试策略**：测试重心从单元测试转向集成测试。检查 CLAUDE.md 完成标准是否要求"关键用户交互 MUST 有集成测试"。
