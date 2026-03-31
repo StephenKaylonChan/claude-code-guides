@@ -2,7 +2,7 @@
 
 > Slash Commands 的进化版 — 更强大的自定义工作流命令
 
-**版本**: v3.16
+**版本**: v3.17
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -1265,7 +1265,35 @@ disable-model-invocation: true
 mkdir -p docs/architecture docs/development
 ```
 
-## Step 1: 深度探索代码
+## Step 1: 变更锚定（增量检测基准）
+
+确定"上次文档更新以来改了什么"，为后续探索提供方向：
+
+```bash
+# 找到最近一次文档更新的 commit
+LAST_DOC_COMMIT=$(git log --oneline -- 'docs/architecture/' 'docs/development/' | head -1 | cut -d' ' -f1)
+
+# 自那以后变更的源文件（按目录分组）
+echo "=== 变更文件 ==="
+git diff --name-only $LAST_DOC_COMMIT..HEAD -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' '*.java' 2>/dev/null | sort
+
+# 新增的文件（上次文档更新时不存在的）
+echo "=== 新增文件 ==="
+git diff --diff-filter=A --name-only $LAST_DOC_COMMIT..HEAD 2>/dev/null
+
+# 最近 commit 摘要（理解变更意图）
+echo "=== 变更摘要 ==="
+git log --oneline $LAST_DOC_COMMIT..HEAD | head -30
+```
+
+将变更文件按模块分组，标记每个模块的变更密度（文件数）。
+**Step 2 的探索 MUST 覆盖所有有变更的模块**，不能只泛泛扫描。
+
+如果 `LAST_DOC_COMMIT` 找不到（首次运行 `/docs` 或文档目录不存在），则跳过锚定，Step 2 做全量探索。
+
+## Step 2: 深度探索代码
+
+**优先探索 Step 1 标记的变更模块**，然后按范围补充探索：
 
 根据范围，使用 Explore subagent 或直接读取关键文件：
 
@@ -1290,7 +1318,7 @@ mkdir -p docs/architecture docs/development
 - 读取环境变量使用情况（grep 所有 process.env / os.environ）
 - 检查部署脚本
 
-## Step 2: 读取现有文档
+## Step 3: 读取现有文档 + 变更覆盖检查
 
 读取对应的现有文档文件（如存在），标记：
 - ✅ 仍然准确的内容
@@ -1298,7 +1326,15 @@ mkdir -p docs/architecture docs/development
 - ❌ 已过时需删除的内容
 - 🆕 代码中有但文档中缺失的内容
 
-## Step 3: 增量更新
+**变更覆盖检查**（基于 Step 1 锚定结果）：
+逐一检查 Step 1 中每个变更模块，确认文档是否覆盖：
+- 新增的文件/模块 → 文档是否提及？
+- 新增的机制/流程（从 commit message 的 `feat:` / `refactor:` 识别）→ 文档是否描述？
+- 删除/重构的功能 → 文档是否还在引用已不存在的内容？
+
+未覆盖的变更 MUST 在 Step 4 中补充到对应文档。
+
+## Step 4: 增量更新
 
 按以下规范写入/更新文档：
 
@@ -1343,19 +1379,20 @@ mkdir -p docs/architecture docs/development
 - 不写数据库表结构（看 ORM 模型）
 - 已有内容只增量更新，不全量重写
 
-## Step 4: 提交
+## Step 5: 提交
 
 ```bash
 git add docs/architecture/ docs/development/
 git commit -m "docs: 更新开发文档 — [更新范围描述]"
 ```
 
-## Step 5: 输出报告
+## Step 6: 输出报告
 
 ```
 ✅ 开发文档已更新
 
 更新范围：[全量 / architecture / frontend / backend / getting-started / deployment]
+变更锚定：基于 [hash] 以来 [N] 个 commit，[M] 个模块有变更 / 首次运行（全量探索）
 
 变更摘要：
 - docs/architecture/README.md: [新建 / 更新 N 处 / 无变更]
@@ -2211,5 +2248,5 @@ rm -rf .claude/commands/
 
 ---
 
-**版本**: v3.16
-**更新日期**: 2026-03（v3.16）
+**版本**: v3.17
+**更新日期**: 2026-03（v3.17）
