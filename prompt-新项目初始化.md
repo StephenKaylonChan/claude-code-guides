@@ -9,7 +9,7 @@
 
 首先阅读以下所有指南，完整理解整套体系，再开始执行：
 
-- `~/Downloads/00_project/guides/README.md`（目录结构、命令体系、废弃对照表）
+- `~/Downloads/00_project/guides/README.md`（目录结构、命令体系概要）
 - `~/Downloads/00_project/guides/00-日常使用说明.md`
 - `~/Downloads/00_project/guides/01-CLAUDE配置架构指南.md`
 - `~/Downloads/00_project/guides/02-Hooks自动化配置.md`
@@ -77,7 +77,7 @@ Stop：是否需要完成通知？（macOS / Linux）
 **Skills 选择**：
 
 ```
-必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、task（日常小任务执行）、done（功能完成收尾）、docs（开发文档梳理）、release（Phase 完成系统性文档刷新）、nbp2（AI 生图 Prompt 助手）
+必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、task（日常小任务执行）、done（功能完成收尾）、docs（开发文档梳理）、release（Phase 完成系统性文档刷新）、nbp2（AI 生图 Prompt 助手）、diagnose（全维度代码健康诊断）
 可选：是否有项目特定的高频操作值得封装为命令？
 ```
 
@@ -173,7 +173,7 @@ mkdir -p docs/roadmap
 - 删除泛化内容，只保留项目特有的信息
 - 将规范语言改为 `MUST` / `MUST NOT` 表述（参考文档 01 的语言规范）
 - 确保包含：项目结构说明、常用命令（含测试/构建/启动）、技术栈（含版本号）、关键约束、Git 提交规范（Conventional Commits）、关键架构决策
-- **完成标准**章节分三部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 确认代码注释）（3）Spec 实施自检（基于 spec 开发时：每完成 task 勾 `[x]` → 检查 Phase Gate → 提醒 `/done` → 所有 Phase 完成提醒 `/release`）
+- **完成标准**章节分两部分：（1）代码验证（集成测试 + 单元测试 + lint + 边界条件 + 回归验证，技术栈细节放 `.claude/rules/`）（2）进度同步（更新 roadmap checkbox + Spec 勾选/Gate/active_phase + Spec 完成→implemented + Roadmap Phase 完成→建议 /release）
 - 控制在 **150 行以内**
 - Monorepo 则还需为各 app 子目录创建专属 CLAUDE.md（< 100 行）
 
@@ -217,7 +217,7 @@ mkdir -p docs/roadmap
 - `permissions.deny`：直接拒绝的危险操作（`git push --force *`、`git reset --hard *`）
 - `hooks`：按 Phase 2 的决策配置各 Hook
 
-注意：`UserPromptSubmit`、`Stop`、`TaskCompleted`、`TeammateIdle`、`WorktreeCreate`、`WorktreeRemove`、`InstructionsLoaded` 共 7 个事件不支持 matcher 字段。
+注意：`UserPromptSubmit`、`Stop`、`TaskCompleted`、`TaskCreated`、`TeammateIdle`、`WorktreeCreate`、`WorktreeRemove`、`CwdChanged` 共 8 个事件不支持 matcher 字段。
 
 #### 5.2 创建 Hook 脚本
 
@@ -238,7 +238,7 @@ chmod +x .claude/hooks/*.sh
 
 #### 5.3 创建 Skills
 
-**逐个创建**以下 9 个 Skill，内容从 `03-Skills命令配置.md` 中对应章节**完整复制**后按项目调整。
+**逐个创建**以下 11 个 Skill，内容从 `03-Skills命令配置.md` 中对应章节**完整复制**后按项目调整。
 
 每个 SKILL.md 的 frontmatter **必须包含**：
 ```yaml
@@ -259,10 +259,12 @@ disable-model-invocation: true    # 除非需要自动触发
 3. `catchup/SKILL.md`：读取 CLAUDE.md 和 session-notes.md 恢复状态
 4. `handoff/SKILL.md`：**使用方案 B** — 先尝试正常 commit → 失败则 `wip:` + `--no-verify` → 写 session-notes.md
 5. `spec/SKILL.md`：讨论成果整理为设计文档，含 Implementation Phases 结构
-6. `done/SKILL.md`：**注意 argument-hint 必须有**（`<完成了什么功能的描述>`），用户显式描述完成内容
-7. `docs/SKILL.md`：深度探索代码，梳理更新开发文档，支持按范围指定
-8. `release/SKILL.md`：Phase 完成系统性文档刷新（引用 `/docs` 全量 + Changelog + ADR）
-9. `nbp2/SKILL.md`：AI 生图 Prompt 助手（六要素公式 + 进阶技巧）
+6. `task/SKILL.md`：日常小任务执行，自动复杂度分流，支持批量模式
+7. `done/SKILL.md`：**注意 argument-hint 必须有**（`<完成了什么功能的描述>`），用户显式描述完成内容
+8. `docs/SKILL.md`：深度探索代码，梳理更新开发文档，支持按范围指定
+9. `release/SKILL.md`：Phase 完成系统性文档刷新（引用 `/docs` 全量 + Changelog + ADR）
+10. `nbp2/SKILL.md`：AI 生图 Prompt 助手（六要素公式 + 进阶技巧）
+11. `diagnose/SKILL.md`：全维度代码健康诊断（13 维度 + 分批重构计划）
 
 #### 5.4 创建路径感知规则（Monorepo 或前后端分离项目）
 
@@ -362,7 +364,7 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 - 子目录 CLAUDE.md: [数量] 个（如有）
 - .claude/rules/: [数量] 个规则文件（如有）
 - Hooks 已启用: [SessionStart / PreToolUse / PostToolUse / PreCompact / Stop / UserPromptSubmit（如有）]
-- Skills: audit / deep-audit / catchup / handoff / spec / task / done / docs / release / nbp2
+- Skills: audit / deep-audit / catchup / handoff / spec / task / done / docs / release / nbp2 / diagnose
 - 开发文档: docs/development/（[已生成的文档列表]）
 - Agent Teams: [已启用 / 未启用]
 

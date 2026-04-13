@@ -71,24 +71,32 @@ ls .claude/rules/ 2>/dev/null
 
 | 事件 | 是否已配置 | 是否需要新增 |
 |------|-----------|------------|
-| `SessionStart` | ? | 按需 |
-| `PreToolUse` | ? | 按需 |
-| `PostToolUse` | ? | 按需 |
-| `Stop` | ? | 按需 |
+| `SessionStart` | ? | 推荐必配 |
+| `PreToolUse` | ? | 推荐（commit 前测试门禁，用 `if` 字段精确匹配） |
+| `PostToolUse` | ? | 按需（自动格式化） |
+| `Stop` | ? | 推荐必配（质量门禁 + 完成通知） |
 | `Notification` | ? | 按需 |
 | `PreCompact` | ? | 推荐 |
-| `UserPromptSubmit` | ? | 推荐（自动注入 session-notes 上下文） |
+| `PostCompact` | ? | 推荐（与 PreCompact 配对） |
+| `UserPromptSubmit` | ? | 按需（自动注入 session-notes 上下文） |
 | `TaskCompleted` | ? | Agent Teams 时需要 |
+| `TaskCreated` | ? | Agent Teams 时需要 |
 | `TeammateIdle` | ? | Agent Teams 时需要 |
 | `WorktreeCreate` | ? | 自定义 VCS 时需要 |
 | `WorktreeRemove` | ? | 自定义 VCS 时需要 |
 | `ConfigChange` | ? | 企业安全需求时需要 |
 | `PermissionRequest` | ? | 自动审批/拒绝权限时需要 |
-| `PostToolUseFailure` | ? | 按需（支持 matcher，错误处理） |
+| `PermissionDenied` | ? | Auto mode 拒绝后自动重试时需要 |
+| `PostToolUseFailure` | ? | 按需（错误处理） |
+| `StopFailure` | ? | 按需（API 错误处理） |
 | `SessionEnd` | ? | 按需（清理资源） |
 | `SubagentStart` | ? | 按需（监控子代理） |
 | `SubagentStop` | ? | 按需（子代理完成后处理） |
-| `InstructionsLoaded` | ? | 按需（指令加载后处理） |
+| `InstructionsLoaded` | ? | 按需（调试 rules 加载） |
+| `Elicitation` | ? | 按需（MCP 请求用户输入） |
+| `ElicitationResult` | ? | 按需（用户响应 MCP） |
+| `CwdChanged` | ? | 按需（自动环境切换） |
+| `FileChanged` | ? | 按需（配置文件监控） |
 
 #### 2.2 Skills 内容检查
 
@@ -271,6 +279,22 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.18 新增**（重点检查）：
+- **Hook 事件 21→26**：新增 PermissionDenied、StopFailure、CwdChanged、FileChanged、TaskCreated。检查 settings.json 是否需要添加新事件。
+- **Handler 类型支持扩展**：几乎所有事件现在支持 4 种 handler（仅 SessionStart 和 InstructionsLoaded 为 command only）。
+- **Hook `if` 字段**：比 matcher 更精确的命令过滤（如 `"if": "Bash(git commit *)"`）。检查 PreToolUse Hook 是否可以用 `if` 字段替代脚本内过滤。
+- **Stop Hook `stop_hook_active`**：防无限循环机制。检查 on-stop.sh 是否有此检查。
+- **CLAUDE_ENV_FILE 扩展**：从仅 SessionStart 扩展到 +CwdChanged/+FileChanged。
+- **Skills Frontmatter 修正**：`allowed-tools` 含义为"免确认"（非限制可用）。`effort`/`shell`/`paths` 为新增字段。`memory`/`maxTurns`/`permissionMode` 等属于 Subagent 配置。
+- **Skill 内容生命周期**：compaction 保留最近 skill 前 5000 tokens，总共 25000 tokens。
+- **Plan Mode 新功能**：Ultraplan（云端规划）、Auto Mode（Shift+Tab 三模式循环）、opusplan（Plan 用 Opus 执行用 Sonnet）。
+- **1M 上下文窗口**：Opus 4.6/Sonnet 4.6 支持（`/model opus[1m]`），auto-compact 在 1M 下有已知 bug。
+- **完成标准精简**：从三部分（代码验证+文档同步+Spec 自检）精简为两部分（代码验证+进度同步），技术栈测试细节移到 `.claude/rules/`。
+- **rules 红线与规范分离**：建议红线不设 paths（始终加载），规范用 paths 按需加载。
+- **维护指南与 /audit 对齐**：检查清单标注哪些由 /audit 自动覆盖。
+- **命令速查去重**：完整命令表只在 00 Section 7 维护，04 和 README 精简指向 00。
+- **Computer Use**：Research Preview，通过 /mcp 启用 computer-use。
 
 **v3.17 新增**（重点检查）：
 - **`/docs` Skill 变更锚定**：工作流从 5 步扩展为 6 步。新增 Step 1 用 `git diff` 定位"上次文档更新以来改了什么"，Step 3 增加变更覆盖检查。如项目已安装 `/docs` Skill，需更新 `.claude/skills/docs/SKILL.md` 模板。

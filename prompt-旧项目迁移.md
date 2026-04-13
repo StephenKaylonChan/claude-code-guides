@@ -9,7 +9,7 @@
 
 首先阅读以下所有指南，完整理解新系统理念，再开始执行：
 
-- `~/Downloads/00_project/guides/README.md`（目录结构、命令体系、废弃对照表）
+- `~/Downloads/00_project/guides/README.md`（目录结构、命令体系概要）
 - `~/Downloads/00_project/guides/00-日常使用说明.md`
 - `~/Downloads/00_project/guides/01-CLAUDE配置架构指南.md`
 - `~/Downloads/00_project/guides/02-Hooks自动化配置.md`
@@ -160,7 +160,7 @@ docs/ai-context/（整个目录）: → 删除
 - 将旧规范改写为 `MUST` / `MUST NOT` 语言（参考文档 01 的模板）
 - 删除进度信息、协作日志等动态内容
 - 技术栈版本对照实际代码确认准确
-- 确保包含**完成标准**章节，分三部分：（1）代码验证（测试通过 + lint 通过 + 边界条件 + 回归验证）（2）文档同步（更新 `docs/roadmap/` checkbox + 更新 `docs/specs/` status 为 `implemented` + 确认代码注释）（3）Spec 实施自检（基于 spec 开发时：每完成 task 勾 `[x]` → 检查 Phase Gate → 提醒 `/done` → 所有 Phase 完成提醒 `/release`）
+- 确保包含**完成标准**章节，分两部分：（1）代码验证（集成测试 + 单元测试 + lint + 边界条件 + 回归验证，技术栈细节放 `.claude/rules/`）（2）进度同步（更新 roadmap checkbox + Spec 勾选/Gate/active_phase + Spec 完成→implemented + Roadmap Phase 完成→建议 /release）
 - 控制在 **150 行以内**
 
 #### 3.2 生成项目路线图（ROADMAP）
@@ -253,7 +253,7 @@ mkdir -p .claude
     └── on-prompt-submit.sh    # 可选
 ```
 
-**逐个创建** 9 个 Skill，内容从 `03-Skills命令配置.md` 中对应章节**完整复制**后按项目调整。
+**逐个创建** 11 个 Skill，内容从 `03-Skills命令配置.md` 中对应章节**完整复制**后按项目调整。
 
 每个 SKILL.md 的 frontmatter **必须包含**：
 ```yaml
