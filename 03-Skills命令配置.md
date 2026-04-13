@@ -19,28 +19,26 @@
 
 ## 1. Frontmatter 字段参考
 
+### SKILL.md 原生字段
+
 ```yaml
 ---
-name: skill-name                      # 斜杠命令名称（/skill-name）
-description: |                        # Claude 自动检测触发的描述（重要！）
+name: skill-name                      # 斜杠命令名称（max 64 字符，小写+数字+连字符）
+description: |                        # Claude 自动检测触发的描述（max 1024 字符，超过 250 字符在列表中截断）
   当用户需要做 X 时使用此命令。
   触发关键词：X、Y、Z
 argument-hint: "[参数说明]"           # 命令行自动补全提示
-allowed-tools: Read, Grep, Bash       # 此 Skill 可用的工具列表
-disallowed-tools: Edit, Write         # 工具黑名单（与 allowed-tools 二选一）
+allowed-tools: Read, Grep, Bash       # 免确认工具（注意：不是限制可用，其他工具仍可调用但需确认）
 model: haiku                          # 模型覆盖（haiku/sonnet/opus/inherit）
+effort: medium                        # 思考深度覆盖（low/medium/high/max）
 context: fork                         # fork = 在隔离子代理中运行
+agent: Explore                        # 搭配 context:fork，指定子代理类型
 disable-model-invocation: false       # true = 只能用户触发，Claude 不能自动调用
 user-invocable: true                  # false = 隐藏，只能 Claude 内部调用
-# --- 以下为 v3.12 新增字段 ---
-memory: project                       # 子代理持久记忆作用域（user/project/local）
-maxTurns: 30                          # 限制最大代理轮次
-permissionMode: default               # 权限模式（default/acceptEdits/dontAsk/bypassPermissions/plan）
-mcpServers:                           # 为此 Skill 限定可用的 MCP 服务器
-  - context7
-skills:                               # 预加载其他 Skills 到子代理上下文
-  - audit
-hooks:                                # Skill 作用域内的生命周期 Hooks（详见文档 02）
+paths:                                # 限定自动激活的文件路径 glob
+  - "apps/web/**/*.tsx"
+shell: bash                           # 控制 !command 的 shell（bash/powershell）
+hooks:                                # Skill 作用域内的 Hooks（详见文档 02 Section 6.3）
   PreToolUse:
     - matcher: "Bash"
       hooks:
@@ -49,21 +47,30 @@ hooks:                                # Skill 作用域内的生命周期 Hooks�
 ---
 ```
 
-### v3.12 新增字段说明
+> **`allowed-tools` 含义**：不是"限制 Skill 只能用这些工具"，而是"这些工具免确认"。Skill 仍然可以调用其他工具，只是需要用户确认。
+
+### Subagent 配置字段
+
+以下字段属于 **Subagent（子代理，`.claude/agents/`）** 配置，不是 SKILL.md 原生字段。在 `context: fork` 的 Skill 中也可使用部分：
 
 | 字段 | 用途 | 说明 |
 |------|------|------|
-| `memory` | 子代理跨会话记忆 | `user`（用户级）、`project`（项目级）、`local`（本地级），Skill 运行结束后记忆持久化 |
-| `maxTurns` | 限制代理轮次 | 防止 Skill 无限循环，超过轮次自动停止 |
-| `permissionMode` | 权限模式 | `plan` 模式下只分析不修改文件，适合审查类 Skill |
-| `disallowed-tools` | 工具黑名单 | 与 `allowed-tools` 互斥，用于禁止特定工具 |
-| `mcpServers` | MCP 服务器限定 | 只有列出的 MCP 服务器对此 Skill 可用，支持内联定义或引用名称 |
-| `skills` | 预加载 Skills | 将其他 Skill 注入子代理上下文 |
-| `hooks` | Skill 作用域 Hooks | 仅在此 Skill 执行期间生效，完成后自动清理（详见文档 02 Section 6.3） |
+| `memory` | 跨会话记忆 | `user`/`project`/`local`，运行结束后持久化 |
+| `maxTurns` | 限制代理轮次 | 防止无限循环 |
+| `permissionMode` | 权限模式 | `plan` = 只分析不修改，适合审查类 |
+| `disallowed-tools` | 工具黑名单 | 禁止特定工具 |
+| `mcpServers` | MCP 服务器限定 | 只有列出的 MCP 可用 |
+| `skills` | 预加载 Skills | 注入子代理上下文 |
+| `isolation` | 声明式 Worktree 隔离 | `worktree` = 在独立 worktree 中运行 |
+| `background` | 后台运行 | `true` = 始终后台 |
+
+### Skill 内容生命周期
+
+- Skill 调用后以**单条消息**进入对话，整个会话期间**不会重新读取**
+- Auto-compaction 保留最近调用的每个 Skill 前 **5,000 tokens**，总共 **25,000 tokens** 预算
+- 旧的 Skill 可能在 compaction 后被完全丢弃——如果 Skill 似乎失效，重新调用即可恢复
 
 ### 动态变量
-
-Skill 内容中可使用以下变量：
 
 | 变量 | 说明 |
 |------|------|
@@ -73,8 +80,7 @@ Skill 内容中可使用以下变量：
 
 ### `description` 的重要性
 
-`description` 字段控制 Claude 是否会**自动检测并调用** Skill。
-写得越具体，自动触发越准确。如果不希望自动触发，设置 `disable-model-invocation: true`。
+`description` 字段控制 Claude 是否会**自动检测并调用** Skill。写得越具体，自动触发越准确。**超过 250 字符会在列表中被截断**——关键用例放在前面。如果不希望自动触发，设置 `disable-model-invocation: true`。
 
 ### `` !`command` `` 动态上下文注入
 
@@ -87,6 +93,8 @@ Skill 内容中可使用以下变量：
 最近 5 个 commit：
 !`git log --oneline -5`
 ```
+
+> **安全控制**：管理员可通过 `disableSkillShellExecution` 设置禁用 Skills 中的 `!command` 执行。
 
 ---
 
@@ -2090,7 +2098,7 @@ Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版�
 /loop 10m "检查 CI 状态"       # 每 10 分钟检查 CI
 ```
 
-**限制**：默认间隔 10 分钟，最长运行 3 天，上限 50 个任务。
+**限制**：默认间隔 10 分钟，最长运行 3 天，上限 50 个任务。支持 `.claude/loop.md` 文件作为默认 prompt。
 
 ---
 
@@ -2102,7 +2110,7 @@ Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版�
 /claude-api                    # 获取 API 集成指导
 ```
 
-**内部机制**：提供 Claude API 的最佳实践、SDK 用法、Tool Use 配置等专业指导。
+**内部机制**：提供 Claude API 的最佳实践、SDK 用法、Tool Use 配置、Managed Agents 参考等专业指导。支持 Python/TypeScript/Java/Go/Ruby/C#/PHP/cURL。
 
 ---
 
