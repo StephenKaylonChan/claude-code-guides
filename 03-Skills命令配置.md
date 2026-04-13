@@ -100,6 +100,17 @@ hooks:                                # Skill 作用域内的 Hooks（详见文�
 
 ## 2. 自定义 Skills
 
+共 11 个自定义 Skill，按用途分为四类：
+
+| 类别 | Skills | 说明 |
+|------|--------|------|
+| **质量审查** | `/audit`、`/deep-audit`、`/diagnose` | 项目健康检查、文档一致性审计、代码架构诊断 |
+| **开发流程** | `/catchup`、`/handoff`、`/spec`、`/task`、`/done` | 上下文恢复、会话交接、设计文档、小任务、收尾检查 |
+| **文档管理** | `/docs`、`/release` | 开发文档梳理、Phase 系统性刷新 |
+| **工具** | `/nbp2` | AI 生图 Prompt 助手 |
+
+---
+
 ### 2.1 /audit — 项目健康检查
 
 **文件路径**: `.claude/skills/audit/SKILL.md`
@@ -859,7 +870,7 @@ draft → approved → implementing → implemented → [deprecated | superseded
 
 ---
 
-### 2.6 /task — 日常小任务执行（v3.14 新增）
+### 2.6 /task — 日常小任务执行
 
 **用途**：处理不需要 Spec 的日常小任务——业务方的小需求、小 Bug、功能微调、技术改进。与 `/spec` 互补：`/spec` 是复杂功能的"先讨论再实施"，`/task` 是明确任务的"直接做"。支持批量模式，一个会话连续处理多个小任务。
 
@@ -1000,7 +1011,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 
 ---
 
-### 2.7 /done — 智能收尾检查（v3.11 改进）
+### 2.7 /done — 智能收尾检查
 
 **用途**：功能或 Spec Phase 完成后，执行收尾检查。用户**显式描述完成了什么**，Claude 据此匹配 Roadmap 条目和 Spec 文件，更新状态。
 
@@ -1188,7 +1199,7 @@ Roadmap Phase 状态：还剩 [M] 个功能 / 🎯 全部完成，建议执行 /
 
 ---
 
-### 2.8 /docs — 开发文档梳理（v3.11 新增）
+### 2.8 /docs — 开发文档梳理
 
 **用途**：深度探索项目代码，梳理并更新开发文档。可全量刷新，也可按范围指定。日常高频使用，保持文档与代码同步。
 
@@ -1374,7 +1385,7 @@ git commit -m "docs: 更新开发文档 — [更新范围描述]"
 
 ---
 
-### 2.9 /release — Phase 完成系统性文档刷新（v3.11 调整）
+### 2.9 /release — Phase 完成系统性文档刷新
 
 **用途**：一个 Roadmap Phase 的所有功能完成后，进行**系统性文档刷新**——全量执行 `/docs`、生成 Changelog、检查 ADR、更新 Phase 状态。与 `/docs` 的区别：`/docs` 是日常随时可用的轻量更新，`/release` 是 Phase 里程碑节点的全面梳理。
 
@@ -1698,7 +1709,7 @@ No watermark, no text overlays.
 
 ---
 
-### 2.11 /diagnose — 全维度代码健康诊断（v3.15 新增）
+### 2.11 /diagnose — 全维度代码健康诊断
 
 **用途**：独立于功能开发的系统性代码健康诊断。覆盖结构、实现、卫生、战略四层共 13 个维度，输出量化评分 + 完整问题清单 + 分批重构计划。与 `/audit`（项目卫生检查）和 `/deep-audit`（文档一致性审计）互补——`/diagnose` 关注代码架构与长期可维护性。
 

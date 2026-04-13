@@ -884,7 +884,7 @@ HTTP 类型 Hook 支持在 headers 中使用环境变量，通过 `allowedEnvVar
       {
         "matcher": "Bash",
         "hooks": [
-          {"type": "command", "command": "bash .claude/hooks/pre-commit-check.sh"}
+          {"type": "command", "command": "bash .claude/hooks/pre-commit-check.sh", "if": "Bash(git commit *)"}
         ]
       }
     ],
@@ -949,7 +949,7 @@ HTTP 类型 Hook 支持在 headers 中使用环境变量，通过 `allowedEnvVar
 }
 ```
 
-> **注意**：`UserPromptSubmit`、`Stop`、`TaskCompleted`、`Elicitation`、`ElicitationResult`、`TeammateIdle`、`WorktreeCreate`、`WorktreeRemove`、`InstructionsLoaded` 共 9 个事件不支持 `matcher` 字段，每次触发必定执行。其余 12 个事件均支持 matcher（详见 Section 2）。
+> **注意**：`UserPromptSubmit`、`Stop`、`TaskCompleted`、`TaskCreated`、`TeammateIdle`、`WorktreeCreate`、`WorktreeRemove`、`CwdChanged` 共 8 个事件不支持 `matcher` 字段，每次触发必定执行。其余 18 个事件均支持 matcher（详见 Section 2）。
 
 ### Hooks 脚本目录结构
 
