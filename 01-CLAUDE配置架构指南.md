@@ -85,46 +85,31 @@
 
 **规则**：更具体的范围优先。多个文件同时存在时，内容合并，具体规则覆盖通用规则。
 
-### 2.2 Monorepo 推荐目录结构
+### 2.2 CLAUDE.md 层级在项目中的分布
 
 ```
 project-root/
-├── CLAUDE.md                      # 必读：项目总览、共享命令、Git 规范（< 150 行）
-├── CLAUDE.local.md                # gitignore：个人本地环境配置
+├── CLAUDE.md                      # 根规范：每次会话自动加载（< 150 行）
+├── CLAUDE.local.md                # 个人本地配置（gitignore，不加载到团队共享）
 │
 ├── .claude/
-│   ├── settings.json              # 权限、模型、行为配置
-│   ├── settings.local.json        # 个人本地设置（gitignore）
 │   ├── rules/
-│   │   ├── frontend.md            # 仅编辑 apps/web/** 时加载
-│   │   └── backend.md             # 仅编辑 apps/api/** 时加载
-│   ├── skills/                    # 自定义命令（11 个，见《03-Skills命令配置》）
-│   ├── agents/                    # 自定义子代理
-│   └── hooks/                     # Hook 脚本目录（见《02-Hooks自动化配置》）
+│   │   ├── frontend.md            # 路径感知规则：仅编辑 apps/web/** 时加载
+│   │   └── backend.md             # 路径感知规则：仅编辑 apps/api/** 时加载
+│   └── ...                        # settings.json、skills/、hooks/（见文档 02、03）
 │
 ├── apps/
 │   ├── web/
-│   │   └── CLAUDE.md              # 懒加载：前端专属规范（< 100 行）
+│   │   └── CLAUDE.md              # 子目录规范：懒加载（< 100 行）
 │   └── api/
-│       └── CLAUDE.md              # 懒加载：后端专属规范（< 100 行）
+│       └── CLAUDE.md              # 子目录规范：懒加载（< 100 行）
 │
-├── packages/
-│   └── shared/
-│       └── CLAUDE.md              # 懒加载：共享包规范（< 50 行）
-│
-└── docs/
-    ├── roadmap/                   # 项目路线图（@引用当前 Phase）
-    ├── specs/                     # 功能设计文档（/spec 生成）
-    ├── development/               # 开发文档（/release 刷新）
-    │   ├── getting-started.md     #   手写：新人上手指南
-    │   ├── deployment.md          #   手写：部署流程、环境变量、回滚
-    │   └── changelog.md           #   自动生成：版本发布记录
-    └── architecture/
-        ├── README.md              # 架构总览（@引用自动加载，/docs 刷新）
-        ├── frontend.md            # 前端架构详细（/docs frontend 刷新）
-        ├── backend.md             # 后端架构详细（/docs backend 刷新）
-        └── adr/                   # 架构决策记录（/release 检查是否需要新增）
+└── docs/                          # @引用目标（CLAUDE.md 中用 @path 加载）
+    ├── architecture/README.md     #   架构总览（@引用自动加载）
+    └── roadmap/                   #   路线图（@引用当前 Phase）
 ```
+
+> 完整项目目录结构（含 hooks、skills、docs 子目录详情）见 README。
 
 **Token 预算参考**：
 
@@ -229,29 +214,21 @@ pnpm build            # 生产构建
 
 功能实现后，MUST 按顺序完成以下验证再报告"完成"：
 
-### 测试验证
-1. 关键用户交互 MUST 有集成测试（测完整操作链路：渲染页面→模拟操作→验证结果）
-   - 前端：用 React Testing Library + MSW（MUST NOT mock fetch/axios，MUST 用 MSW 拦截网络层）
-   - 后端：用 TestClient（FastAPI）/ MockMvc（Spring Boot）测完整请求链路
-2. 纯计算逻辑（日期格式化、金额计算等）有单元测试
+### 代码验证
+1. 关键用户交互 MUST 有集成测试（测完整操作链路，测试策略详见文档 04）
+2. 纯计算逻辑有单元测试
 3. 运行 `pnpm test`，所有测试通过
 4. 运行 `pnpm lint`，无 error
 5. 检查边界条件：空值、异常输入、权限不足
 6. 确认改动不影响现有功能（回归验证）
 
-### 文档同步（功能完成时）
-5. 更新 `docs/roadmap/` 对应条目的 checkbox 状态
-6. 如有关联 Spec：
-   - Spec 有 Implementation Phases → 更新 `active_phase`（仅当前 Phase 完成时）
-   - Spec 所有 Phase 完成 → 更新 status 为 `implemented`
-   - Spec 无 Phases（旧结构）→ 直接更新 status 为 `implemented`
-7. 确认代码注释反映最终实现
+> 各技术栈的具体测试工具和规则见 `.claude/rules/`（前端：RTL+MSW，后端：TestClient/MockMvc）。
 
-### Spec 实施自检（基于 spec 开发时）
-8. 每完成一个 task → 在 spec 文件中勾选 `[x]`
-9. 当前 Phase 所有 Tasks 勾完 → 逐条检查 Gate 条件
-10. Gate 全通过 → 更新 spec frontmatter 的 `active_phase`，提醒执行 `/done`
-11. `/done` 检测：Spec 是否全部完成、Roadmap Phase 是否全部完成
+### 进度同步
+7. 更新 `docs/roadmap/` 对应条目的 checkbox 状态
+8. 如有关联 Spec：更新 `[x]` 勾选状态、Gate 检查、`active_phase` 推进
+9. Spec 所有 Phase 完成 → status 更新为 `implemented`，建议执行 `/done`
+10. Roadmap Phase 全部完成 → 建议执行 `/release`
 
 ## Git 提交规范
 
