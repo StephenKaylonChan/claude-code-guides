@@ -15,9 +15,8 @@
 4. [项目根 CLAUDE.md 模板](#4-项目根-claudemd-模板)
 5. [全局 CLAUDE.md 模板](#5-全局-claudemd-模板)
 6. [路径感知规则 .claude/rules/](#6-路径感知规则-clauderules)
-7. [Auto Memory 管理](#7-auto-memory-管理)
-8. [初始化流程](#8-初始化流程)
-9. [维护指南](#9-维护指南)
+7. [初始化流程](#7-初始化流程)
+8. [维护指南](#8-维护指南)
 
 ---
 
@@ -38,11 +37,23 @@
 跨会话学习的偏好和项目知识，完全自动化。
 
 **特性**：
-- 存储位置：`~/.claude/projects/<git-repo-hash>/memory/`
+- 存储位置：`~/.claude/projects/<项目路径编码>/memory/`
 - `MEMORY.md` **前 200 行**每次会话自动加载
 - 主题文件（如 `debugging.md`、`patterns.md`）按需加载
 - Claude 根据你的纠正和偏好自动更新
 - 使用 `/memory` 命令查看和管理
+
+**何时手动介入**：
+
+| 情况 | 处理方式 |
+|------|---------|
+| Claude 反复犯同一个错误 | 将正确做法写入 `CLAUDE.md`（MUST NOT 语言） |
+| 你纠正了某个偏好 | Auto Memory 自动记录，无需操作 |
+| 发现 Auto Memory 记录了错误信息 | `/memory` 命令进入编辑 |
+| 项目架构发生重大变化 | 手动更新 `CLAUDE.md`，不依赖 Auto Memory |
+| 想在团队间共享某条知识 | 从 Auto Memory 提取，写入版本控制的 `CLAUDE.md` |
+
+**禁用**：在 `.claude/settings.json` 中设置 `"autoMemoryEnabled": false`，或环境变量 `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`。
 
 ### 1.3 如何分工
 
@@ -53,7 +64,7 @@
 | 技术栈版本声明 | `CLAUDE.md` |
 | 个人开发偏好 | `~/.claude/CLAUDE.md` 或 `CLAUDE.local.md` |
 | 跨会话学到的调试技巧 | Auto Memory（Claude 自动维护） |
-| 项目阶段进度 | Auto Memory（自动）+ 必要时手动编辑 |
+| 项目阶段进度 | `docs/roadmap/` 目录（持久化进度跟踪） |
 | 临时任务列表 | `/tasks` 命令（内置任务列表，Ctrl+T 查看） |
 
 ---
@@ -404,97 +415,28 @@ paths:
 
 ---
 
-## 7. Auto Memory 管理
+## 7. 初始化流程
 
-### 7.1 查看和操作
+新项目初始化通过 `prompt-新项目初始化.md` 执行——在目标项目中启动 Claude Code，@ 引用该 prompt 文件，Claude 会自主完成全部配置。
 
-```bash
-# Claude Code 内部命令
-/memory         # 查看所有 CLAUDE.md 文件状态和 Auto Memory 开关
-```
+**初始化会产出的文件**：
 
-### 7.2 Memory 目录结构
+| 产出 | 说明 |
+|------|------|
+| `CLAUDE.md` | 项目规范（精简到 150 行以内） |
+| `.claude/settings.json` | 权限 + Hooks 配置 |
+| `.claude/hooks/*.sh` | Hook 脚本文件 |
+| `.claude/skills/*/SKILL.md` | 自定义 Skills |
+| `.claude/rules/*.md` | 路径感知规则 |
+| `CLAUDE.local.md` | 个人本地配置（加入 .gitignore） |
+| `docs/roadmap/` | 项目路线图（探索后生成） |
+| 子目录 `CLAUDE.md` | Monorepo 子模块规范（按需） |
 
-Claude 自动在以下位置维护记忆文件：
-
-```
-~/.claude/projects/<git-repo-hash>/memory/
-├── MEMORY.md           # 索引文件，前 200 行自动加载
-├── debugging.md        # 调试技巧（按需加载）
-└── patterns.md         # 代码模式偏好（按需加载）
-```
-
-### 7.3 何时手动介入
-
-| 情况 | 处理方式 |
-|------|---------|
-| Claude 反复犯同一个错误 | 将正确做法写入 `CLAUDE.md`（MUST NOT 语言） |
-| 你纠正了某个偏好 | Auto Memory 自动记录，无需操作 |
-| 发现 Auto Memory 记录了错误信息 | `/memory` 命令进入编辑 |
-| 项目架构发生重大变化 | 手动更新 `CLAUDE.md`，不依赖 Auto Memory |
-| 想在团队间共享某条知识 | 从 Auto Memory 提取，写入版本控制的 `CLAUDE.md` |
-
-### 7.4 禁用 Auto Memory
-
-```json
-// .claude/settings.json
-{
-  "autoMemoryEnabled": false
-}
-```
-
-或环境变量：`CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`
+详细步骤见 `prompt-新项目初始化.md`。已有 v3.x 配置的项目同步最新 guide 见 `prompt-guide版本升级.md`。
 
 ---
 
-## 8. 初始化流程
-
-### 新项目初始化
-
-```bash
-# 1. 进入项目根目录，启动 Claude Code
-claude
-
-# 2. 自动生成 CLAUDE.md 草稿
-/init
-# Claude 会扫描代码库，发现构建命令、测试框架、项目结构，生成草稿
-
-# 3. 手动精简草稿到 150 行以内
-# 重点：删除泛化内容，保留项目特有的约束
-
-# 4. 创建子目录 CLAUDE.md（如果是 Monorepo）
-
-# 5. 创建路径感知规则
-mkdir -p .claude/rules
-# 创建 frontend.md、backend.md 等
-
-# 6. 配置 .claude/settings.json（权限设置）
-
-# 7. 将 CLAUDE.local.md 加入 .gitignore
-echo "CLAUDE.local.md" >> .gitignore
-echo ".claude/settings.local.json" >> .gitignore
-```
-
-### 从旧方案迁移
-
-```bash
-# 旧 CONTEXT.md 内容迁移策略：
-# ✅ 提取"技术栈"部分 → 根 CLAUDE.md 技术栈章节
-# ✅ 提取"开发规范"部分 → 用 MUST/MUST NOT 语言重写
-# ✅ 提取"项目结构"部分 → 根 CLAUDE.md 项目结构章节
-# ✅ 提取"协作偏好"部分 → ~/.claude/CLAUDE.md
-# ❌ 丢弃"进度/日志"部分 → 由 Auto Memory 自动接管
-# ❌ 丢弃"待办任务"部分 → 使用 /tasks 内置任务列表
-
-# 清理旧文件
-rm docs/ai-context/CONTEXT.md
-rm docs/ai-context/CURRENT.md
-# 旧的 docs/ai-context/ 目录可以删除
-```
-
----
-
-## 9. 维护指南
+## 8. 维护指南
 
 ### 每月检查清单
 
