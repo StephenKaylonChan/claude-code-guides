@@ -36,48 +36,9 @@
 
 ## 🎯 命令体系
 
-### Anthropic 内置 Bundled Skills（无需配置）
+命令分三类：**Bundled Skills**（Anthropic 内置，5 个）、**自定义 Skills**（安装到 `.claude/skills/`，11 个）、**系统命令**（内置，无需配置）。
 
-| 命令 | 用途 | 频率 |
-|------|------|------|
-| `/simplify` | PR 前三维并行代码审查并自动修复 | **每次 PR 前** |
-| `/batch <描述>` | 跨文件大规模并行变更 | 批量重构时 |
-| `/debug` | 交互式调试助手（设置断点、分析堆栈、定位根因） | Bug 调试时 |
-| `/loop <间隔> <命令>` | 定时重复执行（如 `/loop 5m /audit --quick`，最长 3 天，上限 50 任务） | 监控/轮询 |
-| `/claude-api` | Claude API / Anthropic SDK 集成指导 | 使用 Claude API 开发时 |
-
-### 自定义 Skills（需安装到 .claude/skills/）
-
-| 命令 | 用途 | 频率 |
-|------|------|------|
-| `/catchup` | 清空上下文后快速恢复 | 按需 |
-| `/handoff` | 提交变更 + 生成交接文档 | 中断前 |
-| `/spec` | 讨论成果整理为设计文档 | 需求讨论后 |
-| `/task` | 日常小任务执行（小需求/小 Bug/微调，支持批量） | 随时 |
-| `/diagnose` | 全维度代码健康诊断（13 维度 + 重构计划） | 独立会话，定期 |
-| `/done` | 智能收尾检查（附描述：`/done 完成了XX`） | 功能完成后 |
-| `/docs` | 深度探索代码，梳理更新开发文档（架构/上手/部署） | 日常高频 |
-| `/release` | Phase 完成系统性文档刷新（`/docs` 全量 + Changelog + ADR） | Phase 完成后 |
-| `/nbp2` | AI 生图 Prompt 助手（Nano Banana Pro 2） | 需要生图时 |
-| `/audit` | 项目健康检查 | 每周 |
-| `/deep-audit` | 全面深度审计 | Phase 完成后 |
-
-### 常用系统命令（内置，无需配置）
-
-| 命令 | 用途 |
-|------|------|
-| `/plan` | 进入 Plan Mode（复杂任务前先规划） |
-| `/voice` | 语音模式（Push-to-talk，空格键说话，支持 20 种语言） |
-| `/fast` | 切换 Fast Mode（Opus 4.6 快速输出，约 2.5x 速度） |
-| `/model` | 切换模型（sonnet/opus/haiku） |
-| `/rewind` | 回滚（可选仅对话 / 仅代码 / 两者同时） |
-| `/mcp` | 管理 MCP 服务器（启用/禁用/重连/OAuth） |
-| `/insights` | 会话分析报告（交互模式、项目区域、摩擦点） |
-| `/clear` | 清空上下文（别名 /reset、/new，配合 /handoff 使用） |
-| `/cost` | 查看 Token 使用量 |
-| `/context` | 可视化上下文占用 |
-
-> 注：`/start`、`/end`、`/checkpoint`、`/weekly`、`/monthly`、`/fix` 已由 Hooks 自动化替代，无需手动命令。
+完整命令速查表见 [00-日常使用说明.md](./00-日常使用说明.md) Section 7。
 
 ---
 
@@ -139,15 +100,11 @@ project-root/
 
 ---
 
-## 🚀 新项目初始化步骤
+## 🚀 新项目初始化
 
-1. 在项目根目录运行 `claude`
-2. 执行 `/init` 生成 `CLAUDE.md` 草稿
-3. 手动精简到 150 行以内
-4. 创建 `.claude/settings.json`（参考文档 02 的完整配置）
-5. 创建 `.claude/hooks/` 脚本（参考文档 02）
-6. 创建 `.claude/skills/` 目录（参考文档 03）
-7. 按需为子目录创建 `CLAUDE.md`
+在目标项目中启动 Claude Code，@ 引用 `prompt-新项目初始化.md`，Claude 会自主完成全部配置（CLAUDE.md、settings.json、hooks、skills、rules、roadmap）。
+
+详见 [00-日常使用说明.md](./00-日常使用说明.md) Section 1 或直接使用 [prompt-新项目初始化.md](./prompt-新项目初始化.md)。
 
 ---
 
