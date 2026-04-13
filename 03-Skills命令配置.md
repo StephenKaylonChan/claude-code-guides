@@ -1,6 +1,6 @@
 # Skills 命令配置指南
 
-> Slash Commands 的进化版 — 更强大的自定义工作流命令
+> Claude Code 自定义工作流命令系统
 
 **版本**: v3.17
 **适用**: Claude Code 2.x（2026 年）
@@ -9,73 +9,15 @@
 
 ## 目录
 
-1. [Skills vs 旧 Commands](#1-skills-vs-旧-commands)
-2. [命令迁移说明](#2-命令迁移说明)
-3. [Frontmatter 字段参考](#3-frontmatter-字段参考)
-4. [保留的 Skills](#4-保留的-skills)
-5. [新增的 Skills](#5-新增的-skills)
-6. [Anthropic 内置命令（Bundled Skills）](#6-anthropic-内置命令bundled-skills)
-7. [安装说明](#7-安装说明)
+1. [Frontmatter 字段参考](#1-frontmatter-字段参考)
+2. [自定义 Skills](#2-自定义-skills)
+3. [Anthropic 内置命令（Bundled Skills）](#3-anthropic-内置命令bundled-skills)
+4. [安装说明](#4-安装说明)
+
 
 ---
 
-## 1. Skills vs 旧 Commands
-
-Skills 是 Claude Code 2.x 中 Slash Commands 的升级版（文件位置从 `.claude/commands/` 迁移到 `.claude/skills/<name>/SKILL.md`）。
-
-### 核心差异
-
-| 特性 | 旧 Commands（`.claude/commands/`） | 新 Skills（`.claude/skills/`） |
-|------|----------------------------------|-------------------------------|
-| 文件格式 | 单个 `.md` 文件 | 目录内 `SKILL.md` + 可选资源 |
-| 子代理执行 | 不支持 | 支持（`context: fork`） |
-| 动态上下文注入 | 不支持 | 支持（`` !`command` `` 语法） |
-| 自动触发 | 仅手动 | 支持基于 `description` 自动检测 |
-| 模型覆盖 | 不支持 | 支持（`model: haiku/sonnet/opus`） |
-| 独立 Hooks | 不支持 | 支持（Skill 作用域内的 Hooks） |
-| 参数传递 | 基础 | `$ARGUMENTS`, `$1`, `$2` 等 |
-
-> **兼容性**：旧 `.claude/commands/*.md` 文件仍然有效，但建议迁移到 Skills 格式以获得新特性。
-
----
-
-## 2. 命令迁移说明
-
-### 旧方案中哪些命令已被原生功能替代
-
-下列旧命令**不再需要**，已由 Claude Code 原生能力或 Hooks 接管：
-
-| 旧命令 | 替代方案 | 原因 |
-|--------|---------|------|
-| `/start` | `SessionStart` Hook + Auto Memory | 会话启动自动执行，无需手动恢复 |
-| `/checkpoint` | `Stop` Hook + Auto Memory | Claude 完成响应时自动记录 |
-| `/end` | `Stop` Hook + Auto Memory | 自动维护，无需手动执行 |
-| `/weekly` | 不需要了 | CLAUDE.md < 200 行不会膨胀；Auto Memory 自动管理 |
-| `/monthly` | 不需要了 | Auto Memory 无需手动归档 |
-| `/fix` | `PostToolUse` Hook（自动触发） | 写文件时自动格式化，无需手动调用 |
-
-### 保留并升级的命令
-
-| 旧命令 | 新命令 | 变化 |
-|--------|--------|------|
-| `/audit` | `/audit` | 升级为 Skill 格式，增加子代理并行检查 |
-| `/deep-audit` | `/deep-audit` | 升级为 Skill 格式，增加自动修复能力 |
-
-### 新增命令
-
-| 新命令 | 用途 |
-|--------|------|
-| `/catchup` | 执行 `/clear` 后快速恢复工作上下文 |
-| `/handoff` | 会话结束前生成结构化交接文档 |
-| `/spec` | 讨论成果整理为设计文档 |
-| `/task` | 日常小任务执行（小需求/小 Bug/微调，支持批量） |
-| `/done` | 功能完成收尾检查（Roadmap/Spec 状态更新） |
-| `/docs` | 深度探索代码，梳理更新开发文档（架构/上手/部署） |
-| `/release` | Phase 完成：系统性文档刷新 + 生成 Changelog |
-
----
-
-## 3. Frontmatter 字段参考
+## 1. Frontmatter 字段参考
 
 ```yaml
 ---
@@ -148,9 +90,9 @@ Skill 内容中可使用以下变量：
 
 ---
 
-## 4. 保留的 Skills
+## 2. 自定义 Skills
 
-### 4.1 /audit — 项目健康检查
+### 2.1 /audit — 项目健康检查
 
 **文件路径**: `.claude/skills/audit/SKILL.md`
 
@@ -281,7 +223,7 @@ grep "^\.env" .gitignore || echo "⚠️ .env 可能未被忽略"
 
 ---
 
-### 4.2 /deep-audit — 全面深度审计
+### 2.2 /deep-audit — 全面深度审计
 
 **文件路径**: `.claude/skills/deep-audit/SKILL.md`
 
@@ -440,9 +382,9 @@ git push
 
 ---
 
-## 5. 新增的 Skills
 
-### 5.1 /catchup — 上下文快速恢复
+
+### 2.3 /catchup — 上下文快速恢复
 
 **用途**：执行 `/clear` 清空上下文后，快速重建工作状态，无需重新解释项目背景。
 
@@ -519,7 +461,7 @@ git log --oneline @{u}.. 2>/dev/null || echo "（无法获取，可能没有追�
 
 ---
 
-### 5.2 /handoff — 会话交接文档
+### 2.4 /handoff — 会话交接文档
 
 **用途**：关闭会话前生成结构化交接笔记，自动更新项目路线图进度，供下次会话快速恢复。
 
@@ -662,7 +604,7 @@ git commit -m "docs: 更新路线图和设计文档状态" 2>/dev/null || true
 
 ---
 
-### 5.3 /spec — 讨论成果整理为设计文档
+### 2.5 /spec — 讨论成果整理为设计文档
 
 **用途**：需求讨论、技术方案探讨、UI 设计讨论到一定程度后，将对话中的讨论成果整理为结构化设计文档，持久化到 `docs/specs/` 目录。支持增量更新（跨多次上下文持续完善同一份 spec）。
 
@@ -909,7 +851,7 @@ draft → approved → implementing → implemented → [deprecated | superseded
 
 ---
 
-### 5.4 /task — 日常小任务执行（v3.14 新增）
+### 2.6 /task — 日常小任务执行（v3.14 新增）
 
 **用途**：处理不需要 Spec 的日常小任务——业务方的小需求、小 Bug、功能微调、技术改进。与 `/spec` 互补：`/spec` 是复杂功能的"先讨论再实施"，`/task` 是明确任务的"直接做"。支持批量模式，一个会话连续处理多个小任务。
 
@@ -1050,7 +992,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 
 ---
 
-### 5.5 /done — 智能收尾检查（v3.11 改进）
+### 2.7 /done — 智能收尾检查（v3.11 改进）
 
 **用途**：功能或 Spec Phase 完成后，执行收尾检查。用户**显式描述完成了什么**，Claude 据此匹配 Roadmap 条目和 Spec 文件，更新状态。
 
@@ -1238,7 +1180,7 @@ Roadmap Phase 状态：还剩 [M] 个功能 / 🎯 全部完成，建议执行 /
 
 ---
 
-### 5.6 /docs — 开发文档梳理（v3.11 新增）
+### 2.8 /docs — 开发文档梳理（v3.11 新增）
 
 **用途**：深度探索项目代码，梳理并更新开发文档。可全量刷新，也可按范围指定。日常高频使用，保持文档与代码同步。
 
@@ -1424,7 +1366,7 @@ git commit -m "docs: 更新开发文档 — [更新范围描述]"
 
 ---
 
-### 5.7 /release — Phase 完成系统性文档刷新（v3.11 调整）
+### 2.9 /release — Phase 完成系统性文档刷新（v3.11 调整）
 
 **用途**：一个 Roadmap Phase 的所有功能完成后，进行**系统性文档刷新**——全量执行 `/docs`、生成 Changelog、检查 ADR、更新 Phase 状态。与 `/docs` 的区别：`/docs` 是日常随时可用的轻量更新，`/release` 是 Phase 里程碑节点的全面梳理。
 
@@ -1532,7 +1474,7 @@ git commit -m "docs: Phase N [Phase名称] 完成 — 系统性文档刷新"
 
 ---
 
-### 5.8 /nbp2 — AI 生图 Prompt 助手（Nano Banana Pro 2）
+### 2.10 /nbp2 — AI 生图 Prompt 助手（Nano Banana Pro 2）
 
 **用途**：帮助编写针对 Google Nano Banana Pro / Nano Banana 2 优化的高质量图片生成 Prompt。不同 AI 生图模型有不同的 prompt 写法，此 Skill 内嵌 NBP2 最佳实践，直接输出可用 prompt。
 
@@ -1748,7 +1690,7 @@ No watermark, no text overlays.
 
 ---
 
-### 5.9 /diagnose — 全维度代码健康诊断（v3.15 新增）
+### 2.11 /diagnose — 全维度代码健康诊断（v3.15 新增）
 
 **用途**：独立于功能开发的系统性代码健康诊断。覆盖结构、实现、卫生、战略四层共 13 个维度，输出量化评分 + 完整问题清单 + 分批重构计划。与 `/audit`（项目卫生检查）和 `/deep-audit`（文档一致性审计）互补——`/diagnose` 关注代码架构与长期可维护性。
 
@@ -2082,11 +2024,11 @@ previous_score: [上次得分，如有]
 
 ---
 
-## 6. Anthropic 内置命令（Bundled Skills）
+## 3. Anthropic 内置命令（Bundled Skills）
 
 Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版本自动更新，**无需手动配置，直接使用**。
 
-### 6.1 /simplify — 代码简化审查
+### 3.1 /simplify — 代码简化审查
 
 **何时用**：功能实现完成后、提 PR 前，对本次改动做三维并行审查并自动修复。
 
@@ -2106,7 +2048,7 @@ Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版�
 
 ---
 
-### 6.2 /batch — 大规模并行变更
+### 3.2 /batch — 大规模并行变更
 
 **何时用**：需要对整个代码库做统一变更时（替换库、重命名、统一格式等）。
 
@@ -2126,7 +2068,7 @@ Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版�
 
 ---
 
-### 6.3 /debug — 交互式调试助手
+### 3.3 /debug — 交互式调试助手
 
 **何时用**：遇到难以定位的 Bug 时，让 Claude 引导你逐步调试。
 
@@ -2139,7 +2081,7 @@ Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版�
 
 ---
 
-### 6.4 /loop — 定时重复执行
+### 3.4 /loop — 定时重复执行
 
 **何时用**：需要定期检查状态或重复执行任务时。
 
@@ -2152,7 +2094,7 @@ Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版�
 
 ---
 
-### 6.5 /claude-api — Claude API 集成指导
+### 3.5 /claude-api — Claude API 集成指导
 
 **何时用**：项目中需要使用 Claude API 或 Anthropic SDK 时。
 
@@ -2175,9 +2117,9 @@ Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版�
 
 ---
 
-## 7. 安装说明
+## 4. 安装说明
 
-### 7.1 目录结构
+### 4.1 目录结构
 
 ```bash
 # 创建 Skills 目录
@@ -2194,7 +2136,7 @@ mkdir -p .claude/skills/nbp2
 mkdir -p .claude/skills/diagnose
 ```
 
-### 7.2 文件创建
+### 4.2 文件创建
 
 将上述各 Skill 内容分别写入：
 - `.claude/skills/audit/SKILL.md`
@@ -2209,14 +2151,14 @@ mkdir -p .claude/skills/diagnose
 - `.claude/skills/nbp2/SKILL.md`
 - `.claude/skills/diagnose/SKILL.md`
 
-### 7.3 查看已安装的 Skills
+### 4.3 查看已安装的 Skills
 
 ```bash
 # Claude Code 内部命令
 /skills         # 列出所有可用 Skills
 ```
 
-### 7.4 使用方式
+### 4.4 使用方式
 
 ```bash
 /audit              # 标准健康检查
@@ -2246,19 +2188,6 @@ mkdir -p .claude/skills/diagnose
 /diagnose            # 全项目代码健康诊断
 /diagnose frontend   # 仅前端
 /diagnose auth       # 指定模块
-```
-
-### 7.5 旧 commands/ 迁移
-
-如果有旧版 `.claude/commands/` 文件：
-
-```bash
-# 旧文件仍然有效，可以先保留
-# 等迁移到 Skills 格式后再删除
-ls .claude/commands/
-
-# 确认新 Skills 工作正常后清理
-rm -rf .claude/commands/
 ```
 
 ---
