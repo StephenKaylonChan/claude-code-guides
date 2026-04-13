@@ -1,6 +1,6 @@
 # Hooks 自动化配置指南
 
-> 用 Claude Code 原生钩子替代手动工作流，实现零干预的开发自动化
+> Claude Code 生命周期钩子系统 — 在 AI 操作的关键节点插入自定义逻辑
 
 **版本**: v3.17
 **适用**: Claude Code 2.x（2026 年）
@@ -26,12 +26,12 @@
 Hooks 是 Claude Code 的生命周期钩子系统，允许你在 AI 操作的关键节点插入自定义逻辑。
 
 **核心价值**：
-- 将过去需要 Slash Commands 手动触发的操作变为**自动执行**
-- 实现质量门禁（测试不通过禁止提交）
+- 实现质量门禁（测试不通过禁止提交）— Hook 是**确定性的**，不受上下文劣化影响
 - 保持代码风格一致（自动格式化）
 - 提升开发体验（完成通知、上下文自动加载）
+- 自动化重复操作（会话启动检查、压缩前保存进度）
 
-### Hooks vs Slash Commands vs Skills 的选择
+### Hooks vs Skills 的选择
 
 | 场景 | 推荐方式 |
 |------|---------|
@@ -41,13 +41,23 @@ Hooks 是 Claude Code 的生命周期钩子系统，允许你在 AI 操作的关
 | 手动触发的健康检查 | **Skill**（/audit） |
 | 手动触发的深度审计 | **Skill**（/deep-audit） |
 
+### 渐进式配置建议
+
+不要一次性配置所有 Hook。推荐从 1-2 个核心 Hook 起步，稳定后逐步增加：
+
+1. **第一步**：`SessionStart`（显示 git 状态）+ `Stop`（完成通知 + 质量门禁）
+2. **第二步**：`PreToolUse`（commit 前测试门禁）
+3. **按需添加**：`PostToolUse`（自动格式化）、`PreCompact`（压缩前保存）等
+
+> **为什么渐进式**：每个 Hook 都会增加操作延迟和 Token 消耗。Hook 脚本 bug 会影响整个开发流，先用少量 Hook 验证脚本可靠性，再扩展。
+
 ---
 
 ## 2. 核心 Hook 事件
 
-Claude Code 当前支持 **21 个** Hook 事件：
+Claude Code 当前支持 **26 个** Hook 事件：
 
-### 支持 matcher 的事件（12 个）
+### 支持 matcher 的事件（18 个）
 
 | 事件 | 触发时机 | matcher 匹配对象 | 典型用途 |
 |------|---------|-----------------|---------|
@@ -56,47 +66,52 @@ Claude Code 当前支持 **21 个** Hook 事件：
 | `PostToolUse` | 工具调用**成功后** | 工具名 | 自动格式化、自动测试 |
 | `PostToolUseFailure` | 工具调用**失败后** | 工具名 | 错误处理、自动恢复 |
 | `PermissionRequest` | 权限请求时（可阻断） | 工具名 | 编程化自动审批/拒绝权限 |
-| `Notification` | 需要用户注意时 | 通知类型：`permission_prompt`/`idle_prompt`/`elicitation_dialog` 等 | 桌面通知、TTS 提醒 |
+| `PermissionDenied` | Auto mode 拒绝工具调用后 | 工具名 | 自动重试、日志记录 |
+| `Notification` | 需要用户注意时 | 通知类型：`permission_prompt`/`idle_prompt` 等 | 桌面通知、TTS 提醒 |
 | `SubagentStart` | 子代理启动时 | 代理类型：`Bash`/`Explore`/`Plan` 或自定义名 | 监控子代理生命周期 |
 | `SubagentStop` | 子代理完成时 | 代理类型（同 SubagentStart） | 汇总子代理结果 |
 | `PreCompact` | 上下文压缩前 | 触发方式：`manual`/`auto` | 保存关键信息 |
-| `PostCompact` | 上下文压缩**完成后** | 触发方式：`manual`/`auto` | 压缩后恢复检查、日志记录 |
-| `SessionEnd` | 会话终止时 | 终止原因：`clear`/`logout`/`other` 等 | 清理资源、记录会话统计 |
-| `ConfigChange` | 配置文件变更时（可阻断） | 配置来源：`user_settings`/`project_settings` 等 | 企业安全审计、防止配置篡改 |
+| `PostCompact` | 上下文压缩**完成后** | 触发方式：`manual`/`auto` | 压缩后恢复检查 |
+| `SessionEnd` | 会话终止时 | 终止原因：`clear`/`logout`/`other` 等 | 清理资源、记录统计 |
+| `ConfigChange` | 配置文件变更时（可阻断） | 配置来源：`user_settings`/`project_settings` 等 | 企业安全审计 |
+| `StopFailure` | API 错误结束时 | 错误类型：`rate_limit`/`authentication_failed`/`billing_error` 等 | 错误处理、自动恢复 |
+| `InstructionsLoaded` | 指令文件加载时（只读） | 加载原因：`session_start`/`path_glob_match`/`include`/`compact` | 调试 rules 加载 |
+| `Elicitation` | MCP 服务端请求用户输入时 | MCP 服务器名 | 自动应答、日志记录 |
+| `ElicitationResult` | 用户响应 Elicitation 后 | MCP 服务器名 | 校验/修改/拦截响应 |
+| `FileChanged` | 被监视的文件变化时 | 文件名（字面匹配，`\|` 分隔） | 配置文件监控 |
 
-### 不支持 matcher（每次必触发，共 9 个）
+### 不支持 matcher（每次必触发，共 8 个）
 
 | 事件 | 触发时机 | 典型用途 |
 |------|---------|---------|
 | `UserPromptSubmit` | 用户提交 prompt**前** | 注入额外上下文、校验 prompt |
-| `Stop` | Claude 完成响应时 | 完成通知、状态验证 |
-| `TaskCompleted` | 任务被标记为完成时 | 强制完成标准（测试通过、lint 通过） |
-| `Elicitation` | MCP 服务端请求用户输入时（表单/浏览器 URL） | 自动应答、跳过对话框、日志记录 |
-| `ElicitationResult` | 用户响应 MCP Elicitation 后、发送回服务端前 | 校验/修改/拦截用户响应 |
-| `TeammateIdle` | Agent Teams 中 teammate 空闲时 | 控制 teammate 继续还是停止 |
-| `WorktreeCreate` | 创建 worktree 时（替换默认 git 行为） | 自定义 VCS 初始化（SVN/Perforce） |
-| `WorktreeRemove` | 删除 worktree 时 | 清理 worktree 相关资源 |
-| `InstructionsLoaded` | 指令文件加载时（只读，无法阻断） | 调试 CLAUDE.md 层级加载、合规审计 |
+| `Stop` | Claude 完成响应时 | 完成通知、质量门禁 |
+| `TaskCompleted` | 任务被标记为完成时 | 强制完成标准 |
+| `TaskCreated` | 通过 TaskCreate 创建任务时 | 多 agent 协调 |
+| `TeammateIdle` | Agent Teams 中 teammate 空闲时 | 控制 teammate 继续/停止 |
+| `WorktreeCreate` | 创建 worktree 时 | 自定义 VCS 初始化 |
+| `WorktreeRemove` | 删除 worktree 时 | 清理 worktree 资源 |
+| `CwdChanged` | Claude 切换工作目录时 | 自动环境切换（direnv） |
 
 ### Handler 类型支持
 
-并非所有事件都支持全部 Handler 类型（详见 [Section 3](#3-handler-类型)）：
+绝大多数事件支持全部 4 种 Handler 类型（详见 [Section 3](#3-handler-类型)）：
 
-- **全部 4 种（command + http + prompt + agent）**：PreToolUse、PostToolUse、PostToolUseFailure、PermissionRequest、Stop、SubagentStop、TaskCompleted、UserPromptSubmit、Elicitation、ElicitationResult
-- **仅 command**：SessionStart、SessionEnd、Notification、PreCompact、PostCompact、SubagentStart、ConfigChange、WorktreeCreate、WorktreeRemove、TeammateIdle、InstructionsLoaded
+- **全部 4 种（command + http + prompt + agent）**：除以下 2 个外的所有事件
+- **仅 command**：`SessionStart`、`InstructionsLoaded`
 
 ### SessionStart 的 matcher 值
 
 ```json
 "matcher": "startup"    // 首次启动
 "matcher": "resume"     // 恢复已有会话
-"matcher": "compact"    // 上下文压缩后重启（压缩后重新注入上下文）
+"matcher": "compact"    // 上下文压缩后重启
 "matcher": "clear"      // /clear 后
 ```
 
 ### UserPromptSubmit 的特殊行为
 
-stdout 输出的内容会作为**额外上下文注入给 Claude**（而非显示给用户），非常适合自动注入当前 Sprint 任务、项目状态等动态信息。
+stdout 输出的内容会作为**额外上下文注入给 Claude**（而非显示给用户），非常适合自动注入当前 Sprint 任务、项目状态等动态信息。支持 `sessionTitle` 设置会话标题、`decision: "block"` 阻断 prompt 提交。
 
 ---
 
@@ -170,6 +185,46 @@ Hooks 默认同步执行（阻塞 Claude 等待结果）。添加 `"async": true
 适合场景：通知类 Hook（桌面通知、Slack 消息）、日志记录、不需要即时反馈的后台操作。
 
 > **注意**：异步 Hook 不能阻断操作（exit code 2 无效），因为 Claude 不会等待其完成。
+
+### 3.6 默认超时
+
+不同 Handler 类型有不同的默认超时：
+
+| Handler 类型 | 默认超时 | 说明 |
+|-------------|---------|------|
+| command | **600 秒**（10 分钟） | 可通过 `"timeout"` 字段自定义 |
+| http | **30 秒** | |
+| prompt | **30 秒** | |
+| agent | **60 秒**（50 轮限制） | |
+| SessionEnd 特殊 | **1.5 秒** | 会话终止时间极短 |
+
+### 3.7 Hook 配置新字段
+
+| 字段 | 用途 | 示例 |
+|------|------|------|
+| `"if"` | 精细命令过滤（比 matcher 更精确） | `"if": "Bash(git commit *)"` 只匹配 git commit |
+| `"timeout"` | 自定义超时（秒） | `"timeout": 30` |
+| `"statusMessage"` | 自定义执行时 spinner 文本 | `"statusMessage": "运行测试中..."` |
+| `"shell"` | 指定 shell 类型 | `"shell": "bash"` 或 `"powershell"` |
+| `"once"` | 每个会话只执行一次 | `"once": true`（Skill Frontmatter 专用） |
+
+**`if` 字段 vs matcher + 脚本过滤**：
+
+```json
+// ❌ 旧方式：matcher="Bash"，每次 Bash 调用都触发，脚本内再过滤
+{"matcher": "Bash", "hooks": [{"type": "command", "command": "bash .claude/hooks/pre-commit-check.sh"}]}
+
+// ✅ 新方式：if 字段精确匹配，只在 git commit 时触发
+{"matcher": "Bash", "hooks": [{"type": "command", "command": "bash .claude/hooks/pre-commit-check.sh", "if": "Bash(git commit *)"}]}
+```
+
+推荐使用 `if` 字段——减少不必要的 Hook 触发，降低 error 风险和性能开销。
+
+### 3.8 PreToolUse 的 defer 决策值
+
+PreToolUse Hook 除了 allow/deny/ask，新增 `defer` 决策值，用于 headless 模式（`-p` 标志）——暂停工具执行，等待外部进程恢复。
+
+决策优先级：`deny` > `defer` > `ask` > `allow`
 
 ---
 
@@ -250,13 +305,18 @@ TOOL=$(echo "$INPUT" | jq -r '.tool_name')
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
 ```
 
+> **调试技巧**：不同事件的 stdin 格式不同。不确定时先保存下来看：
+> ```bash
+> INPUT=$(cat); echo "$INPUT" > /tmp/hook-debug.json; echo "$INPUT"
+> ```
+
 ---
 
 ## 5. 实用 Hook 模板
 
 ### 5.1 SessionStart：会话启动检查
 
-**用途**：每次会话开始时自动显示项目状态，替代旧的 `/start` 命令。
+**用途**：每次会话开始时自动显示项目状态。**推荐必配**。
 
 ```bash
 #!/bin/bash
@@ -354,14 +414,7 @@ exit 0  # 格式化失败不阻断 Claude
 ```bash
 #!/bin/bash
 # .claude/hooks/pre-commit-check.sh
-
-INPUT=$(cat)
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
-
-# 只拦截 git commit 命令
-if [[ "$COMMAND" != *"git commit"* ]]; then
-  exit 0
-fi
+# 注：配合 if 字段使用时，只有 git commit 命令会触发此脚本
 
 echo "🔍 检测到 git commit，运行测试..." >&2
 
@@ -375,7 +428,7 @@ echo "✅ 测试通过" >&2
 exit 0
 ```
 
-在 `settings.json` 中配置，同时需要添加 Bash 权限：
+在 `settings.json` 中配置，使用 `if` 字段精确匹配 git commit（不会在其他 Bash 命令时触发）：
 ```json
 {
   "permissions": {
@@ -385,7 +438,7 @@ exit 0
     "PreToolUse": [
       {
         "matcher": "Bash",
-        "hooks": [{"type": "command", "command": "bash .claude/hooks/pre-commit-check.sh"}]
+        "hooks": [{"type": "command", "command": "bash .claude/hooks/pre-commit-check.sh", "if": "Bash(git commit *)"}]
       }
     ]
   }
@@ -394,9 +447,9 @@ exit 0
 
 ---
 
-### 5.4 Stop：完成通知 + 质量门禁（v3.13 增强）
+### 5.4 Stop：完成通知 + 质量门禁
 
-**用途**：Claude 完成响应时发送桌面通知，**同时检查本轮修改的文件是否有质量问题**。这是防止代码劣化的关键防线——Hook 是确定性的，不受上下文劣化影响，每次都会执行。
+**用途**：Claude 完成响应时发送桌面通知，**同时检查本轮修改的文件是否有质量问题**。这是防止代码劣化的关键防线——Hook 是确定性的，不受上下文劣化影响，每次都会执行。**推荐必配**。
 
 > **为什么 Stop 比 PostToolUse 更适合做质量门禁？** PostToolUse 在每次写文件时触发，适合格式化单个文件。Stop 在一轮响应结束时触发，可以对本轮所有改动做整体检查，避免重复执行。
 
@@ -406,6 +459,12 @@ exit 0
 
 INPUT=$(cat)
 LAST_MSG=$(echo "$INPUT" | jq -r '.last_assistant_message // ""' | head -c 100)
+
+# === 防循环：如果 Stop hook 已经触发过续写，不再重复检查 ===
+HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
+if [ "$HOOK_ACTIVE" = "true" ]; then
+  exit 0
+fi
 
 # === 质量门禁：检查本轮修改的文件 ===
 CHANGED_FILES=$(git diff --name-only 2>/dev/null)
@@ -696,11 +755,13 @@ if echo "$COMMAND" | grep -q '^rm '; then
 fi
 ```
 
+> **并发警告**：当多个 PreToolUse hook 都返回 `updatedInput` 时，最后完成的那个生效（hook 并行执行，顺序不确定）。如果需要多次修改同一工具输入，应合并到一个 hook 中。
+
 ---
 
 ### 6.2 CLAUDE_ENV_FILE（环境变量持久化）
 
-**SessionStart Hook 独享能力**：在 Hook 执行期间，环境变量 `CLAUDE_ENV_FILE` 指向一个临时文件。向该文件写入 `export` 语句，可在整个会话的所有 Bash 命令中生效。
+**3 个事件支持**（`SessionStart`、`CwdChanged`、`FileChanged`）：在 Hook 执行期间，环境变量 `CLAUDE_ENV_FILE` 指向一个临时文件。向该文件写入 `export` 语句，可在整个会话的所有 Bash 命令中生效。
 
 ```bash
 #!/bin/bash
@@ -720,7 +781,7 @@ fi
 
 **适合场景**：nvm use、pyenv、conda activate、自定义 PATH 等环境初始化操作。
 
-> **注意**：仅 SessionStart 事件提供 `CLAUDE_ENV_FILE`，其他 Hook 事件中该变量不可用。
+> **注意**：仅 `SessionStart`、`CwdChanged`、`FileChanged` 三个事件提供 `CLAUDE_ENV_FILE`，其他 Hook 事件中该变量不可用。`CwdChanged` 适合与 direnv 集成实现自动环境切换，`FileChanged` 适合监视 `.env` 文件变化自动重载。
 
 ---
 
@@ -943,7 +1004,7 @@ wait
 
 ### 8.3 Hook 超时
 
-每个 Hook 最长执行时间为 **10 分钟**。超时会被终止，视为非阻断性失败。
+不同 Handler 类型有不同的默认超时（详见 Section 3.6）。command 类型默认 600 秒（10 分钟），可通过 `"timeout"` 字段自定义。超时会被终止，视为非阻断性失败。
 
 ---
 
@@ -969,10 +1030,12 @@ echo "退出码: $?"
 
 | 问题 | 排查方向 |
 |------|---------|
-| Hook 不触发 | 检查 matcher 是否匹配工具名；检查 JSON 格式是否正确 |
-| Hook 阻断了不该阻断的操作 | 检查退出码逻辑；确认条件判断准确 |
+| Hook 不触发 | 检查 matcher 是否匹配工具名；检查 JSON 格式；用 `if` 字段时确认语法正确 |
+| Hook 阻断了不该阻断的操作 | 检查退出码逻辑；确认条件判断准确；推荐用 `if` 字段缩小触发范围 |
 | Hook 执行很慢 | 检查脚本中是否有网络请求；格式化工具是否需要初始化 |
 | 格式化导致 Token 暴涨 | 限制格式化的文件类型范围；或禁用格式化 Hook |
+| 长会话后 Hook 停止执行 | 已知 bug：约 2.5 小时后 hooks 可能停止触发，重启会话可恢复 |
+| 多并行实例 + hooks 导致 CPU 挂起 | 已知 bug：多个 Claude Code 实例同时运行 + hooks 可能导致 100% CPU |
 
 ---
 
