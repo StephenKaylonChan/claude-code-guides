@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.22
+**版本**: v3.23
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -910,11 +910,71 @@ Spec Gate 检测：
 
 ---
 
-### 2.5 /spec — 讨论成果整理为设计文档
+### 2.5 /spec — 讨论成果整理为执行契约
 
-**用途**：需求讨论、技术方案探讨、UI 设计讨论到一定程度后，将对话中的讨论成果整理为结构化设计文档，持久化到 `docs/specs/` 目录。支持增量更新（跨多次上下文持续完善同一份 spec）。
+**用途**：需求讨论到一定程度后，将对话中的讨论成果整理为**结构化执行契约**，持久化到 `docs/specs/` 目录。支持增量更新（跨多次上下文持续完善同一份 spec）。
 
-**v3.9 增强**：Spec 输出结构支持分阶段实施追踪——每个 Phase 包含 Tasks checklist、Gate 完成条件、完成触发动作，解决大 Spec 实施中途 auto-compact 后丢失进度的问题。
+**定位**：**Spec 是执行契约（Execution Contract）**，不是 PRD、RFC 或 ADR。它承载"做什么 + 怎么验证完成"，用 Phase + 可机器判定的 Gate 条件驱动 /implement 和 /done 的自动化流程。
+
+### 文档边界（Spec vs 其他）
+
+| 文档类型 | 定位 | 写入时机 |
+|---------|------|---------|
+| **PRD** | 问题是什么（产品视角） | 立项阶段 |
+| **RFC** | 提议方案征求评审 | 方案争议大时 |
+| **ADR** | 已达成的架构决策（不可变事后记录） | 关键决策发生时，**不合并进 spec** |
+| **Design Doc**（Google 风格）| 实施细节 + 风险 / trade-off | 讨论成熟后 |
+| **Spec**（本命令产出） | **执行契约**：需求 + 方案 + 可机器判定的 Gate | 讨论方向已定，准备实施前 |
+
+> **关键原则**：ADR 另外写，不合并进 spec——ADR 的**不可变性**是其核心价值，和 spec 的"活文档"属性冲突。spec 里可以**引用 ADR 链接**。
+
+### 设计参考
+
+- **EARS 句式**（Rolls-Royce 2009，Kiro 2025 产品化）——`[manual]` Gate 条件用
+- **Fitness Functions**（Neal Ford《Building Evolutionary Architectures》）——架构特性可执行化思路
+- **GitHub Spec Kit** + **Kiro**：业界参考，但本命令保持**单文件 + 更轻**
+- **Brooker 2026-04**："spec 是被迭代的对象"——支持 draft → approved 的迭代流程
+
+### v3.23 重要变化
+
+- **Gate 三类型标注**：`[auto: <观察表达式>]` / `[command: <shell>]` / `[manual]` + EARS 句式
+  - **关键**：`[auto]` 必须映射到**可观察事实**（Claude 只读不判断），避免"AI 自证清白"
+- **使用时机流程图**：明确**初稿时机**（方向定了即可写）vs **定稿时机**（实施前 approved）
+- **文档边界声明**：Spec vs PRD/RFC/ADR/Design Doc
+- **AskUserQuestion**：分歧确认 / Roadmap 关联 / status 切换
+- **frontmatter 精简**：去掉冗余 `phase` 字段
+
+### 使用时机流程图
+
+```
+讨论需求（多轮，方向逐渐明确）
+  ↓
+方向已定（细节可留待后续）
+  ↓
+/spec <name>              ← 【初稿时机】status: draft
+  ↓
+┌────────────────────────────────────┐
+│ 讨论仍在继续？                       │
+│   ├── 是 → 继续讨论                 │
+│   │         ↓                      │
+│   │       /spec <name>（增量更新）  │
+│   │         （重复此循环）           │
+│   └── 否 → 确认方案                 │
+│             ↓                      │
+│           /spec <name> 确认          │
+│             ↓                      │
+│           【定稿时机】status: approved │
+└────────────────────────────────────┘
+  ↓
+/clear
+  ↓
+开始实施（/implement 或 Phase 1）
+```
+
+**关键原则**（不要这样用）：
+- ❌ 不要每轮讨论都跑 /spec（太频繁，增量价值有限）
+- ❌ 不要讨论没有共识就 /spec（会写出充满 TODO 的半成品）
+- ❌ 不要用 /spec "强制开始讨论"——它是讨论的**结果**，不是触发器
 
 **文件路径**: `.claude/skills/spec/SKILL.md`
 
@@ -922,29 +982,40 @@ Spec Gate 检测：
 ---
 name: spec
 description: |
-  将讨论成果整理为结构化设计文档。当需求讨论、技术方案探讨、UI 设计讨论到一定程度时使用。
-  触发关键词：整理讨论、写 spec、保存设计、记录方案、整理成文档
-argument-hint: "[功能名称]"
+  将讨论成果整理为结构化执行契约（Spec），写入 docs/specs/ 目录。
+  支持增量更新（跨多次对话持续完善）。
+  Spec 定位：执行契约（不是 PRD/RFC/ADR），含可机器判定的 Gate 条件。
+  触发关键词：整理讨论、写 spec、保存设计、记录方案
+argument-hint: "[功能名称] [可选：确认 → status 改为 approved]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 disable-model-invocation: true
 ---
 
 <task>
-将当前对话中的讨论成果整理为结构化设计文档，写入 docs/specs/ 目录。
-如果目标文件已存在，执行增量更新（合并新内容，保留已有内容）。
+将当前对话的讨论成果整理为 Spec（执行契约）。
+- 新建时：写入 docs/specs/<name>.md（status: draft）
+- 已存在时：增量合并新讨论
+- 用户说"确认"时：status → approved
 
-重点：输出的 spec 必须包含可追踪的实施计划（Implementation Phases），每个 Phase 独立可交付、独立可验证。
+MUST 原则：
+1. 每个 Gate 条件带类型标注（[auto: 表达式] / [command: shell] / [manual]）
+2. [auto] 必须映射到可观察事实，Claude 只读不判断
+3. [manual] 用 EARS 句式（减少含糊）
+4. 不合并 ADR 内容（引用即可）
 </task>
 
 <workflow>
 
 ## Step 0: 确定文件名和模式
 
-- 如果提供了参数（如 `/spec user-auth`），用参数作为文件名（kebab-case）
-- 如果没有参数，根据讨论主题自动命名
-- 检查 `docs/specs/<name>.md` 是否已存在：
-  - **已存在** → 增量更新模式（读取现有内容，合并新讨论成果）
-  - **不存在** → 新建模式
+读取 `$ARGUMENTS`：
+- `/spec user-auth` → 文件名 `user-auth.md`，新建或增量
+- `/spec user-auth 确认` → 已存在的 spec，status 切换为 approved（进入 Step 5b）
+- 无参数 → 根据讨论主题自动命名（kebab-case）
+
+判断模式：
+- 文件不存在 → **新建模式**（Step 3a）
+- 文件已存在 → **增量更新模式**（Step 3b）
 
 ```bash
 mkdir -p docs/specs
@@ -952,51 +1023,65 @@ mkdir -p docs/specs
 
 ## Step 1: 收敛讨论成果
 
-回顾当前对话，**先归纳共识与分歧**，再提取内容：
-
 ### 1a. 共识与分歧梳理
 
-在整理前，先输出一段简要总结：
+先输出总结：
 
 ```
-📋 讨论收敛总结：
-✅ 已达成共识：[列出 2-5 条核心决定]
-⚠️ 待确认/分歧：[列出尚未敲定的点，如有]
+📋 讨论收敛：
+✅ 共识：[2-5 条核心决定]
+⚠️ 待定：[尚未敲定的点，如有]
 ```
 
-如有待确认项，询问用户是否现在确认，或标记为 draft 后续再定。
+**有待定项 → AskUserQuestion**：
+
+```
+Question: 讨论中有 [N] 项待确认：
+- [分歧 A]
+- [分歧 B]
+
+Options:
+1. 现在逐一确认（你回答后 Claude 继续整理）
+2. 标记为 draft，这些点后续讨论（Spec 里用 TODO 标出）
+3. 按 Claude 建议方案写入（自担风险）
+```
 
 ### 1b. 提取讨论内容
 
-按需提取（不强制全部有）：
+按需提取（**没有的不写**）：
 
 - 功能背景与目标
 - 需求要点和验收标准
 - 讨论过的方案及取舍理由
 - 最终确定的设计方案
-- UI/交互设计细节（页面布局、按钮功能、交互流程）
-- API 设计（端点、请求/响应格式）
-- 数据模型设计（表结构、字段、关系）
-- 业务逻辑和处理流程
-- 调研发现（联网搜索结果、技术选型依据）
-- 约束条件和注意事项
+- UI/交互设计
+- API 设计
+- 数据模型
+- 业务逻辑
+- 调研发现
+- 约束条件
 
-## Step 2: 规划实施阶段
+## Step 2: 规划 Implementation Phases
 
-将功能拆分为 **2-5 个 Implementation Phases**，每个 Phase 必须满足：
+拆分为 **2-5 个 Phase**，每个 Phase 必须：
 
-- **独立可交付**：完成后有可验证的产出（不是"写了一半的模块"）
-- **独立可验证**：有明确的 Gate 条件可以检查
-- **上下文友好**：单个 Phase 的实施不超过一个上下文窗口（约 30 分钟人工等效工作量）
+- **独立可交付**：完成后有可验证产出
+- **独立可验证**：有**可机器判定**的 Gate 条件
+- **规模合理**（对齐 /implement 硬阈值）：
+  - 控制在 3-5 文件改动范围
+  - 避免单 Phase 同时跨模块 + 新依赖 + 改数据流
+  - 超出 → 拆两个 Phase
 
-Phase 拆分原则：
-- 数据层 → API 层 → UI 层（后端优先）
-- 或按功能模块独立拆分（各模块无强依赖时）
-- 简单功能（预估 < 30 分钟）可以只有 1 个 Phase
+拆分策略：
+- **纵向**：数据层 → API 层 → UI 层（后端优先）
+- **横向**：独立模块并行（各模块无强依赖时）
+- **简单功能**（预估 < 30 分钟）：1 个 Phase 即可
 
-## Step 3: 写入/更新 Spec 文件
+## Step 3: 写入 Spec 文件
 
-**新建模式** — 写入 `docs/specs/<name>.md`：
+### Step 3a: 新建模式
+
+写入 `docs/specs/<name>.md`：
 
 ```markdown
 ---
@@ -1004,20 +1089,22 @@ title: [功能名称]
 status: draft
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-phase: phase-N
 total_phases: 3
 active_phase: 1
 ---
 
-# [功能名称] 设计文档
+# [功能名称] — 执行契约（Spec）
+
+> 这是 **Spec（执行契约）**，不是 PRD / RFC / ADR。
+> ADR 链接（如有）：[docs/architecture/adr/XXXX-xxx.md]
 
 ## 背景与目标
 
-[为什么要做这个功能，解决什么问题]
+[为什么做，解决什么问题]
 
 ## 需求概要
 
-[核心功能点，验收标准]
+[核心功能点 + 验收标准]
 
 ## 设计方案
 
@@ -1034,105 +1121,152 @@ active_phase: 1
 （以下模块按需包含，没有的不写）
 
 ### UI/交互设计
-
-[页面布局、组件、按钮功能、交互流程]
+[页面布局、组件、交互流程]
 
 ### API 设计
-
 [端点列表、请求/响应格式]
 
 ### 数据模型
-
 [表结构、字段、关系]
 
 ### 业务逻辑
-
-[核心处理流程、边界情况、异常处理]
+[核心处理流程、边界情况]
 
 ## 调研记录
-
-[联网搜索发现的信息、参考资料、技术选型依据]
+[联网搜索、技术选型依据]
 
 ## 约束与注意事项
-
-[性能要求、安全考虑、兼容性、已知限制]
+[性能、安全、兼容性、已知限制]
 
 ## Implementation Phases
 
-### Phase 1: [阶段名称，如"数据模型与迁移"]
+### Phase 1: [名称，如"数据模型与迁移"]
+
 **Tasks**:
-- [ ] [具体任务 1]
-- [ ] [具体任务 2]
-- [ ] [具体任务 3]
+- [ ] 定义 User/Token 模型（apps/api/models/auth.py）
+- [ ] 创建迁移脚本
+- [ ] 补单元测试
 
-**Gate（全部满足才算完成）**:
-- [ ] 所有 Tasks 已勾选
-- [ ] 相关测试通过
-- [ ] 无 lint errors
+**Gate（全部满足才算完成，/done 验证）**:
+- [ ] Tasks 全部勾选                              [auto: phase.tasks.unchecked == 0]
+- [ ] 单元测试通过                                [command: pnpm test apps/api/models/auth]
+- [ ] 无 lint error                              [command: pnpm lint apps/api/models]
+- [ ] While 数据库已迁移, when 查询 User, the 系统 shall 返回正确 schema    [manual]
 
-**On Complete**: 更新 active_phase → 2，建议执行 /done
+**On Complete**: active_phase → 2，建议 /done
 
-### Phase 2: [阶段名称，如"API 端点实现"]
+### Phase 2: [名称，如"API 端点实现"]
+
 **Tasks**:
-- [ ] [具体任务 1]
-- [ ] [具体任务 2]
+- [ ] /auth/login 端点
+- [ ] /auth/refresh 端点
+- [ ] 集成测试
 
 **Gate**:
-- [ ] 所有 Tasks 已勾选
-- [ ] API 测试通过
-- [ ] 与 Phase 1 集成验证通过
+- [ ] Tasks 全部勾选                              [auto: phase.tasks.unchecked == 0]
+- [ ] 集成测试通过                                [command: pnpm test tests/auth/]
+- [ ] While 用户已注册, when POST /auth/login 正确凭据, the API shall 返回 200 + token  [manual]
 
-**On Complete**: 更新 active_phase → 3，建议执行 /done
+**On Complete**: active_phase → 3，建议 /done
 
-### Phase 3: [阶段名称，如"前端 UI 集成"]
+### Phase 3: [名称，如"前端 UI 集成"]
+
 **Tasks**:
-- [ ] [具体任务 1]
-- [ ] [具体任务 2]
+- [ ] 登录页面
+- [ ] axios 拦截器
+- [ ] E2E 测试
 
 **Gate**:
-- [ ] 所有 Tasks 已勾选
-- [ ] 端到端测试通过
-- [ ] UI 响应式检查通过
+- [ ] Tasks 全部勾选                              [auto: phase.tasks.unchecked == 0]
+- [ ] E2E 测试通过                                [command: pnpm test:e2e auth]
+- [ ] While 未登录, when 访问受保护页面, the 系统 shall 重定向到 /login  [manual]
 
-**On Complete**: 所有 Phase 完成，建议执行 /done + /release（如当前 Roadmap Phase 也完成）
+**On Complete**: 所有 Phase 完成，建议 /done + /release（如 Roadmap Phase 也完成）
 ```
 
-**增量更新模式** — 读取已有文件，将新讨论成果合并到对应模块：
+#### Gate 条件的 3 种类型
+
+| 类型 | 语法 | 说明 | 示例 |
+|------|------|------|------|
+| **`[auto: <表达式>]`** | 可观察事实的表达式 | /done 读取文件/spec 验证，**Claude 只读不判断** | `[auto: phase.tasks.unchecked == 0]` |
+| **`[command: <shell>]`** | shell 命令 | /done 执行，exit code 0 = 通过 | `[command: pnpm test tests/auth/]` |
+| **`[manual]`** + EARS 句式 | While X, when Y, the Z shall W | /done 弹窗询问用户验证 | `[manual] While 用户已登录, when 点击登出, the 系统 shall 清除 token` |
+
+**为什么三类型**：
+- `[auto]` 避免"AI 自证清白"（Martin Fowler 对纯 AI 判断的质疑）
+- `[command]` 是相对 Kiro/spec-kit 的**独特增量**——Gherkin 纯文本仍是"AI 解释"，shell 命令是真正的机器判定
+- `[manual]` 用 EARS 句式（Rolls-Royce 2009）减少"怎么算验证通过"的含糊
+
+**EARS 五种模式**（`[manual]` 可用）：
+- **Ubiquitous**: `The <system> shall <response>`
+- **Event-Driven**: `When <trigger>, the <system> shall <response>`
+- **State-Driven**: `While <precondition>, the <system> shall <response>`
+- **Unwanted**: `If <unwanted condition>, then the <system> shall <mitigation>`
+- **Optional**: `Where <feature>, the <system> shall <response>`
+
+### Step 3b: 增量更新模式
+
+已存在的 spec 追加新讨论成果：
 - 保留已有内容不删除
-- 新增内容融入对应章节
-- 更新 frontmatter 中的 `updated` 日期
-- 如果讨论推翻了之前的结论，更新对应内容并在"讨论过的方案"中记录变更原因
-- Implementation Phases 已完成的 Phase 保留 `[x]` 状态不动
+- 新讨论融入对应章节
+- 更新 frontmatter 的 `updated` 日期
+- 推翻之前的结论 → 更新内容 + 在"讨论过的方案"记录变更原因
+- Phases 已完成 `[x]` 的状态**不动**
+- Gate 条件如果有升级（如从自由格式升级为类型标注） → 同步补充类型标注
 
-## Step 4: 检查 ROADMAP 关联
+## Step 4: Roadmap 关联（AskUserQuestion）
 
-如果 `docs/roadmap/` 存在：
-- 检查当前 spec 对应的功能是否在 ROADMAP 中有对应条目
-- 如有 → 在 spec 头部填写关联信息
-- 如无 → 提示用户是否需要添加到 ROADMAP
+检查 `docs/roadmap/` 是否有对应条目：
 
-## Step 5: 判断状态
-
-根据讨论充分程度判断 frontmatter 中的 `status`：
-- `draft`：讨论还在进行中，部分模块尚未确定
-- `approved`：核心方案已确定，可以开始实施
-
-如果用户明确说"确认"或"可以开始做了"，status 设为 `approved`。
-
-**完整状态生命周期**：
+**找到** → 在 spec 头部标注：`关联 Roadmap: phase-2.md - "用户认证模块"`
+**未找到** → AskUserQuestion：
 
 ```
-draft → approved → implementing → implemented → [deprecated | superseded]
+Question: 未在 Roadmap 找到对应条目，是否添加？
+
+Options:
+1. (Recommended) 添加到当前 Phase
+2. 添加到下一个 Phase
+3. 不添加（spec 独立存在）
 ```
 
-| status | 含义 | 转换时机 | 谁触发 |
-|--------|------|---------|--------|
-| `draft` | 讨论中 | `/spec` 首次生成 | `/spec` Skill |
-| `approved` | 方案已确认 | 用户确认内容 OK | `/spec` Skill |
-| `implementing` | 实施中 | 基于 spec 开始编码时 | Claude 自动更新 |
-| `implemented` | 已完成 | 功能全部完成 | `/done` 或完成标准自动更新 |
-| `deprecated` | 已弃用 | 技术/业务变化 | 手动更新 |
-| `superseded` | 被替代 | 新 spec 取代 | 手动更新（在 frontmatter 中注明替代文件） |
+## Step 5: 状态判断
+
+### 5a. 默认首次生成 → status: draft
+
+不主动推断用户意图。
+
+### 5b. 用户明确"确认" → AskUserQuestion 确认
+
+当 `$ARGUMENTS` 包含"确认"或生成后用户表示要确认：
+
+```
+Question: 当前 status: draft，是否切换为 approved？
+
+Options:
+1. (Recommended) approved（方案已定，可以开始实施）
+2. 保持 draft（还想继续讨论某部分）
+3. 保持 draft + 补充某个模块（自由输入要补的部分）
+```
+
+选 1 → frontmatter status: draft → approved + 更新 updated 日期
+
+### 状态生命周期
+
+```
+draft → approved → implementing → implemented
+                                      ↓
+                              [deprecated | superseded]
+```
+
+| status | 含义 | 触发时机 |
+|--------|------|---------|
+| `draft` | 讨论中 | /spec 首次生成 |
+| `approved` | 方案已确认，可实施 | 用户明确确认 |
+| `implementing` | 实施中 | Claude 基于 spec 开始编码时自动切换 |
+| `implemented` | 已完成 | /done 推进所有 Phase 后 |
+| `deprecated` | 已弃用 | 手动（技术/业务变化，不再实施） |
+| `superseded` | 被替代 | 手动（新 spec 取代，frontmatter 注明替代文件） |
 
 ## Step 6: 输出确认
 
@@ -1140,20 +1274,45 @@ draft → approved → implementing → implemented → [deprecated | superseded
 ✅ Spec 已生成/更新
 
 文件：docs/specs/<name>.md
-状态：草稿 / 已确认
-实施阶段：[N] 个 Phase，当前 Phase [active_phase]
-内容：需求 [N] 项、设计方案 [N] 个、API [N] 个、UI [N] 个页面、...
-关联 ROADMAP：[有/无]
+状态：draft / approved / implementing / implemented
+Phases：[N] 个（active_phase: [M]）
+Gate 类型分布：[auto] X 条 / [command] Y 条 / [manual] Z 条
+关联 Roadmap：[有 phase-X.md "[条目]" / 无]
 
-建议下一步：
-- 继续讨论 → 讨论后再次 /spec 更新
-- 开始实施 → /clear 后 "读取 docs/specs/<name>.md，开始实施 Phase 1"
-  （每次只实施一个 Phase，完成 Gate 后再进入下一个）
-- 确认内容 → 告诉我"确认"，状态改为"已确认"
+建议下一步（按状态）：
+- draft → 继续讨论 → 再次 /spec <name> 增量更新
+- draft → 确认方案 → /spec <name> 确认（切换到 approved）
+- approved → /clear 后 "读取 docs/specs/<name>.md，开始实施 Phase 1"
+  （每次只实施一个 Phase，完成 Gate 后 /done 推进）
 ```
 
 </workflow>
 ````
+
+**用法示例**：
+
+```bash
+# 首次生成
+/spec user-auth
+
+# 增量更新（多轮讨论后再次整理）
+/spec user-auth
+
+# 确认方案（status: draft → approved）
+/spec user-auth 确认
+```
+
+**与相关命令的关系**：
+
+| 阶段 | 命令 | 做什么 |
+|------|------|-------|
+| **讨论** | （对话） | 多轮讨论需求/方案 |
+| **整理** | **`/spec`** | 讨论成果 → 执行契约 |
+| **实施** | `/implement` | 按 Phase 执行单个改动 |
+| **收尾** | `/done` | 验证 Phase Gate（三类型），推进 active_phase / status |
+| **发版** | `/release` | Roadmap Phase 完成后发版 |
+
+> **`/spec` 不做代码验证**——那是 /done 的职责（见 2.7 Step 4）。
 
 ---
 
@@ -1523,20 +1682,71 @@ Options:
 
 如果 Step 0 匹配到 Spec 文件，读取 spec 并按当前 `active_phase` 检查进度：
 
-### 4a. Phase Gate 验证
+### 4a. Phase Gate 验证（支持三类型标注，v3.23）
 
-不论 Spec 有 1 个还是 N 个 Phase，统一检查当前 `active_phase`：
-- 所有 Tasks 是否已勾 `[x]`？
-- Gate 条件是否全部满足？
+读取当前 `active_phase` 的 Gate 条件。**解析每个 Gate 条件的类型标注**（详见文档 03 Section 2.5 的 Gate 三类型），按类型分别验证：
 
-**Gate 通过**：
+#### 类型 1：`[auto: <表达式>]` — 读取可观察事实
+
+Claude **只读取不判断**，映射到具体可观察事实。
+
+常见表达式：
+| 表达式 | 验证方式 |
+|--------|---------|
+| `phase.tasks.unchecked == 0` | 读 spec 文件，当前 Phase 的 `- [ ]` 数量是否为 0 |
+| `grep -q 'TODO' spec.md && exit 1` | spec 里无 TODO 标记 |
+| `file.exists: apps/api/auth/login.py` | 指定文件存在 |
+
+#### 类型 2：`[command: <shell>]` — 执行命令
+
+```bash
+# 直接执行 shell，exit code 0 = 通过
+<shell 命令>
+echo "exit: $?"
+```
+
+通过条件：exit code == 0。
+示例：
+- `[command: pnpm test tests/auth/]` → 跑 `pnpm test tests/auth/`
+- `[command: pnpm lint apps/api/auth/]` → 跑 lint
+
+#### 类型 3：`[manual]` + EARS 句式 — 弹窗询问
+
+用户视觉验证类条件（如"While 用户已登录, when 点击登出, the 系统 shall 清除 token"），/done **MUST 用 AskUserQuestion** 询问：
+
+```
+Question: 请验证 Manual Gate 条件：
+
+[EARS 句式，如 "While 用户已登录, when 点击登出, the 系统 shall 清除 token 并跳转首页"]
+
+Options:
+1. ✅ 已验证通过
+2. ❌ 未通过（说明原因）
+3. ⏭️ 跳过（暂不验证，记为"未验证"）
+```
+
+#### 汇总判定
+
+所有 Gate 条件全部通过 → **Gate 通过**：
 1. 更新 frontmatter `active_phase` → 下一个 Phase
 2. 更新 `updated` 日期
 3. 检查 `active_phase > total_phases`？
    - **否** → 记录"Phase N 完成，进入 Phase N+1"
    - **是（所有 Phase 完成）** → 进入 4b
 
-**Gate 未通过** → 输出未满足的条件列表，询问用户是否强制推进（AskUserQuestion）。
+**Gate 未通过** → 输出未满足的条件列表（分类型），AskUserQuestion 询问：
+```
+Options:
+1. 返回修复未通过的条件（取消 /done 推进）
+2. 强制推进（自担风险，未通过条件记录到 spec 的"遗留"段）
+```
+
+#### 兼容旧格式（无类型标注）
+
+遇到旧 spec 的 Gate 条件没有类型标注（如 `- [ ] 相关测试通过`）：
+- 视为 `[manual]` 类型
+- 弹窗询问用户
+- 建议用户下次运行 /spec 时补类型标注（/spec 增量更新会识别并升级）
 
 ### 4b. Spec 全部完成
 
@@ -2728,5 +2938,5 @@ mkdir -p .claude/skills/diagnose
 
 ---
 
-**版本**: v3.22
-**更新日期**: 2026-04（v3.22）
+**版本**: v3.23
+**更新日期**: 2026-04（v3.23）
