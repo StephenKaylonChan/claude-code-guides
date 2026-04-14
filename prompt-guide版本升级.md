@@ -226,7 +226,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.18-v3.20），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.19-v3.21），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -279,6 +279,15 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.21 新增**（重点检查）：
+- **`/catchup` 重新定位为"工作上下文重建 + 下一步指引"**：检查项目 `.claude/skills/catchup/SKILL.md` 是否已升级到 v3.21 模板。
+- **核心变化**：
+  - **去重加载**：识别 CLAUDE.md 已 @ 的文件（如 `@docs/roadmap/README.md`、当前 Phase 文件），**不重复读**（避免相同内容塞两次进上下文）
+  - **参数聚焦模式**：`/catchup <关键词>`（如 `auth`）只读匹配的 spec/commit/文件；`/catchup <描述>`（如"昨天做到哪了"）走概览模式
+  - **AskUserQuestion 引导下一步**：基于 session-notes + Phase 待办 + implementing spec 生成 3-4 个具体候选，一键选择（散文询问 → 弹窗决策）
+- **和 SessionStart Hook 明确分工**：Hook 跑 git 状态（被动，每次启动），/catchup 恢复深层上下文（手动，session-notes + spec + 参数聚焦）。两者不再重复跑 git 命令。
+- **读取顺序变化**：只读补充文件（session-notes + implementing spec + 最近源文件列表），不再重复读 CLAUDE.md / roadmap / architecture（这些已 @ 加载）。
 
 **v3.20 新增**（重点检查）：
 - **`/done` 重新定位为"功能交付检查清单"**（7 步 → 9 步）：检查项目 `.claude/skills/done/SKILL.md` 是否已升级到 v3.20 模板。
