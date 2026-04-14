@@ -226,7 +226,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.19-v3.21），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.20-v3.22），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -279,6 +279,28 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.22 新增**（重点检查）：
+- **`/handoff` 重新定位为"状态快照 + 下次恢复桥梁"**：检查项目 `.claude/skills/handoff/SKILL.md` 是否已升级到 v3.22 模板。
+- **参数分流**：
+  - `/handoff`（默认）= 完整模式，写 6 段 + 关联指针
+  - `/handoff quick` = 精简模式，只填 2 段（"做了什么" + "下一步"）
+- **session-notes 结构变化**（6 段 + 关联指针）：
+  - 🔗 关联指针（Spec / Roadmap / 最近 commits，指向而非内容）
+  - 📝 本次会话做了什么（叙事摘要，省 /catchup 推理成本）
+  - 🎯 下一步具体动作（MUST 有，供 /catchup 弹窗候选）
+  - 🧠 关键决策（git log 抓不到的软信息）
+  - 🕳️ 踩过的坑（避免重犯）
+  - ⚠️ 注意事项 / 临时 TODO
+  - 删除：代码变更摘要（diff stat 重复）、路线图进度（合并到关联指针）、设计文档状态（合并到关联指针）
+- **职责边界修正**（MUST 同步修改 handoff 模板）：
+  - ❌ 去掉 Spec frontmatter 更新（那是 /done 的主业，v3.20 已明确）
+  - ❌ 去掉自动 `--no-verify` WIP commit（改为 AskUserQuestion 让用户决定）
+- **新增 AskUserQuestion 决策点**：
+  - 未跟踪新增文件 → multiSelect 询问是否 stage（避免误提交临时文件）
+  - 复杂改动（≥4 文件 / 跨模块）→ 列 commit message 候选
+  - commit 被 Hook 拦下 → 4 选项（修复 / 只写 notes 不 commit / 强制跳过 Hook / 自定义）
+- **Gate 满足但未 /done 检测**：Step 2b 扫描 implementing spec，如当前 Phase Gate 已满足但未推进 active_phase → 提示先跑 /done。
 
 **v3.21 新增**（重点检查）：
 - **`/catchup` 重新定位为"工作上下文重建 + 下一步指引"**：检查项目 `.claude/skills/catchup/SKILL.md` 是否已升级到 v3.21 模板。
