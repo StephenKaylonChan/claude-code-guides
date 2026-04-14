@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.18（2026-04）
+> **版本**: v3.19（2026-04）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -60,7 +60,7 @@ project-root/
 │   │   ├── catchup/SKILL.md
 │   │   ├── handoff/SKILL.md
 │   │   ├── spec/SKILL.md
-│   │   ├── task/SKILL.md
+│   │   ├── implement/SKILL.md
 │   │   ├── done/SKILL.md
 │   │   ├── docs/SKILL.md
 │   │   ├── release/SKILL.md
@@ -112,11 +112,12 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.19 | 2026-04 | `/task` 重命名为 `/implement` 并流程强化：**命名冲突修正**（原 `/task` 与 Claude Code 原生 Task tool 语义冲突）+ **三个防面条机制**（Step 2 rg 模式扫描 MUST、Step 5 Kent Beck 三红灯 + Tidy First 分 commit MUST、Step 7 ADR 四类条件触发 AskUserQuestion 弹窗）+ **Step 1 硬阈值**（≥3 文件/跨模块 import/新依赖/数据流改变 → 升级 /spec 或 Plan Mode）+ frontmatter 修正（`disable-model-invocation: true`、移除 `Agent`）+ 六层收尾模型"小任务级"→"实施级"。设计依据：Anthropic "search before implement"、Kent Beck Augmented Coding、Claude Code 最佳实践。Skills 总数不变（仍 11 个） |
 | v3.18 | 2026-04 | 全文档梳理优化：删除旧方案对比内容、Hook 事件 21→26 + handler 矩阵更新 + `if` 字段 + 渐进式配置建议、Skills Frontmatter 区分原生/Subagent 字段 + allowed-tools 含义修正 + Skill 生命周期、Plan Mode 补 Ultraplan/Auto Mode/opusplan、1M 上下文窗口说明、命令速查去重（00 保留完整版）、rules 红线与规范分离建议、完成标准精简（技术栈移 rules/）、维护指南与 /audit 对齐 |
 | v3.17 | 2026-03 | `/docs` Skill 增加变更锚定步骤：用 git diff 定位"上次文档更新以来改了什么"，解决只查数字不一致、不查新增功能缺文档的设计漏洞。工作流从 5 步扩展为 6 步（Step 1 变更锚定 + Step 3 变更覆盖检查） |
 | v3.16 | 2026-03 | Testing Trophy 测试策略：集成测试为主（测用户操作链路，不只是独立函数）、四层测试体系（静态/单元/集成/E2E）、CLAUDE.md 完成标准要求关键交互 MUST 有集成测试、rules 模板增加前后端测试规则（RTL+MSW/TestClient/MockMvc）、`/diagnose` D9 维度从"可测试性"扩展为"测试覆盖" |
 | v3.15 | 2026-03 | `/diagnose` 全维度代码健康诊断 Skill：四层 13 维度系统性扫描（结构/实现/卫生/战略）、量化健康度评分（0-10）、热点分析（git 历史 × 代码质量）、自动 SubAgent 并行（大项目）、分批重构计划输出、技术栈专项检查（React/Next.js/FastAPI/Spring Boot）、Skills 总数 10→11 |
-| v3.14 | 2026-03 | `/task` 日常小任务 Skill：补齐 Spec 与"改 typo"之间的空白、自动复杂度分流（太大→建议 /spec）、支持批量模式、六层收尾模型新增"小任务级"、Skills 总数 9→10 |
+| v3.14 | 2026-03 | `/task` 日常小任务 Skill：补齐 Spec 与"改 typo"之间的空白、自动复杂度分流（太大→建议 /spec）、支持批量模式、六层收尾模型新增"小任务级"、Skills 总数 9→10（v3.19 重命名为 `/implement`） |
 | v3.13 | 2026-03 | 代码质量防御体系：Stop Hook 质量门禁（响应结束后自动检查致命问题）、分层防御模型（Hook 硬拦 > 上下文纪律 > CLAUDE.md 红线 > /simplify 兜底）、CLAUDE.md 编码红线模板 + `.claude/rules/` 技术栈专属红线（含 React/FastAPI/Spring Boot 示例）、红线编写原则（少/硬/具体/含修 Bug 场景）、上下文劣化认知更新 |
 | v3.12 | 2026-03 | Hook 事件 18→21（新增 PostCompact/Elicitation/ElicitationResult）、Hook Handler 类型补全（prompt/agent 支持更多事件）、PostCompact 模板、Skills/Agent frontmatter 新字段（memory/mcpServers/maxTurns/permissionMode/disallowedTools/`${CLAUDE_SKILL_DIR}`/`${CLAUDE_SESSION_ID}`）、Chrome 浏览器集成、Plugin 插件系统、`/effort` 命令、模型更新（Opus 4.6 默认/Sonnet 4.6/Effort 级别简化） |
 | v3.11 | 2026-03 | `/done` 改进（显式描述参数，去掉自动猜测）、新增 `/docs` 开发文档梳理 Skill（深度探索代码→刷新架构/上手/部署文档，支持按范围指定）、`/release` 调整为 Phase 系统性梳理（含 `/docs` 全量）、架构文档拆分为 README+frontend.md+backend.md、Skills 总数 8→9 |
@@ -139,4 +140,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-04（v3.18）
+**最后更新**: 2026-04（v3.19）
