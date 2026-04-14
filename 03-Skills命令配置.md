@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.18
+**版本**: v3.19
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -105,7 +105,7 @@ hooks:                                # Skill 作用域内的 Hooks（详见文�
 | 类别 | Skills | 说明 |
 |------|--------|------|
 | **质量审查** | `/audit`、`/deep-audit`、`/diagnose` | 项目健康检查、文档一致性审计、代码架构诊断 |
-| **开发流程** | `/catchup`、`/handoff`、`/spec`、`/task`、`/done` | 上下文恢复、会话交接、设计文档、小任务、收尾检查 |
+| **开发流程** | `/catchup`、`/handoff`、`/spec`、`/implement`、`/done` | 上下文恢复、会话交接、设计文档、单改动实施、收尾检查 |
 | **文档管理** | `/docs`、`/release` | 开发文档梳理、Phase 系统性刷新 |
 | **工具** | `/nbp2` | AI 生图 Prompt 助手 |
 
@@ -870,98 +870,183 @@ draft → approved → implementing → implemented → [deprecated | superseded
 
 ---
 
-### 2.6 /task — 日常小任务执行
+### 2.6 /implement — 有纪律的单改动实施
 
-**用途**：处理不需要 Spec 的日常小任务——业务方的小需求、小 Bug、功能微调、技术改进。与 `/spec` 互补：`/spec` 是复杂功能的"先讨论再实施"，`/task` 是明确任务的"直接做"。支持批量模式，一个会话连续处理多个小任务。
+**用途**：处理不需要 Spec 的单个代码改动——业务小需求、Bug 修复、功能微调、技术改进。与 `/spec` 互补：`/spec` 关注"做什么"（产品/UI/API 设计讨论），`/implement` 关注"**在现有代码里怎么做才一致**"（代码层面的快速对齐）。支持批量模式，一个会话连续处理多个改动（每个独立走完整流程）。
 
-**设计参考**：社区 [shinpr/claude-code-workflows](https://github.com/shinpr/claude-code-workflows) 的 `/recipe-task`（自动分流复杂度）+ [Pimzino/claude-code-spec-workflow](https://github.com/Pimzino/claude-code-spec-workflow) 的双轨制（Spec 线 + Bug-fix 线），结合本指南现有的复杂度分级体系。
+**定位**：`/implement` 不是 `/spec` 的轻量版——它是"**有纪律的快速执行**"，压缩流程但**不丢关键检查点**（模式扫描、架构边界、Tidy First）。名字不挑大小，任何一个连贯的实施都可以走。
 
-**文件路径**: `.claude/skills/task/SKILL.md`
+**设计参考**：
+- Anthropic 官方 "search before implement" 模式（agent 每任务跑 10-30 次 rg）
+- Kent Beck [Augmented Coding: Beyond the Vibes](https://tidyfirst.substack.com/p/augmented-coding-beyond-the-vibes)（Tidy First + 三红灯信号）
+- Claude Code 官方最佳实践的"一句话能描述 → 直改，≥3 文件 → plan"阈值
+- Augment Code [11 prompting techniques](https://www.augmentcode.com/blog/how-to-build-your-agent-11-prompting-techniques-for-better-ai-agents)（反重复 prompt 模式）
+
+**文件路径**: `.claude/skills/implement/SKILL.md`
 
 ````markdown
 ---
-name: task
+name: implement
 description: |
-  处理不需要 Spec 的日常小任务（小功能、小 Bug、功能微调、技术改进）。
-  当用户有明确的小改动需求，不需要多轮讨论时使用。
-  支持批量模式：`/task` 无参数时进入批量模式。
-  触发关键词：小需求、快速修复、改一下、调整、小 bug
-argument-hint: "<任务描述> 或留空进入批量模式"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
+  有纪律地实施一个单个代码改动（业务小需求、Bug 修复、功能微调、技术改进）。
+  不需要 Spec 但需保证与现有代码一致、不引入面条代码。
+  支持批量模式：`/implement` 无参数时进入批量模式，每个改动独立走完整流程。
+  触发关键词：实施、加个功能、改一下、修复、小需求、快速修复
+argument-hint: "<改动描述> 或留空进入批量模式"
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+disable-model-invocation: true
 ---
 
 <task>
-评估并执行日常小任务，确保质量的同时避免过度流程。
+有纪律地实施一个代码改动——MUST 先扫描现有模式再动手，MUST 在 commit 前做架构边界自检，避免面条代码累积。
 </task>
 
 <workflow>
 
 ## Step 0: 接收任务
 
-**单任务模式**（有参数）：
-- `/task 列表页加排序功能`
-- 直接进入 Step 1
+**单任务模式**（有参数）：`/implement 列表页加排序功能` → 进入 Step 1
 
 **批量模式**（无参数）：
-- 询问用户要处理哪些任务
-- 用户列出编号列表
-- 按顺序逐个处理，每个走完整 Step 1-4 后独立 commit
+- 询问用户要处理哪些改动
+- 用户列出编号清单
+- **每个改动独立走完整 Step 1-7 流程**（批量 ≠ 简化）
 
-## Step 1: 评估复杂度
+## Step 1: 复杂度评估（硬阈值）
 
-快速判断任务规模：
+**任一触发 → 建议升级到 /spec 或 Plan Mode**：
 
-| 信号 | 判断 | 动作 |
-|------|------|------|
-| 需要多轮讨论才能明确需求 | 太大 | 建议 `/spec` |
-| 涉及架构变更或新模块 | 太大 | 建议 `/spec` |
-| 改动预估 > 5 个文件 | 偏大 | 提醒用户确认，或建议 `/spec` |
-| 改动范围可预估，方向明确 | 合适 | 继续执行 |
-| 能一句话描述改动 | 合适 | 继续执行 |
+| 硬阈值 | 为什么 |
+|--------|--------|
+| 涉及 ≥3 文件（无法用一句话描述 diff） | 需要先规划影响面 |
+| 跨模块/跨层 import（如 controller 直接调 repo） | 触碰架构边界 |
+| 新增第三方依赖 | 决策影响长期维护 |
+| 改变数据流向（API 形状、state 形状、DB schema） | 影响其他模块 |
+| 需要多轮讨论才能明确需求 | 应该先 /spec |
 
-如果判断太大，输出：
-"这个任务涉及 [原因]，建议用 `/spec` 先讨论设计再实施。要继续还是切到 /spec？"
+触发时输出：
+> 这个改动涉及 [具体触发项]，建议用 `/spec` 先讨论设计再实施。要继续还是切换？
 
-用户坚持继续 → 继续执行（尊重用户判断）。
+用户坚持继续 → 尊重判断，继续执行。
 
-## Step 2: 按复杂度执行
+## Step 2: 模式扫描（MUST，Code 前）
 
-根据评估结果选择开发循环：
+**核心原则**：在写任何新代码之前，MUST 确认"项目里是否已有同类实现"。防止 5 个 sort 实现、3 种命名风格的面条代码累积。
 
-**简单**（1-2 文件，改动明确）：
-→ Code → Verify → Commit
+### 扫描步骤
 
-**中等**（3-5 文件，方向明确）：
-→ Explore → Code → Verify → Commit
+1. **识别动词/名词关键词**：从改动描述提取（sort / filter / format / validate / parse / fetch...）
+2. **用 rg 搜索现有实现**：
+   ```bash
+   rg -i "sort|orderBy|order_by" --type ts
+   rg "format.*date|dateFormat" --type ts
+   ```
+3. **列出所有匹配位置**（给用户看一眼，透明决策）
+4. **判断**：
+   - **找到相似实现** → MUST 说明"为什么不复用"或"怎么复用"——不能装作没看见
+   - **未找到** → 明确记录"项目无同类实现，新增为 X"
+   - **发现 3+ 种风格并存** → 提醒"这里已有风格分裂，本次改动要统一到哪种？"
 
-**Bug 修复**：
-→ Explore（复现+定位）→ Code（回归测试+修复）→ Verify → Commit
+### 架构敏感区识别
 
-遵循项目 CLAUDE.md 中的完成标准和编码红线。
+扫描中同步检查：
+- 新增的代码属于哪一层（router/service/repo/util/component）？放对了吗？
+- 是否与项目现有的目录/命名约定一致？
+- 是否触碰了 `.claude/rules/` 中声明的红线？
 
-## Step 3: 验证
+## Step 3: 按复杂度执行
 
-- 运行相关测试，确认通过
-- 检查 lint / 类型检查
-- 边界条件（如适用）
+| 复杂度 | 流程 |
+|--------|------|
+| **简单**（1-2 文件） | Code → Verify → Commit |
+| **中等**（3-5 文件，已通过 Step 1 阈值） | Explore → Code → Verify → Simplify（建议）→ Commit |
+| **Bug 修复** | Explore（复现+定位）→ Code（先写**集成测试**重现 Bug → 修复 → 测试变绿）→ Verify → Commit |
+
+遵循项目 CLAUDE.md 的完成标准和 `.claude/rules/` 的编码红线。
+
+> **Bug 修复的集成测试要求**：MUST 从用户视角重现问题（详见文档 04 Section 1 Testing Trophy）。只测内部函数通过但用户仍然报 Bug —— 这是典型的"测试类型错了"。
+
+## Step 4: Verify（验证）
+
+- 运行相关测试，全部通过
+- 运行 lint / 类型检查
+- 检查边界条件（空值、异常输入、权限不足）
 - 回归验证（确认不影响现有功能）
+- 项目无测试 → 跳过测试，但 lint 和类型检查仍 MUST 执行
 
-如果项目没有测试 → 跳过测试步骤，但 lint 和类型检查仍执行。
+## Step 5: Commit 前自检（MUST，防面条关键关卡）
 
-## Step 4: 提交
+### Kent Beck 三红灯（任一触发 → 暂停，向用户汇报）
 
-- commit message 使用 Conventional Commits（`feat:`/`fix:`/`refactor:`/`chore:`）
+- 我是否写了循环/重试逻辑**来掩盖失败**（而非处理真实错误）？
+- 我是否加了**用户没要求的功能**（顺手优化、未经确认的扩展）？
+- 我是否**禁用或删除了任何测试**（包括 `.skip` / `.only` / xdescribe）？
+
+**为什么重要**：Kent Beck 在 [Augmented Coding](https://tidyfirst.substack.com/p/augmented-coding-beyond-the-vibes) 中明确观察到 AI 会在阻力前"自作主张"——这三个信号是 AI 偷懒的典型标志。
+
+### Tidy First 分 commit（显式卡顺序）
+
+检查本次 diff 是否**同时**包含：
+- **结构变动**（提取函数、重命名、拆分文件、移动代码）
+- **行为变动**（新功能、修复、逻辑改变）
+
+**任一同时存在 → MUST 拆成两个 commit**：
+
+1. 先提交结构变动（纯重构，行为不变）：`refactor: 提取 xxx 到 utils/`
+2. 再提交行为变动：`feat: ...` / `fix: ...`
+
+> **为什么**：Beck 观察到"AI 不会自觉 safe-sequencing"。结构和行为混在一起的 commit 后续难以 review、难以回滚，是架构腐化的主要路径。
+
+## Step 6: Commit
+
+- 使用 Conventional Commits（`feat:` / `fix:` / `refactor:` / `chore:` / `perf:` / `test:`）
 - message 包含足够上下文（改了什么、为什么）
-- 如果任务关联 Roadmap 条目 → 提醒用户是否更新 checkbox
+- 若本次改动和已有 Roadmap 条目关联 → 在输出末尾提示"如需更新 Roadmap，执行 `/done <描述>`"
 
-**不需要 /done**：小任务的 commit message 即文档，不需要额外收尾流程。
+## Step 7: ADR 触发检查（条件触发弹窗）
 
-## Step 5: 下一个（批量模式）
+**四类触发条件**（任一满足）：
+- 新增跨模块依赖
+- 替换已有实现（如旧 dateUtil → 新 dateFormatter）
+- 引入新第三方库
+- 改变数据流向（API / state / DB schema）
 
-批量模式下，每完成一个任务：
-- 报告完成状态
-- 自动开始下一个（不询问，除非遇到需要 /spec 的任务）
-- 全部完成后输出汇总
+满足任一 → 调用 AskUserQuestion 弹窗：
+
+```
+Question: 本次改动涉及 [具体决策，如"新增 date-fns 依赖替换 moment"]，
+          是否记录为 ADR？
+
+Header: "ADR 决策"
+
+Options:
+1. (Recommended) 生成 ADR 草稿
+   description: Claude 生成含 Context/Decision/Alternatives/Consequences 的草稿到 docs/architecture/adr/
+2. 跳过
+   description: 本次不记录
+```
+
+**不触发就不问**——避免疲劳。
+
+> 为什么用 AskUserQuestion 而非对话询问：频率低（月均 2-5 次）+ 一键选择 + 沉淀率高。散文标记 90% 会被忽略。
+
+## Step 8: /docs 联动提示
+
+改动涉及架构敏感区（新增模块 / 改路由组织 / 新增跨层依赖 / 改变数据流） → 在输出末尾提示：
+> 本次改动涉及架构敏感区，建议执行 `/docs architecture` 刷新架构文档。
+
+不自动执行（避免打断），由用户决定时机。
+
+## 批量模式处理
+
+| 情况 | 动作 |
+|------|------|
+| 单个改动测试失败 | **停止批量**，汇报失败原因 + 已完成数，等用户决定 |
+| 用户说"暂停"/"停一下" | 立即报告当前进度，等待指令 |
+| 上下文 > 60% | 提醒剩余改动数，建议 /handoff 后分批处理 |
+| ADR 弹窗 | 每次独立询问（不累积批量问） |
+
+**批量 ≠ 简化**：每个改动都走完整 Step 1-8，包括模式扫描和 Commit 前自检。
 
 ## 输出格式
 
@@ -969,15 +1054,17 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 ```
 ✓ [hash] fix(list): 修复日期格式显示不正确
   改动: src/utils/date.ts, src/components/List.tsx
+  模式扫描: 已复用现有 formatDate（src/utils/date.ts:15）
+  [可选] ⚠️ 涉及架构敏感区，建议 /docs architecture 刷新
 ```
 
 **批量完成汇总**：
 ```
-✅ 完成 3/4 个任务：
+✅ 完成 3/4 个改动：
 1. ✓ [hash] feat(list): 添加列表排序功能
 2. ✓ [hash] fix(date): 修复日期格式显示
-3. ✓ [hash] chore: 默认分页数从 10 改为 20
-4. ⏭️ 跳过 — 建议用 /spec（涉及新增权限模块）
+3. ✓ [hash] chore: 默认分页数从 10 改为 20（Tidy First 拆为 refactor + chore 两个 commit）
+4. ⏭️ 跳过 — 涉及 4 文件 + 跨模块依赖，建议 /spec
 ```
 
 </workflow>
@@ -987,13 +1074,13 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 
 ```bash
 # 单任务
-/task 列表页加个按名称排序的功能
-/task 日期显示格式从 MM/DD 改成 YYYY-MM-DD
-/task 首页加载慢，商品列表查询需要加索引
+/implement 列表页加个按名称排序的功能
+/implement 日期显示格式从 MM/DD 改成 YYYY-MM-DD
+/implement 首页加载慢，商品列表查询需要加索引
 
 # 批量模式
-/task
-# Claude: 请列出要处理的任务
+/implement
+# Claude: 请列出要处理的改动
 # 你：
 # 1. 列表加排序
 # 2. 日期格式修复
@@ -1005,9 +1092,11 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 | 场景 | 用什么 |
 |------|--------|
 | 需要多轮讨论的复杂功能 | `/spec` → 实施 → `/done` |
-| 方向明确、直接能做的小任务 | **`/task`** |
+| 方向明确、可直接执行的单改动 | **`/implement`** |
 | 功能完成后的收尾检查（有 Spec/Roadmap） | `/done` |
 | PR 前的代码审查 | `/simplify` |
+
+> **与旧 `/task` 的关系**：`/implement` 是 `/task`（v3.14-v3.18）的重命名和流程强化版。旧项目迁移方式见 `prompt-guide版本升级.md` v3.19 迁移指令。
 
 ---
 
@@ -1731,7 +1820,7 @@ disable-model-invocation: true
 
 <task>
 对项目进行全维度代码健康诊断（13 个维度），输出量化评分、完整问题清单和分批重构计划。
-**只诊断不改代码**——改代码在后续用 `/task` 批量模式按计划执行。
+**只诊断不改代码**——改代码在后续用 `/implement` 批量模式按计划执行。
 </task>
 
 <dimensions>
@@ -1976,7 +2065,7 @@ previous_score: [上次得分，如有]
 
 ## 执行建议
 
-按 Batch 顺序执行，每个 Batch 用 `/task` 批量模式：
+按 Batch 顺序执行，每个 Batch 用 `/implement` 批量模式：
 1. 先补测试锁定现有行为
 2. 重构
 3. 跑测试确认不破坏
@@ -2000,7 +2089,7 @@ previous_score: [上次得分，如有]
 
 下一步：
 - 查看报告，确认优先级排序
-- 按 Batch 顺序用 /task 批量模式执行重构
+- 按 Batch 顺序用 /implement 批量模式执行重构
 - 全部完成后再次 /diagnose 验证改善
 ```
 
@@ -2147,7 +2236,7 @@ mkdir -p .claude/skills/deep-audit
 mkdir -p .claude/skills/catchup
 mkdir -p .claude/skills/handoff
 mkdir -p .claude/skills/spec
-mkdir -p .claude/skills/task
+mkdir -p .claude/skills/implement
 mkdir -p .claude/skills/done
 mkdir -p .claude/skills/docs
 mkdir -p .claude/skills/release
@@ -2163,7 +2252,7 @@ mkdir -p .claude/skills/diagnose
 - `.claude/skills/catchup/SKILL.md`
 - `.claude/skills/handoff/SKILL.md`
 - `.claude/skills/spec/SKILL.md`
-- `.claude/skills/task/SKILL.md`
+- `.claude/skills/implement/SKILL.md`
 - `.claude/skills/done/SKILL.md`
 - `.claude/skills/docs/SKILL.md`
 - `.claude/skills/release/SKILL.md`
@@ -2211,5 +2300,5 @@ mkdir -p .claude/skills/diagnose
 
 ---
 
-**版本**: v3.18
-**更新日期**: 2026-04（v3.18）
+**版本**: v3.19
+**更新日期**: 2026-04（v3.19）
