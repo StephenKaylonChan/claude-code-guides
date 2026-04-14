@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.20（2026-04）
+> **版本**: v3.21（2026-04）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -112,6 +112,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.21 | 2026-04 | `/catchup` 重新定位为"工作上下文重建 + 下一步指引"：**去重加载**（识别 CLAUDE.md 已 @ 的文件不重复读，避免 Token 浪费）+ **参数聚焦模式**（`/catchup auth` 只读相关 spec/commit/文件；`/catchup 昨天做到哪了` 概览模式简要输出）+ **AskUserQuestion 引导下一步**（基于 session-notes/Phase 待办/implementing spec 生成 3-4 个具体候选，不散文询问）+ **和 SessionStart Hook 明确分工**（Hook 跑 git 被动、catchup 恢复深层上下文手动）。Skills 总数不变（11 个）|
 | v3.20 | 2026-04 | `/done` 重新定位为"功能交付检查清单"（7 步 → 9 步）：**剥离代码验证重跑**（交给 /implement Verify 和 PreToolUse Hook）+ **新增测试覆盖快速扫描**（推断测试路径，缺失 AskUserQuestion 询问是否补）+ **Roadmap 部分完成检测**（父条目有未完成子项 → 弹窗确认）+ **文档影响智能判断**（按 diff 范围 + 完成粒度判断是否弹窗询问 /docs）+ **simplify 补跑询问**（启发式判断，≥3 文件才问）+ **Roadmap Phase 完成 AskUserQuestion 询问 /release**+ **commit message 动态生成**。新增"职责边界"说明（/done vs /handoff vs /implement）。原"自动 vs 手动"表格删除（/done 从不自动触发）。模板从 188 行扩展到 280 行 |
 | v3.19 | 2026-04 | `/task` 重命名为 `/implement` 并流程强化：**命名冲突修正**（原 `/task` 与 Claude Code 原生 Task tool 语义冲突）+ **三个防面条机制**（Step 2 rg 模式扫描 MUST、Step 5 Kent Beck 三红灯 + Tidy First 分 commit MUST、Step 7 ADR 四类条件触发 AskUserQuestion 弹窗）+ **Step 1 硬阈值**（≥3 文件/跨模块 import/新依赖/数据流改变 → 升级 /spec 或 Plan Mode）+ frontmatter 修正（`disable-model-invocation: true`、移除 `Agent`）+ 六层收尾模型"小任务级"→"实施级"。设计依据：Anthropic "search before implement"、Kent Beck Augmented Coding、Claude Code 最佳实践。Skills 总数不变（仍 11 个） |
 | v3.18 | 2026-04 | 全文档梳理优化：删除旧方案对比内容、Hook 事件 21→26 + handler 矩阵更新 + `if` 字段 + 渐进式配置建议、Skills Frontmatter 区分原生/Subagent 字段 + allowed-tools 含义修正 + Skill 生命周期、Plan Mode 补 Ultraplan/Auto Mode/opusplan、1M 上下文窗口说明、命令速查去重（00 保留完整版）、rules 红线与规范分离建议、完成标准精简（技术栈移 rules/）、维护指南与 /audit 对齐 |
@@ -141,4 +142,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-04（v3.20）
+**最后更新**: 2026-04（v3.21）
