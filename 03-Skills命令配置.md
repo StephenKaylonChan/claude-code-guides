@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.21
+**版本**: v3.22
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -609,9 +609,32 @@ Options:
 
 ---
 
-### 2.4 /handoff — 会话交接文档
+### 2.4 /handoff — 会话状态快照 + 下次恢复桥梁
 
-**用途**：关闭会话前生成结构化交接笔记，自动更新项目路线图进度，供下次会话快速恢复。
+**用途**：会话中断前（/clear 之前 / 结束一天任务未完成 / 临时中断 / WIP 状态）生成结构化交接，供下次 /catchup 快速恢复。
+
+**定位**：**状态快照 + 恢复桥梁**。承载"**git log 抓不到的软信息**"（决策/踩坑/下一步）+ "**叙事性预汇总**"（省 /catchup 的推理成本）。
+
+**明确职责边界**：
+- ✅ Commit 当前变更（不绕 Hook，失败弹窗询问）
+- ✅ 勾 Roadmap checkbox（**副业**）
+- ✅ 写 session-notes
+- ❌ **不管 Spec frontmatter**（那是 /done 的职责——主业）
+- ❌ **不跑 `--no-verify`**（绕 Hook 要用户明确授权）
+- ❌ 不做代码验证（commit 存在即验证过）
+
+**v3.22 变化**：
+- **参数分流**：`/handoff`（完整）+ `/handoff quick`（精简，只填 2 段）
+- **session-notes 结构化为 6 段 + 关联指针**（去掉纯数字统计、合并 Roadmap/Spec 状态到关联指针）
+- **去掉 Spec frontmatter 更新**（职责归 /done）
+- **去掉自动 --no-verify**（改为 AskUserQuestion 让用户决定）
+- **新增文件 → AskUserQuestion multiSelect**（避免误 stage 临时文件）
+- **commit message 复杂改动 → AskUserQuestion 列候选**（简单改动 Claude 直接判）
+- **检测到 Gate 满足但未跑 /done → 提示先跑 /done**
+
+**什么时候不需要 /handoff**：
+- 任务完整 commit 了，明天从新功能开始（文档 00 Section 6 已说明）
+- 会话中完全没做事
 
 **文件路径**: `.claude/skills/handoff/SKILL.md`
 
@@ -619,136 +642,271 @@ Options:
 ---
 name: handoff
 description: |
-  会话结束前生成交接文档。当用户说"生成交接文档"、"我要关闭了"、"记录一下进度"时使用。
-argument-hint: ""
+  会话状态快照 + 下次 /catchup 恢复桥梁。/clear 前或结束开发时使用。
+  默认完整模式写 6 段 session-notes；`/handoff quick` 精简模式只填 2 段（适合短时间中断）。
+  触发关键词：生成交接文档、我要关闭了、记录进度、handoff、/clear 前
+argument-hint: "[quick | 空=完整]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+disable-model-invocation: true
 ---
 
 <task>
-提交当前所有变更，更新项目路线图进度，然后生成结构化会话交接文档。
+会话中断前的状态快照：commit 未提交变更 + 勾 Roadmap checkbox + 写 session-notes。
+**不碰 Spec frontmatter**（归 /done），**不绕 Hook**（--no-verify 要用户授权）。
 </task>
 
 <workflow>
 
-## Step 0: 收集当前状态
+## Step 0: 明确模式 + 收集状态
+
+读取 `$ARGUMENTS`：
+- `quick` → 精简模式（仅填 session-notes 的 2 段必填字段）
+- 空 → 完整模式（填 6 段 + 关联指针）
+
+收集会话状态供后续使用（不展示给用户，仅内部参考）：
 
 ```bash
-echo "=== 会话信息 ==="
 date '+%Y-%m-%d %H:%M'
+git branch --show-current
 git log --oneline -10
 git status --short
 git diff --stat HEAD 2>/dev/null | tail -5
 ```
 
-## Step 1: 提交当前变更
+## Step 1: 处理未提交变更
 
-检查是否有未提交的变更（`git status --short` 有输出）。
+### 1a. 工作区干净 → 跳过到 Step 2
 
-**如果有未提交文件**，按以下步骤处理：
+### 1b. 有未提交变更
 
-1. 精确 stage 变更文件（不用 `git add .`）：
-   - 读取 `git status --short` 输出，识别已修改和新增文件
-   - 排除 `.env`、`*.log`、`node_modules/`、构建产物等
-   - 执行 `git add <具体文件列表>`
+**已修改文件**（`git status --short` 里 ` M` 开头）：Claude 读取并自动 stage（排除 `.env`、`*.log`、`node_modules/`、构建产物）。
 
-2. 分析变更内容，生成符合 Conventional Commits 规范的 commit message，尝试正常提交：
-   ```bash
-   git commit -m "<type>(<scope>): <subject>"
-   ```
+**新增文件**（`??` 开头，unstaged）：**MUST 用 AskUserQuestion multiSelect 询问**，避免误 stage 临时文件：
 
-3. 根据结果：
-   - **成功** → 记录"正常 commit: `<message>`"，继续 Step 2
-   - **失败（测试不通过，exit code 2）** → 降级为 WIP 提交：
-     ```bash
-     git commit --no-verify -m "wip: <简要描述当前开发状态>"
-     ```
-     记录"WIP commit: `wip: <描述>`"，继续 Step 2
+```
+Question: 发现未跟踪的新增文件，选择要提交的（多选）：
 
-**如果没有未提交文件** → 记录"无变更"，直接跳到 Step 2。
+multiSelect: true
 
-## Step 2: 更新项目路线图
-
-检查 `docs/roadmap/` 目录是否存在。
-
-**如果存在**：
-
-1. 读取 `docs/roadmap/README.md` 确定当前 Phase
-2. 读取当前 Phase 文件（如 `phase-2-核心业务.md`）
-3. 根据本次会话完成的工作，**仅更新 checkbox 状态**：
-   - 已完成的功能：`[ ]` → `[x] ✅ <日期>`
-   - 开始进行中的功能：`[ ]` → `[-] 🏗️ <日期>`
-4. 更新 README.md 中的进度统计（如 `2/5` → `3/5`）
-5. 如果当前 Phase 全部完成，将状态改为 `✅ 完成`
-
-**重要**：只更新状态，**不添加新功能条目**。新功能需用户在开发过程中明确要求添加。
-
-**如果不存在** → 跳过此步骤。
-
-**更新 Spec 状态**：检查 `docs/specs/` 中状态为"实施中"的 spec 文件。如果本次会话完成了 spec 中的全部功能，将状态更新为"已完成"。
-
-**提交文档状态更新**：如果 Step 2 修改了 roadmap 或 spec 文件，单独提交：
-```bash
-git add docs/roadmap/ docs/specs/ 2>/dev/null
-git commit -m "docs: 更新路线图和设计文档状态" 2>/dev/null || true
+Options:
+1. src/components/LoginForm.tsx
+2. src/hooks/useAuth.ts
+3. test.md   ← 看起来是临时文件？
+4. notes.txt ← 看起来是临时文件？
 ```
 
-## Step 3: 生成交接文档
+用户勾选后 stage。
 
-写入 `.claude/session-notes.md`：
+### 1c. 生成 commit message
+
+**简单改动**（≤3 文件，单一主题）→ Claude 直接生成 Conventional Commits message。
+
+**复杂改动**（≥4 文件 / 跨模块 / 多个主题）→ **AskUserQuestion 询问**：
+
+```
+Question: 本次变更跨多个模块/主题，commit message 建议：
+
+Options:
+1. (Recommended) feat(auth): 实现 JWT 刷新机制
+2. feat: 添加认证相关代码（auth + api + frontend）
+3. 拆成多个 commit（Tidy First）
+4. 自定义（自由输入）
+```
+
+选 3 → Claude 按 Tidy First 拆 commit（结构先、行为后，详见 /implement Step 5）。
+
+### 1d. 执行 commit
+
+```bash
+git commit -m "<message>"
+```
+
+**失败处理**（Hook 拦下，exit code 2）→ **MUST 用 AskUserQuestion 询问**（不自动 --no-verify）：
+
+```
+Question: commit 被 Hook 拦下（测试/lint 未通过）。如何处理？
+
+Options:
+1. (Recommended) 返回编辑修复（取消本次 /handoff）
+2. 只写 session-notes 记录未提交状态（不 commit）
+3. 强制跳过 Hook（--no-verify，会留下未验证的 commit 在历史中）
+4. 自定义
+```
+
+选 1 → 停止 /handoff，用户去修复。
+选 2 → 跳过 commit，继续 Step 2-3（session-notes 里标注"工作区有未提交变更"）。
+选 3 → 仅在用户明确选择时才 `--no-verify`，message 前缀 `wip:`。
+
+## Step 2: Roadmap 更新（副业）
+
+**只更新 checkbox，不碰 Spec frontmatter**（那是 /done 的主业）。
+
+如果 `docs/roadmap/` 存在：
+1. 读取 `docs/roadmap/README.md` 确定当前 Phase
+2. 读取当前 Phase 文件
+3. 根据本次会话已完成的工作，**仅**更新 checkbox：
+   - 已完成：`- [ ]` → `- [x] ✅ YYYY/MM/DD`
+   - 进行中：`- [ ]` → `- [-] 🏗️ YYYY/MM/DD`
+4. 更新 README.md 进度统计（如 `2/5` → `3/5`）
+5. 当前 Phase 全部完成 → 状态改为 `✅ 完成`
+
+**MUST NOT**：
+- 不添加新条目（新功能需用户明确要求）
+- 不碰 `docs/specs/` 的 frontmatter（active_phase / status / Gate）
+
+### Step 2b: Gate 满足但未 /done 检测
+
+扫描 `docs/specs/` 中 `status: implementing` 的 spec：
+- 检查当前 `active_phase` 的 Tasks 是否全勾 `[x]`
+- Gate 条件是否全部满足
+
+**检测到 Gate 已满足但 active_phase 未推进** → 提示（不阻塞）：
+
+```
+⚠️ 检测到 docs/specs/user-auth.md 的 Phase 2 Gate 已满足，但未推进到 Phase 3。
+建议先执行 `/done <描述>` 再 /handoff，以正确推进 Spec 进度。
+
+是否继续 /handoff？
+```
+
+AskUserQuestion：
+```
+Options:
+1. 先跑 /done 再 handoff（推荐）
+2. 继续 handoff（稍后手动跑 /done）
+```
+
+### Step 2c: 提交文档变更
+
+```bash
+git add docs/roadmap/
+git commit -m "docs: 勾选 Phase N [条目名] 完成"
+```
+
+## Step 3: 写 session-notes.md
+
+### 完整模式（默认）
+
+写 6 段 + 关联指针到 `.claude/session-notes.md`：
 
 ```markdown
 # 会话交接文档
 
-**生成时间**: [当前时间]
-**当前分支**: [git branch --show-current]
+**生成时间**: YYYY-MM-DD HH:MM
+**分支**: [branch-name]
+**模式**: 完整 / quick
 
-## 本次会话完成的工作
+## 🔗 关联指针（/catchup 可快速定位）
+- Spec: docs/specs/user-auth.md (Phase 2, status: implementing)
+- Roadmap: phase-2.md - "用户认证模块" (3/5)
+- 最近 commits:
+  - abc1234 feat(auth): 实现 JWT 刷新端点
+  - def5678 feat(web): 集成 axios 拦截器
+  - ...（最多 5 个）
 
-[总结这次会话完成了什么]
+## 📝 本次会话做了什么（叙事摘要）
+[一段话概括，让 /catchup 无需读 5 个 commit message 推理]
+今天完成了 JWT 刷新 Token 机制：实现了 /auth/refresh 端点
+（apps/api/auth/refresh.py）、集成了前端 axios 拦截器
+（apps/web/src/lib/api.ts）、补了集成测试（tests/auth/...）。
 
-## 关键技术决策
+## 🎯 下一步具体动作（MUST 有，供 /catchup 弹窗候选）
+- 优先级 1：实现 refreshToken revoke 机制（apps/api/auth/revoke.py）
+- 优先级 2：前端 401 自动刷新拦截器（apps/web/src/lib/api.ts:L120）
+- 优先级 3：...
 
-[记录做了什么重要决策，为什么这样决定]
+## 🧠 关键决策（git log 不写的软信息）
+- 选 refresh token 方案而非 session — 支持移动端
+- Token 有效期 7 天，refresh 30 天 — 平衡安全与体验
 
-## 代码变更摘要
+## 🕳️ 踩过的坑（避免重犯）
+- 中间件顺序要在路由之前注册，否则不生效
+- CORS 要加 X-Refresh-Token 响应头，前端才能读到
 
-[git diff --stat HEAD 输出]
+## ⚠️ 注意事项 / 临时 TODO
+- refresh token revoke 还没实现（非本 Spec 范围）
+- 可能需要前端 401 自动刷新拦截器
+```
 
-## 路线图进度
+### 精简模式（`quick`）
 
-[当前 Phase 名称及进度，如："Phase 2 核心业务 3/5"]
+只填 2 段必填：
 
-## 设计文档状态
+```markdown
+# 会话交接文档（quick）
 
-[如有活跃的 spec，注明文件名、状态和实施进度]
+**生成时间**: YYYY-MM-DD HH:MM
+**分支**: [branch-name]
+**模式**: quick
 
-## 遗留问题 / 下次继续
+## 🔗 关联指针
+- [spec/roadmap 如有，Claude 自动填]
+- 最近 commits: [最多 3 个]
 
-[还没完成什么，下次从哪里接手]
+## 📝 本次会话做了什么
+[一句话]
 
-## 注意事项
-
-[有什么需要特别注意的，踩过的坑]
+## 🎯 下一步具体动作
+- [1-3 条]
 
 ---
-*下次会话运行 `/catchup` 恢复此上下文*
+*其他字段（决策/坑/注意事项）quick 模式不强制，如有就写*
 ```
 
-## Step 4: 确认
+## Step 4: 输出确认
 
 ```
-✅ 交接完成
+✅ 交接完成（模式：完整 / quick）
 
-提交状态: [正常 commit: <message> | WIP commit: wip: <描述> | 无变更]
-路线图更新: [已更新 Phase X: N/M | 无 roadmap 目录，跳过]
-交接文档: .claude/session-notes.md
+━━━━━━━━━━━━━━━━━━━━━━━━
+提交状态：
+  ✅ 正常 commit: feat(auth): ...
+  / ⚠️ 只记录未提交状态（Hook 拦下，用户选择不 --no-verify）
+  / 🏷️ WIP commit（--no-verify，用户明确授权）
+  / ⏭️ 无变更
+
+Roadmap：
+  ✅ 勾选 Phase N "[条目]" / ⏭️ 无关联
+
+Spec Gate 检测：
+  ⚠️ 检测到 Gate 满足但未 /done，建议跑 /done 再关闭
+  / ✅ 无待推进的 Spec
+
+交接文档：
+  .claude/session-notes.md (6 段 / 2 段 quick)
+━━━━━━━━━━━━━━━━━━━━━━━━
 
 下次会话运行 /catchup 可快速恢复上下文。
-辛苦了！
 ```
 
 </workflow>
 ````
+
+**用法示例**：
+
+```bash
+# 完整模式（默认）：结束一天、WIP 中断、跨天恢复
+/handoff
+
+# 精简模式：上下文满了要 /clear，短时间内会 /catchup
+/handoff quick
+```
+
+**与相关命令的职责边界**：
+
+| 场景 | 用哪个 |
+|------|-------|
+| 会话中断前保存状态 + 写 session-notes | **`/handoff`** |
+| 完成功能后做交付检查（测试/Roadmap/Spec 状态） | `/done` |
+| /clear 之后恢复上下文 | `/catchup` |
+
+**/handoff vs /done 的 Roadmap/Spec 分工**：
+- `/done`：**主业** — Phase 进度引擎（active_phase / status / Gate 验证）+ Roadmap checkbox
+- `/handoff`：**副业** — 只勾 Roadmap checkbox（**不碰** Spec frontmatter）
+
+**什么时候不需要 /handoff**：
+- 任务完整 commit 了，明天从新功能开始（详见文档 00 Section 6）
+- 会话中完全没做事
 
 ---
 
@@ -2570,5 +2728,5 @@ mkdir -p .claude/skills/diagnose
 
 ---
 
-**版本**: v3.21
-**更新日期**: 2026-04（v3.21）
+**版本**: v3.22
+**更新日期**: 2026-04（v3.22）
