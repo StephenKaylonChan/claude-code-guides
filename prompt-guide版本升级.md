@@ -226,7 +226,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.17-v3.19），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.18-v3.20），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -279,6 +279,22 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.20 新增**（重点检查）：
+- **`/done` 重新定位为"功能交付检查清单"**（7 步 → 9 步）：检查项目 `.claude/skills/done/SKILL.md` 是否已升级到 v3.20 模板。
+- **核心变化**：
+  - **剥离代码验证重跑**：/done 不再跑测试/lint（这些是 commit hook 和 /implement Verify 的责任）
+  - **Step 1 工作区检查**：有未提交变更 → 停止，要求先 commit
+  - **Step 2 测试覆盖快速扫描**：推断测试路径，缺失 → AskUserQuestion 询问是否补
+  - **Step 3 Roadmap 部分完成检测**：父条目有未完成子项 → 弹窗确认
+  - **Step 5 文档影响智能判断**：按 diff 范围 + 完成粒度判断是否弹窗询问 /docs
+  - **Step 6 simplify 补跑询问**：启发式判断（≥3 文件才问）
+  - **Step 7 Phase 完成 AskUserQuestion**：询问现在是否跑 /release（不只是散文建议）
+  - **Step 8 commit message 动态生成**：根据实际变更内容（仅 checkbox / Spec Phase 推进 / Spec 完成）
+- **去掉"自动 vs 手动"表格**：/done 从不自动触发，全是手动调用。
+- **新增"职责边界"段**：明确 /done vs /handoff vs /implement vs /release 的分工。
+- **/done vs /handoff 的 Roadmap 区分**：/done 管 Spec frontmatter + Gate 验证（主业），/handoff 只顺手勾 checkbox（副业）。
+- **六层收尾模型表格更新**：实施级/功能级/Spec 完成级/文档同步级/Roadmap Phase 级的动作描述同步到 v3.20 语义（checklist + 弹窗）。
 
 **v3.19 新增**（重点检查）：
 - **`/task` 重命名为 `/implement`**（MUST 迁移）：
