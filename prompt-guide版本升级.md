@@ -226,7 +226,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.20-v3.22），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.21-v3.23），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -279,6 +279,24 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.23 新增**（重点检查）：
+- **`/spec` 重新定位为"执行契约"** + **Gate 三类型机器判定**：检查 `.claude/skills/spec/SKILL.md` 和 `done/SKILL.md` 是否已升级到 v3.23 模板。
+- **Gate 三类型标注**（核心）：
+  - `[auto: <观察表达式>]` - Claude **只读不判断**，映射到可观察事实（如 `phase.tasks.unchecked == 0`）
+  - `[command: <shell>]` - 执行 shell，exit code 0 = 通过（如 `pnpm test tests/auth/`）
+  - `[manual]` + **EARS 句式**（`While X, when Y, the Z shall W`）- /done 弹窗询问用户
+  - **兼容旧格式**：无类型标注的 Gate 条件视为 `[manual]`，下次 /spec 增量更新会补标注
+- **文档边界声明**：Spec 是执行契约，不是 PRD/RFC/ADR。**ADR 不合并进 spec**（保留不可变性），spec 里引用 ADR 链接。
+- **使用时机流程图**：明确区分**初稿时机**（方向定了即可写 draft）vs **定稿时机**（实施前 `/spec name 确认` 切换 approved）。符合 Brooker 2026 "spec 是被迭代的对象" 共识。
+- **AskUserQuestion 决策点**：
+  - 分歧确认（Step 1a）
+  - Roadmap 关联（Step 4）
+  - status 切换（Step 5b）
+- **Phase 拆分阈值**：对齐 /implement 硬阈值（≤5 文件 / 单 Phase，避免跨模块 + 新依赖 + 数据流同时出现）
+- **frontmatter 精简**：去掉冗余 `phase` 字段
+- **连带升级 /done Step 4a**：Gate 验证支持三类型（必须同步改）。旧 spec 的无标注条件视为 `[manual]`，弹窗询问用户。
+- **设计依据**：EARS（Rolls-Royce 2009）、Fitness Functions（Neal Ford）、Kiro + GitHub Spec Kit 社区实践、Martin Fowler 对 "AI 自证" 的警告（`[auto]` 必须映射可观察事实，不是 AI 判断）。
 
 **v3.22 新增**（重点检查）：
 - **`/handoff` 重新定位为"状态快照 + 下次恢复桥梁"**：检查项目 `.claude/skills/handoff/SKILL.md` 是否已升级到 v3.22 模板。
