@@ -50,7 +50,7 @@ ls .claude/rules/ 2>/dev/null
 7. `.claude/skills/spec/SKILL.md`
 8. `.claude/skills/done/SKILL.md`
 9. `.claude/skills/docs/SKILL.md`
-10. `.claude/skills/task/SKILL.md`
+10. `.claude/skills/implement/SKILL.md`（v3.19 从 `task/` 重命名）
 11. `.claude/skills/diagnose/SKILL.md`
 12. `.claude/hooks/session-start.sh`
 10. `.claude/hooks/pre-commit-check.sh`
@@ -226,7 +226,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.15-v3.17），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.17-v3.19），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -268,10 +268,10 @@ ls .claude/rules/ 2>/dev/null
 - **`.claude/rules/` 红线增强**：rules 文件新增"红线"区块（技术栈专属的 MUST NOT 规则），与编码规范分开。检查 `frontend.md` / `backend.md` 是否已补充红线。
 - **代码质量防御章节**（文档 04 Section 10）：分层防御模型（Hook 硬拦 > 上下文纪律 > CLAUDE.md 红线 > /simplify 兜底）、上下文劣化认知更新。
 
-**v3.14 新增**（重点检查）：
-- **`/task` 日常小任务 Skill**：`.claude/skills/task/SKILL.md`，处理不需要 Spec 的小功能、小 Bug、微调。检查是否已安装。自动分流复杂度（太大→建议 /spec），支持批量模式。
-- **六层收尾模型**：五层→六层，新增"小任务级"（`/task` 执行，不需要 `/done`）。
-- **Skills 总数 9→10**：新增 `/task`。
+**v3.14 新增**（重点检查，⚠️ v3.19 已重命名为 `/implement`）：
+- **`/task` 日常小任务 Skill**：v3.14 引入，**v3.19 重命名为 `/implement` 并流程强化**（详见 v3.19 新增）。检查是否已安装最新版。
+- **六层收尾模型**：五层→六层，新增"小任务级"（**v3.19 改名为"实施级"**）。
+- **Skills 总数 9→10**：新增 `/task`（**v3.19 重命名为 `/implement`**）。
 
 **v3.15 新增**（重点检查）：
 - **`/diagnose` 全维度代码健康诊断 Skill**：`.claude/skills/diagnose/SKILL.md`，四层 13 维度系统性扫描（结构层：耦合度/职责划分/模块边界/依赖方向；实现层：代码重复/错误处理/类型安全/性能隐患/可测试性；卫生层：死代码/一致性；战略层：代码热点/知识孤岛）。检查是否已安装。
@@ -279,6 +279,24 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.19 新增**（重点检查）：
+- **`/task` 重命名为 `/implement`**（MUST 迁移）：
+  1. 目录重命名：`mv .claude/skills/task .claude/skills/implement`
+  2. SKILL.md 首行 `name:` 字段：`task` → `implement`
+  3. 全量替换新模板内容（详见 guide 文档 03 Section 2.6）
+  4. 项目文档里所有 `/task` 引用改为 `/implement`（CLAUDE.md、docs/ 等）
+  5. 用户习惯迁移：以后不再用 `/task`，统一用 `/implement`
+- **流程强化（核心）**：`/implement` 相比 v3.14 `/task` 新增三个防面条机制：
+  - **Step 2 模式扫描**（MUST）：Code 前 `rg` 搜现有实现，找到相似项 MUST 说明"为什么不复用"
+  - **Step 5 Commit 前自检**（MUST）：Kent Beck 三红灯（循环/重试掩盖失败、未请求功能、禁/删测试）+ Tidy First（结构与行为必须分 commit）
+  - **Step 7 ADR 触发**（条件）：新增跨模块依赖/替换实现/新依赖/数据流改变 → AskUserQuestion 弹窗询问生成 ADR 草稿
+- **Step 1 硬阈值**：≥3 文件 / 跨模块 import / 新第三方依赖 / 改数据流向 → 建议升级 /spec 或 Plan Mode。
+- **六层收尾模型**："小任务级" → **"实施级"**（名字不挑大小，强调有纪律实施）。
+- **frontmatter 修正**：`disable-model-invocation: true`（避免 Claude 自动触发）；`allowed-tools` 移除 `Agent`（单改动不需要 subagent）。
+- **命名冲突修正**：旧 `/task` 与 Claude Code 原生 Task tool（`TaskCreate`/`TaskList`）语义冲突，`/implement` 更准。
+- **Skills 总数不变（仍 11 个）**：本次是重命名+强化，不新增。
+- **设计依据**：Anthropic "search before implement"、Kent Beck [Augmented Coding](https://tidyfirst.substack.com/p/augmented-coding-beyond-the-vibes)、Claude Code 最佳实践"≥3 文件 → plan"阈值、Augment Code 反重复 prompt 模式。
 
 **v3.18 新增**（重点检查）：
 - **Hook 事件 21→26**：新增 PermissionDenied、StopFailure、CwdChanged、FileChanged、TaskCreated。检查 settings.json 是否需要添加新事件。

@@ -77,7 +77,7 @@ Stop：是否需要完成通知？（macOS / Linux）
 **Skills 选择**：
 
 ```
-必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、task（日常小任务执行）、done（功能完成收尾）、docs（开发文档梳理）、release（Phase 完成系统性文档刷新）、nbp2（AI 生图 Prompt 助手）、diagnose（全维度代码健康诊断）
+必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、implement（有纪律的单改动实施）、done（功能完成收尾）、docs（开发文档梳理）、release（Phase 完成系统性文档刷新）、nbp2（AI 生图 Prompt 助手）、diagnose（全维度代码健康诊断）
 可选：是否有项目特定的高频操作值得封装为命令？
 ```
 
@@ -259,7 +259,7 @@ disable-model-invocation: true    # 除非需要自动触发
 3. `catchup/SKILL.md`：读取 CLAUDE.md 和 session-notes.md 恢复状态
 4. `handoff/SKILL.md`：**使用方案 B** — 先尝试正常 commit → 失败则 `wip:` + `--no-verify` → 写 session-notes.md
 5. `spec/SKILL.md`：讨论成果整理为设计文档，含 Implementation Phases 结构
-6. `task/SKILL.md`：日常小任务执行，自动复杂度分流，支持批量模式
+6. `implement/SKILL.md`：有纪律的单改动实施，含模式扫描（rg）+ 硬阈值 + Kent Beck 红灯 + Tidy First + ADR AskUserQuestion 触发
 7. `done/SKILL.md`：**注意 argument-hint 必须有**（`<完成了什么功能的描述>`），用户显式描述完成内容
 8. `docs/SKILL.md`：深度探索代码，梳理更新开发文档，支持按范围指定
 9. `release/SKILL.md`：Phase 完成系统性文档刷新（引用 `/docs` 全量 + Changelog + ADR）
@@ -373,7 +373,7 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 
 ### 日常使用
 - 开始开发：直接说需求（Hook 自动运行）
-- 小任务/小 Bug：/task 描述（评估→执行→验证→commit）
+- 单改动/小 Bug：/implement 描述（硬阈值评估 → 模式扫描 → 执行 → Commit 前自检）
 - 功能完成：/simplify 审查 → Claude 自动 commit（Hook 验证后）→ 你确认 push
 - 功能收尾：/done 完成了XX（代码验证 + Roadmap/Spec 状态更新）
 - 文档更新：/docs（深度探索代码 → 刷新开发文档）

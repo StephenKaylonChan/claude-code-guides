@@ -402,7 +402,7 @@ echo "退出码: $?"
 
 ### 日常使用变化
 - 不再需要：/start、/end、/checkpoint、/weekly、/monthly、/fix
-- 小任务/小 Bug：/task 描述（评估→执行→验证→commit）
+- 单改动/小 Bug：/implement 描述（硬阈值评估 → 模式扫描 → 执行 → Commit 前自检）
 - 新的工作流：功能完成 → /simplify → Claude 自动 commit（Hook 验证后）→ 你确认 push
 - 功能收尾：/done 完成了XX（代码验证 + Roadmap/Spec 状态更新）
 - 文档更新：/docs（深度探索代码 → 刷新开发文档）
