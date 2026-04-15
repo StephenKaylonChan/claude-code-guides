@@ -231,7 +231,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.25-v3.27），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.26-v3.28），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -284,6 +284,17 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.28 新增**（重点检查）：
+- **`/nbp2` 轻度优化**：检查 `.claude/skills/nbp2/SKILL.md` 是否已升级到 v3.28 模板。
+- **Step 1 分流**：
+  - 有参数 → 直接走默认 NBP2
+  - 无参数 → AskUserQuestion 一次问清（5 场景选项含自定义）
+- **模型对比表加注**：价格/速度/Model ID 数据截至 2026-04，以 Google 官方最新定价为准
+- **加"与其他 skill 的关系"段**：/nbp2 是独立工具，不对接开发工作流；专注 Nano Banana，不适用其他模型
+- **加用法示例段**（有参数推荐 / 无参数弹窗）
+- **不加** `disable-model-invocation`（工具类保持自动触发）
+- **专业知识全部保留**：六要素公式、进阶技巧（文字/负面约束/角色一致性/Image Search/Thinking Mode）、5 个示例（产品/电影/杂志/等距/混合媒介）
 
 **v3.27 新增**（重点检查）：
 - **`/release` 重新定位为"Phase 里程碑工作流（含可选对外发版）"**：检查 `.claude/skills/release/SKILL.md` 是否已升级到 v3.27 模板。
