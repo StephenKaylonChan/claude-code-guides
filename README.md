@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.25（2026-04）
+> **版本**: v3.26（2026-04）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -111,6 +111,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.26 | 2026-04 | `/diagnose` 细节优化 + 吸收 Phase 4 "lint 建议" TODO：**Step 7 AskUserQuestion 引导下一步**（启动 /implement Batch / 写入 Roadmap / 只看报告）+ **D9 测试覆盖对接 v3.23 Gate**（扫 spec `[command]` Gate 对应测试是否存在，假 Gate 标记 P1）+ **D11 加"重复模式 → lint 建议"**（Addy Osmani 理念，2+ 次重复反模式 → 独立清单输出具体 ESLint / `.claude/rules/` 配置）+ **Step 1 自适应文件类型**（读 CLAUDE.md 技术栈段 + package.json/pyproject.toml 推断，不硬编码）+ **Step 5 加"不做"列**（投入产出比低明确标记，减少决策负担）+ **SubAgent 指令加 D9/D11 补充要点**。Phase 4 路线图"`/audit` 重复模式 → lint 建议"TODO 已在 /diagnose 完成并打勾 |
 | v3.25 | 2026-04 | **体系重构**：`/deep-audit` **废弃**，功能合并到 `/docs`（重新定位为"**文档生态守护者**"）。**三个审查类命令分工明确**：/audit（代码质量+依赖+安全，浅层）/ /docs（文档一致性含 spec/ADR，深度）/ /diagnose（架构健康，13 维度量化）。`/docs` 四种操作：**更新**（不一致）/ **新增**（代码有文档缺）/ **删除**（文档有代码缺）/ **审计**（spec-code、ADR 有效性、Gate `[command]` 可执行性，对接 v3.23）。`audit` 子模式：`/docs audit` 专注深度审计。AskUserQuestion 修改前审核（>10 处弹窗）。历史对比（docs/reports/docs-*.md）。默认不 push。Skills 总数 **11 → 10**（移除 deep-audit）|
 | v3.24 | 2026-04 | `/audit` 重新定位为"**浅层快速巡检**"：**参数 5 种简化为 3 种**（`/audit` / `--deep` / `--security`，去掉 `--quick` 和 `--docs`）+ **明确职责边界**（/audit 只发现不改代码 vs /deep-audit 修复 + commit vs /diagnose 架构量化）+ **命令自适应**（从 CLAUDE.md / package.json 读 lint/test/build 命令，不硬编码 pnpm；包管理器自动识别 pnpm/npm/yarn/poetry/pip）+ **AskUserQuestion 修复引导**（4 选项：只看报告 / 启动 /implement 批量修复 / 只修 P0 / 写入 Roadmap TODO）+ **历史对比**（保留 `docs/reports/audit-YYYY-MM-DD.md`，下次审计显示趋势 ↑/↓/→）+ **文档同步并入标准检查**（CLAUDE.md 行数、rules 路径、roadmap 一致性、stale spec 每次都查）+ **Security 优先用 gitleaks**（fallback grep）。Skills 总数不变（11 个）|
 | v3.23 | 2026-04 | `/spec` 重新定位为"讨论成果整理为**执行契约**"+ Gate 三类型机器判定：**Gate 条件带类型标注**（`[auto: 观察表达式]` Claude 只读不判断 / `[command: shell]` 执行 exit code 0 / `[manual]` + **EARS 句式** `While X, when Y, the Z shall W` 弹窗）+ **文档边界声明**（Spec 执行契约，**不是** PRD/RFC/ADR；ADR 不合并进 spec 保留不可变性）+ **使用时机流程图**（初稿时机 vs 定稿时机，迭代式 spec 符合 Brooker 2026 共识）+ **AskUserQuestion 决策点**（分歧确认 / Roadmap 关联 / status 切换 draft→approved）+ **Phase 拆分阈值**（对齐 /implement 硬阈值：≤5 文件/单 Phase）+ frontmatter 精简（去冗余 `phase` 字段）。**连带升级 /done Step 4a**：Gate 验证支持三类型（auto 读取 / command 执行 / manual 弹窗），兼容旧格式视为 manual。设计依据：EARS（Rolls-Royce 2009）、Fitness Functions（Neal Ford）、Kiro + GitHub Spec Kit 社区实践、Martin Fowler 对"AI 自证"的警告。Skills 总数不变（11 个）|
@@ -145,4 +146,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-04（v3.25）
+**最后更新**: 2026-04（v3.26）
