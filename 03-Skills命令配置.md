@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.28
+**版本**: v3.29
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -107,7 +107,7 @@ hooks:                                # Skill 作用域内的 Hooks（详见文�
 | **质量审查** | `/audit`、`/diagnose` | 项目健康浅层巡检、代码架构量化诊断（文档一致性归 `/docs`）|
 | **开发流程** | `/catchup`、`/handoff`、`/spec`、`/implement`、`/done` | 上下文恢复、会话交接、设计文档、单改动实施、收尾检查 |
 | **文档管理** | `/docs`、`/release` | 开发文档梳理、Phase 系统性刷新 |
-| **工具** | `/nbp2` | AI 生图 Prompt 助手 |
+| **工具** | `/nbp2`、`/fix-permission` | AI 生图 Prompt 助手、Claude Code 权限拦截诊断修复 |
 
 ---
 
@@ -3270,6 +3270,201 @@ lint 建议: [M] 条（重复模式 ≥2 次，建议升级为 lint/rules）
 
 ---
 
+### 2.11 /fix-permission — 权限拦截自动诊断与修复
+
+**用途**：Claude Code 跳出权限确认弹窗时，用户粘贴拦截信息 → 自动诊断原因 + 添加对应权限规则到 `settings.json`。**独立工具 skill，不对接开发工作流**。
+
+**定位**：**Claude Code 权限系统的自动化修复工具**。专门处理"为什么被拦截 + 应该加什么规则"的诊断，支持三级 settings（用户/项目/项目本地），写入前预演确认。
+
+### v3.29 新增
+
+- **首次写入 03 模板**（之前只在 guides 本地）
+- **三级 settings 扫描**：读取 `~/.claude/settings.json`（用户级）+ `./.claude/settings.json`（项目级）+ `./.claude/settings.local.json`（项目本地）
+- **AskUserQuestion 选择写入级别**：根据规则性质选最合适的级别
+- **写入前预演**：显示将要添加的规则 + 弹窗确认
+- **Step 4A 更新**：加 Auto mode / deny 优先 / 更具体规则等解法
+
+### 和其他 skill 的关系
+
+/fix-permission 是**独立工具**，不对接开发工作流（不像 /implement/done/release 等配套使用）。
+
+| 场景 | 用哪个 |
+|------|-------|
+| 权限弹窗出现时 | **`/fix-permission`** |
+| 日常 settings.json 配置调整 | 直接编辑或 `/update-config` 原生命令 |
+| Hook 配置 | 见文档 02（Hook 自动化配置）|
+
+**文件路径**: `.claude/skills/fix-permission/SKILL.md`
+
+````markdown
+---
+name: fix-permission
+description: |
+  分析权限拦截原因并自动修复。当用户遇到 Claude Code 权限弹窗时使用。
+  用户粘贴拦截信息，自动诊断原因、添加对应权限规则到 settings.json（用户/项目/项目本地三级可选）。
+  触发关键词：权限拦截、permission、被拦截了、又来了、要确认
+argument-hint: "<粘贴拦截信息>"
+allowed-tools: Read, Edit, Bash
+---
+
+<task>
+分析用户遇到的 Claude Code 权限拦截，诊断原因，写入前预演确认，最后添加规则到用户选择的 settings.json 级别。
+</task>
+
+<workflow>
+
+## Step 1: 解析拦截信息
+
+从 `$ARGUMENTS` 中提取：
+1. **被拦截的命令**（Bash command 后面的内容）
+2. **拦截原因**（如 "Compound commands"、"backslash-escaped whitespace" 等）
+
+## Step 2: 诊断原因
+
+常见拦截原因分类：
+
+| 拦截提示 | 根因 | 需要的权限规则 |
+|---------|------|--------------|
+| Compound commands with cd and git | cd && git 复合命令 | `Bash(*)` 或 `Bash(cd * && git *)` |
+| backslash-escaped whitespace | 路径含空格/中文 | `Bash(*)` 或对应命令的 `Bash(cmd *)` |
+| command substitution $() | 命令替换 | `Bash(*)` 或 `Bash(for *)` 等 |
+| quoted newline followed by # | 多行脚本带注释 | `Bash(*)` 或 `Bash(docker *)` |
+| output redirection (>) | 输出重定向 | `Bash(*)` 或对应命令的 `Bash(cmd *)` |
+| pipe command (\|) | 管道命令 | `Bash(cmd1 \| cmd2 *)` 或 `Bash(*)` |
+| background process (&) | 后台运行 | `Bash(cmd * &)` 或 `Bash(*)` |
+| Permission rule ... requires confirmation | 命令不在 allow 列表 | 添加对应 `Bash(cmd *)` 到 allow |
+
+## Step 3: 读取三级 settings 配置
+
+```bash
+# 用户级（全局）
+cat ~/.claude/settings.json 2>/dev/null
+
+# 项目级（版本控制，团队共享）
+cat ./.claude/settings.json 2>/dev/null
+
+# 项目本地（gitignore，个人）
+cat ./.claude/settings.local.json 2>/dev/null
+```
+
+诊断：
+- 三个级别哪个已有相关规则？
+- 缺的是什么？
+- 是否 deny 列表阻止了 allow（deny 优先级高）？
+
+## Step 4: 诊断输出
+
+### 情况 A：`Bash(*)` 已存在于 allow，但仍被拦截
+
+这是 Claude Code 内置安全启发式。几种解法：
+
+1. **更具体的规则**：尝试 `Bash(cmd *)` 替代宽泛的 `Bash(*)`，更具体的规则可能绕过启发式
+2. **检查 deny**：`deny` 列表比 `allow` 优先级高，看是否被 deny 拦住
+3. **Auto mode**：Shift+Tab 切到 Auto mode，分类器自动判定（安全操作放行）
+4. **手动确认**：如果是一次性命令，直接点"Yes, and don't ask again"
+
+### 情况 B：缺少对应权限规则
+
+需要添加规则。**进入 Step 5 选择写入级别**。
+
+### 情况 C：命令在 `deny` 列表中
+
+明确被拒绝的命令（如 `rm -rf /`、`curl | bash`、`wget | sh`、`git push --force`）。
+
+- 如果是安全拦截 → **告知用户，不建议放行**
+- 用户确认要放行 → 进入 Step 5 但提示这是**高危操作**
+
+## Step 5: AskUserQuestion 选择写入级别
+
+**仅在情况 B/C 需要写入时询问**：
+
+```
+Question: 权限规则写到哪个级别？
+
+Options:
+1. (Recommended) 用户级（~/.claude/settings.json）= 所有项目都生效，个人偏好
+2. 项目级（./.claude/settings.json）= 只当前项目 + 提交到 git（团队共享）
+3. 项目本地（./.claude/settings.local.json）= 只当前项目 + 不提交（个人项目特定）
+```
+
+**选择建议**：
+- 通用 Bash 命令（`ls`、`git status`）→ 用户级
+- 项目特定脚本（`pnpm` / `poetry run` 等）→ 项目级（团队统一）
+- 个人实验或敏感配置 → 项目本地
+
+## Step 6: 预演写入规则
+
+显示将要添加的规则 + AskUserQuestion 确认：
+
+```
+将在 [用户/项目/项目本地] 级 settings.json 的 permissions.allow 添加：
+
+  "Bash(pnpm install *)"
+
+之前该级别已有 [N] 条规则。添加后总 [N+1] 条。
+
+Question: 确认添加？
+
+Options:
+1. (Recommended) 确认添加
+2. 调整规则（自由输入更精确的规则）
+3. 取消
+```
+
+## Step 7: 写入 settings.json
+
+用户确认后，编辑对应级别的 `settings.json`：
+- 如文件不存在 → 创建包含基础结构的新文件
+- 如文件存在 → 读取 → 合并规则 → 写回（保持 JSON 格式化）
+
+**精确 add**（如项目级）：
+```bash
+git add .claude/settings.json  # 仅项目级才需要
+```
+
+## Step 8: 输出结果
+
+```
+✅ 权限规则已添加
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+拦截命令: [命令摘要]
+拦截原因: [原因分类]
+处理方式:
+  - 级别: [用户级 / 项目级 / 项目本地]
+  - 规则: [具体规则，如 Bash(pnpm install *)]
+  - 文件: [路径]
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+需要重启 Claude Code 生效（退出后重新 claude）。
+下次遇到类似命令将自动放行。
+```
+
+</workflow>
+````
+
+**用法示例**：
+
+```bash
+# 用户粘贴拦截信息作为参数
+/fix-permission Bash command 'pnpm install' requires confirmation. 不在 allow 列表
+
+# 或直接粘贴完整拦截弹窗
+/fix-permission 下面这段是拦截提示：[粘贴整段]
+```
+
+**settings.json 三级优先级**（参考）：
+
+| 级别 | 文件 | 生效范围 | 版本控制 |
+|------|------|---------|---------|
+| 用户级 | `~/.claude/settings.json` | 所有项目 | 不提交 |
+| 项目级 | `./.claude/settings.json` | 仅当前项目 | **提交** |
+| 项目本地 | `./.claude/settings.local.json` | 仅当前项目 | 不提交 |
+
+**优先级**：项目本地 > 项目级 > 用户级（更具体的覆盖通用）。`deny` 比 `allow` 优先（无论哪一级）。
+
+---
+
 ## 3. Anthropic 内置命令（Bundled Skills）
 
 Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版本自动更新，**无需手动配置，直接使用**。
@@ -3379,6 +3574,7 @@ mkdir -p .claude/skills/docs
 mkdir -p .claude/skills/release
 mkdir -p .claude/skills/nbp2
 mkdir -p .claude/skills/diagnose
+mkdir -p .claude/skills/fix-permission
 ```
 
 ### 4.2 文件创建
@@ -3394,6 +3590,7 @@ mkdir -p .claude/skills/diagnose
 - `.claude/skills/release/SKILL.md`
 - `.claude/skills/nbp2/SKILL.md`
 - `.claude/skills/diagnose/SKILL.md`
+- `.claude/skills/fix-permission/SKILL.md`
 
 ### 4.3 查看已安装的 Skills
 
@@ -3428,9 +3625,11 @@ mkdir -p .claude/skills/diagnose
 /diagnose            # 全项目代码健康诊断
 /diagnose frontend   # 仅前端
 /diagnose auth       # 指定模块
+
+/fix-permission <粘贴拦截信息>   # 权限拦截诊断 + 自动修复 settings.json
 ```
 
 ---
 
-**版本**: v3.28
-**更新日期**: 2026-04（v3.28）
+**版本**: v3.29
+**更新日期**: 2026-04（v3.29）
