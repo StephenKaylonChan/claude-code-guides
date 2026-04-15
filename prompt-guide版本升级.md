@@ -53,6 +53,7 @@ ls .claude/rules/ 2>/dev/null
 10. `.claude/skills/release/SKILL.md`
 11. `.claude/skills/nbp2/SKILL.md`
 12. `.claude/skills/diagnose/SKILL.md`
+13. `.claude/skills/fix-permission/SKILL.md`（v3.29 新增到模板）
 
 > **v3.25 起 `deep-audit/SKILL.md` 已废弃**，功能合并到 `/docs`。如项目仍存在该目录，参考下方 v3.25 迁移指令删除。
 12. `.claude/hooks/session-start.sh`
@@ -231,7 +232,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.26-v3.28），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.27-v3.29），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -284,6 +285,21 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.29 新增**（重点检查，⚠️ 含 /fix-permission 新增）：
+- **`/fix-permission` 首次写入 03 模板**（之前只存在于 guides 本地）
+- **迁移**：旧版本项目需要新增 `.claude/skills/fix-permission/SKILL.md`，内容从 guides 项目的模板复制
+  ```bash
+  mkdir -p .claude/skills/fix-permission
+  # 从 guide 复制 SKILL.md 内容（03 Section 2.11）
+  ```
+- **核心能力**：
+  - 三级 settings 扫描（用户级 ~/ / 项目级 ./ / 项目本地 ./.local）
+  - AskUserQuestion 选择写入级别（根据规则性质）
+  - 写入前预演确认（显示将添加规则 + 弹窗确认）
+  - Step 4A 更新（Bash(*) 仍拦截时的 4 种解法：更具体规则 / deny 优先 / Auto mode / 手动确认）
+  - 扩展诊断表（加管道 / 后台进程等常见拦截）
+- **Skills 总数 10 → 11**（新增 /fix-permission）
 
 **v3.28 新增**（重点检查）：
 - **`/nbp2` 轻度优化**：检查 `.claude/skills/nbp2/SKILL.md` 是否已升级到 v3.28 模板。
@@ -564,8 +580,8 @@ chmod +x .claude/hooks/*.sh
 **⛔ 运行以下命令验证，输出完整结果**（不可跳过）：
 
 ```bash
-echo "=== Skills (应为 10 个，v3.25 起 /deep-audit 废弃) ==="
-for f in audit catchup handoff spec implement done docs release nbp2 diagnose; do
+echo "=== Skills (应为 11 个，v3.29 起含 fix-permission / v3.25 起 /deep-audit 废弃) ==="
+for f in audit catchup handoff spec implement done docs release nbp2 diagnose fix-permission; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 # 验证旧 /deep-audit 是否已删除
