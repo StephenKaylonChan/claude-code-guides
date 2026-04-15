@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.26（2026-04）
+> **版本**: v3.27（2026-04）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -111,6 +111,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.27 | 2026-04 | `/release` 重新定位为"**Phase 里程碑工作流（含可选对外发版）**"：**明确区分两件事**——Phase 完成（内部里程碑）vs 对外发版（外部里程碑）。**参数分流**：`/release`（默认 A，Phase 内部里程碑）/ `/release --publish`（A+B，加版本号 bump + git tag + 对外 Changelog）。**对接 v3.25 /docs 新流程**：Step 1 全量 /docs + Step 1b 可选 /docs audit 深度审计。**ADR 检查 AskUserQuestion**：识别模式对齐 v3.19 /implement 四类触发（跨模块依赖 / 替换实现 / 新依赖 / 数据流向），基于 Phase 期间 commit message 推断。**Phase 开始日期三种 fallback**（Phase 文件 frontmatter → 上次 /release commit → 第一个 commit）。**精确 git add**（不用 `git add docs/` 宽泛 stage）。**默认不 push**（对齐 v3.25 /docs）。**Step 8 AskUserQuestion 引导下一步**（push / /diagnose / 规划 Phase N+1 / 其他）。明确排除临时 hotfix 场景（直接 `git tag` 更快）|
 | v3.26 | 2026-04 | `/diagnose` 细节优化 + 吸收 Phase 4 "lint 建议" TODO：**Step 7 AskUserQuestion 引导下一步**（启动 /implement Batch / 写入 Roadmap / 只看报告）+ **D9 测试覆盖对接 v3.23 Gate**（扫 spec `[command]` Gate 对应测试是否存在，假 Gate 标记 P1）+ **D11 加"重复模式 → lint 建议"**（Addy Osmani 理念，2+ 次重复反模式 → 独立清单输出具体 ESLint / `.claude/rules/` 配置）+ **Step 1 自适应文件类型**（读 CLAUDE.md 技术栈段 + package.json/pyproject.toml 推断，不硬编码）+ **Step 5 加"不做"列**（投入产出比低明确标记，减少决策负担）+ **SubAgent 指令加 D9/D11 补充要点**。Phase 4 路线图"`/audit` 重复模式 → lint 建议"TODO 已在 /diagnose 完成并打勾 |
 | v3.25 | 2026-04 | **体系重构**：`/deep-audit` **废弃**，功能合并到 `/docs`（重新定位为"**文档生态守护者**"）。**三个审查类命令分工明确**：/audit（代码质量+依赖+安全，浅层）/ /docs（文档一致性含 spec/ADR，深度）/ /diagnose（架构健康，13 维度量化）。`/docs` 四种操作：**更新**（不一致）/ **新增**（代码有文档缺）/ **删除**（文档有代码缺）/ **审计**（spec-code、ADR 有效性、Gate `[command]` 可执行性，对接 v3.23）。`audit` 子模式：`/docs audit` 专注深度审计。AskUserQuestion 修改前审核（>10 处弹窗）。历史对比（docs/reports/docs-*.md）。默认不 push。Skills 总数 **11 → 10**（移除 deep-audit）|
 | v3.24 | 2026-04 | `/audit` 重新定位为"**浅层快速巡检**"：**参数 5 种简化为 3 种**（`/audit` / `--deep` / `--security`，去掉 `--quick` 和 `--docs`）+ **明确职责边界**（/audit 只发现不改代码 vs /deep-audit 修复 + commit vs /diagnose 架构量化）+ **命令自适应**（从 CLAUDE.md / package.json 读 lint/test/build 命令，不硬编码 pnpm；包管理器自动识别 pnpm/npm/yarn/poetry/pip）+ **AskUserQuestion 修复引导**（4 选项：只看报告 / 启动 /implement 批量修复 / 只修 P0 / 写入 Roadmap TODO）+ **历史对比**（保留 `docs/reports/audit-YYYY-MM-DD.md`，下次审计显示趋势 ↑/↓/→）+ **文档同步并入标准检查**（CLAUDE.md 行数、rules 路径、roadmap 一致性、stale spec 每次都查）+ **Security 优先用 gitleaks**（fallback grep）。Skills 总数不变（11 个）|
@@ -146,4 +147,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-04（v3.26）
+**最后更新**: 2026-04（v3.27）
