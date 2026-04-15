@@ -231,7 +231,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.23-v3.25），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.24-v3.26），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -284,6 +284,17 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.26 新增**（重点检查）：
+- **`/diagnose` 细节优化**：检查 `.claude/skills/diagnose/SKILL.md` 是否已升级到 v3.26 模板。
+- **核心变化**：
+  - **Step 7 AskUserQuestion 引导**：诊断后弹窗 4 选项（启动 /implement Batch 1 / 写入 Roadmap / 只看报告 / 自定义）
+  - **D9 测试覆盖对接 v3.23 Gate**：扫 spec 的 `[command]` Gate 条件对应测试是否存在，假 Gate 标记 P1
+  - **D11 "重复模式 → lint 建议"**（Addy Osmani 理念）：2+ 次重复反模式 → 独立清单输出具体 ESLint / `.claude/rules/` 配置建议，不和 P0-P3 混淆
+  - **Step 1 自适应文件类型**：从 CLAUDE.md 技术栈段 + package.json/pyproject.toml 推断，不硬编码 `*.ts/*.py/*.java`
+  - **Step 5 加"不做"列**：投入产出比低的问题明确标记（修改面大收益小 / 即将废弃 / 成本收益未明），减少决策负担
+  - **SubAgent 指令加 D9/D11 补充要点**（假 Gate 检查 + lint 建议独立清单）
+- **Phase 4 路线图 "重复模式 → lint 建议" TODO 已打勾**（从 /audit 转移到 /diagnose 实现，更合适）
 
 **v3.25 新增**（重点检查，⚠️ 含 /deep-audit 废弃迁移）：
 - **`/deep-audit` 正式废弃，功能合并到 `/docs`**（MUST 迁移）：
