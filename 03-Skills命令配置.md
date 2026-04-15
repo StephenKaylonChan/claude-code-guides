@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.27
+**版本**: v3.28
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -2634,6 +2634,8 @@ allowed-tools: Read, Bash
 | 角色一致性 | 强 | 最多 5 角色、14 对象/工作流 |
 | Model ID | gemini-3-pro-image | gemini-3.1-flash-image-preview |
 
+> **注**：价格/速度/Model ID 数据截至 2026-04，以 [Google 官方](https://ai.google.dev/) 最新定价为准。
+
 ## 核心差异 — 工作流策略
 
 - **Pro**：精雕细琢单个 prompt，追求一次到位的最高品质
@@ -2645,10 +2647,35 @@ allowed-tools: Read, Bash
 
 ## Step 1: 理解用户需求
 
-询问或从 `$ARGUMENTS` 中提取：
+### 1a. 有参数（`/nbp2 <需求描述>`）
+
+直接从 `$ARGUMENTS` 提取主题，**目标模型默认 NBP2**（性价比高）。如需特殊要求（角色一致性/Pro 模式等），Claude 根据描述推断。
+
+### 1b. 无参数（`/nbp2`）
+
+**MUST 用 AskUserQuestion 一次问清**（避免散文来回）：
+
+```
+Question: 要生成什么图片？选择场景 + 目标模型
+
+Header: "生图需求"
+
+Options:
+1. 社交媒体封面 / 海报（NBP2 默认）
+2. 产品摄影（商业用途）
+3. 电影感场景 / 大幅概念图（建议 Pro）
+4. 角色 / IP 一致性（多图工作流，需 NBP2）
+5. 自定义（自由输入主题 + 需求）
+```
+
+选 5 用户自由输入；选 1-4 → Claude 根据类型自动选择模型并询问具体主题。
+
+### 1c. 按需提取四要素
+
+无论哪种输入方式，最终要明确：
 1. **画面主题** — 要画什么？
 2. **用途场景** — 社交媒体封面？产品图？海报？个人创作？
-3. **目标模型** — 用 Pro（最高品质）还是 NBP2（快速迭代）？默认 NBP2
+3. **目标模型** — Pro（最高品质）或 NBP2（快速迭代）？**默认 NBP2**
 4. **特殊要求** — 需要文字渲染？角色一致性？真实地标？
 
 ## Step 2: 按六要素公式构建 Prompt
@@ -2812,6 +2839,30 @@ No watermark, no text overlays.
 
 </examples>
 ````
+
+**用法示例**：
+
+```bash
+# 有参数（推荐，快速走默认 NBP2）
+/nbp2 一个未来感城市夜景海报
+/nbp2 杂志封面带 "SPRING 2026" 字样
+/nbp2 等距 2.5D 风格的咖啡店插画
+
+# 无参数（AskUserQuestion 弹窗引导）
+/nbp2
+```
+
+**与其他 skill 的关系**：
+
+/nbp2 是**独立工具 skill**，不对接开发工作流（不像 /implement / /done / /release 等配套使用）。
+
+| 场景 | 用哪个 |
+|------|-------|
+| 写 Nano Banana Pro / NBP2 生图 prompt | **`/nbp2`** |
+| 生成 OG 图 / 社交媒体预览图（SEO 场景） | 项目如启用 `claude-seo:seo-image-gen`，参考对应 skill |
+| 项目文档里的示意图 / 架构图 | 不用 /nbp2（用 Mermaid / PlantUML 等代码化工具）|
+
+> /nbp2 专注 Nano Banana 生态。其他生图模型（Midjourney / DALL-E / Stable Diffusion）的 prompt 写法不同，此 skill 不适用。
 
 ---
 
@@ -3381,5 +3432,5 @@ mkdir -p .claude/skills/diagnose
 
 ---
 
-**版本**: v3.27
-**更新日期**: 2026-04（v3.27）
+**版本**: v3.28
+**更新日期**: 2026-04（v3.28）
