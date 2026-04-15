@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.23（2026-04）
+> **版本**: v3.24（2026-04）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -112,6 +112,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.24 | 2026-04 | `/audit` 重新定位为"**浅层快速巡检**"：**参数 5 种简化为 3 种**（`/audit` / `--deep` / `--security`，去掉 `--quick` 和 `--docs`）+ **明确职责边界**（/audit 只发现不改代码 vs /deep-audit 修复 + commit vs /diagnose 架构量化）+ **命令自适应**（从 CLAUDE.md / package.json 读 lint/test/build 命令，不硬编码 pnpm；包管理器自动识别 pnpm/npm/yarn/poetry/pip）+ **AskUserQuestion 修复引导**（4 选项：只看报告 / 启动 /implement 批量修复 / 只修 P0 / 写入 Roadmap TODO）+ **历史对比**（保留 `docs/reports/audit-YYYY-MM-DD.md`，下次审计显示趋势 ↑/↓/→）+ **文档同步并入标准检查**（CLAUDE.md 行数、rules 路径、roadmap 一致性、stale spec 每次都查）+ **Security 优先用 gitleaks**（fallback grep）。Skills 总数不变（11 个）|
 | v3.23 | 2026-04 | `/spec` 重新定位为"讨论成果整理为**执行契约**"+ Gate 三类型机器判定：**Gate 条件带类型标注**（`[auto: 观察表达式]` Claude 只读不判断 / `[command: shell]` 执行 exit code 0 / `[manual]` + **EARS 句式** `While X, when Y, the Z shall W` 弹窗）+ **文档边界声明**（Spec 执行契约，**不是** PRD/RFC/ADR；ADR 不合并进 spec 保留不可变性）+ **使用时机流程图**（初稿时机 vs 定稿时机，迭代式 spec 符合 Brooker 2026 共识）+ **AskUserQuestion 决策点**（分歧确认 / Roadmap 关联 / status 切换 draft→approved）+ **Phase 拆分阈值**（对齐 /implement 硬阈值：≤5 文件/单 Phase）+ frontmatter 精简（去冗余 `phase` 字段）。**连带升级 /done Step 4a**：Gate 验证支持三类型（auto 读取 / command 执行 / manual 弹窗），兼容旧格式视为 manual。设计依据：EARS（Rolls-Royce 2009）、Fitness Functions（Neal Ford）、Kiro + GitHub Spec Kit 社区实践、Martin Fowler 对"AI 自证"的警告。Skills 总数不变（11 个）|
 | v3.22 | 2026-04 | `/handoff` 重新定位为"状态快照 + 下次恢复桥梁"：**参数分流**（默认完整 / `quick` 精简）+ **session-notes 瘦身为 6 段 + 关联指针**（保留叙事性摘要 + git 抓不到的软信息，去掉纯数字 git 统计，合并 Roadmap/Spec 状态到关联指针）+ **修复职责重叠**（不再碰 Spec frontmatter，归 /done 主业）+ **安全化 commit 失败处理**（Hook 拦下 → AskUserQuestion 询问用户，不自动 --no-verify）+ **新增文件 multiSelect 询问**（避免误 stage 临时文件）+ **commit message 复杂改动列候选**（≥4 文件 / 跨模块时弹窗）+ **Gate 满足但未 /done 检测**（提示用户先跑 /done）。Skills 总数不变（11 个）|
 | v3.21 | 2026-04 | `/catchup` 重新定位为"工作上下文重建 + 下一步指引"：**去重加载**（识别 CLAUDE.md 已 @ 的文件不重复读，避免 Token 浪费）+ **参数聚焦模式**（`/catchup auth` 只读相关 spec/commit/文件；`/catchup 昨天做到哪了` 概览模式简要输出）+ **AskUserQuestion 引导下一步**（基于 session-notes/Phase 待办/implementing spec 生成 3-4 个具体候选，不散文询问）+ **和 SessionStart Hook 明确分工**（Hook 跑 git 被动、catchup 恢复深层上下文手动）。Skills 总数不变（11 个）|
@@ -144,4 +145,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-04（v3.23）
+**最后更新**: 2026-04（v3.24）
