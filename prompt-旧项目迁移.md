@@ -37,7 +37,7 @@
 | `docs/ai-context/`（整个目录） | 不再需要 | 内容提取后删除 |
 | `.claude/commands/`（整个目录） | `.claude/skills/` | 升级格式后删除旧目录 |
 | `.claude/commands/audit.md` | `.claude/skills/audit/SKILL.md` | 升级格式，保留核心逻辑 |
-| `.claude/commands/deep-audit.md` | `.claude/skills/deep-audit/SKILL.md` | 升级格式，保留核心逻辑 |
+| `.claude/commands/deep-audit.md` | 废弃（功能合并到 `/docs` v3.25）| v3.25 起 /deep-audit 已废弃，删除目录，其功能由 /docs 四种操作承担 |
 | `.claude/commands/start.md` | `SessionStart` Hook | 废弃，自动替代 |
 | `.claude/commands/end.md` | `Stop` Hook + Auto Memory | 废弃，自动替代 |
 | `.claude/commands/checkpoint.md` | Claude 直接 commit | 废弃，自动替代 |
@@ -95,7 +95,8 @@ cat pyproject.toml 2>/dev/null | head -30
 └── 其余滚动日志内容                       → 丢弃
 
 从 .claude/commands/ 提取：
-├── audit.md、deep-audit.md              → 升级为 Skills 格式保留（提取核心逻辑）
+├── audit.md                             → 升级为 Skills 格式保留（提取核心逻辑）
+│   deep-audit.md                        → v3.25 起废弃，功能合并到 /docs
 └── 其余命令（start/end/checkpoint 等）   → 废弃，由 Hooks 替代
 ```
 
@@ -235,7 +236,7 @@ mkdir -p .claude
 ├── rules/                     # 路径感知规则（按需）
 ├── skills/
 │   ├── audit/SKILL.md         # 从旧 audit.md 升级（保留核心逻辑）
-│   ├── deep-audit/SKILL.md    # 从旧 deep-audit.md 升级（保留核心逻辑）
+│   # (deep-audit/ 目录 v3.25 起废弃，删除)
 │   ├── catchup/SKILL.md       # 新增
 │   ├── handoff/SKILL.md       # 新增（含自动 commit 方案 B）
 │   ├── spec/SKILL.md          # 新增（讨论成果整理为设计文档）
@@ -333,7 +334,7 @@ grep -q "session-notes.md" .gitignore || echo ".claude/session-notes.md" >> .git
 
 ```bash
 echo "=== Skills (应为 11 个) ==="
-for f in audit deep-audit catchup handoff spec task done docs release nbp2 diagnose; do
+for f in audit catchup handoff spec implement done docs release nbp2 diagnose; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 echo "=== Hooks ==="
@@ -406,7 +407,7 @@ echo "退出码: $?"
 - 新的工作流：功能完成 → /simplify → Claude 自动 commit（Hook 验证后）→ 你确认 push
 - 功能收尾：/done 完成了XX（代码验证 + Roadmap/Spec 状态更新）
 - 文档更新：/docs（深度探索代码 → 刷新开发文档）
-- 阶段完成：/release（系统性文档刷新）→ /deep-audit（代码审计）
+- 阶段完成：/release（系统性文档刷新）→ /diagnose（架构量化，如需）
 - 批量变更：/batch "描述"
 - 需求讨论后：/spec（整理讨论成果为设计文档）
 - 中断前：/handoff（自动 commit + 写交接文档）

@@ -15,6 +15,7 @@
 - [x] 代码质量深度诊断工作流 ✅ 2026/03/29 — v3.15 `/diagnose` 全维度代码健康诊断 Skill
 - [x] 测试策略体系 ✅ 2026/03/29 — v3.16 Testing Trophy 集成测试为主 + 完成标准增强 + rules 测试规则
 - [x] `/task` → `/implement` 重命名 + 防面条流程强化 ✅ 2026/04/14 — v3.19 Kent Beck 三红灯 + Tidy First + rg 模式扫描 + ADR 弹窗触发
+- [x] Skills 体系梳理（逐个重新定位） ✅ 2026/04/14-15 — v3.19 /implement、v3.20 /done、v3.21 /catchup、v3.22 /handoff、v3.23 /spec+/done Gate 三类型、v3.24 /audit、**v3.25 /deep-audit 废弃 + /docs 扩展为文档生态守护者**
 - [ ] `/audit` 新增"重复模式 → lint 建议"维度（Addy Osmani "重复犯错升级为 lint 规则"理念）
 - [ ] guides 自身配置优化（已完成基础配置 v3.13）
 

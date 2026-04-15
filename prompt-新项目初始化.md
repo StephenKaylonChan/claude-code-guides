@@ -77,7 +77,7 @@ Stop：是否需要完成通知？（macOS / Linux）
 **Skills 选择**：
 
 ```
-必须：audit、deep-audit、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理）、implement（有纪律的单改动实施）、done（功能完成收尾）、docs（开发文档梳理）、release（Phase 完成系统性文档刷新）、nbp2（AI 生图 Prompt 助手）、diagnose（全维度代码健康诊断）
+必须：audit（浅层巡检）、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理为执行契约）、implement（有纪律的单改动实施）、done（功能交付检查清单）、docs（文档生态守护者：更新/新增/删除/审计 spec-code/ADR/Gate）、release（Phase 完成系统性文档刷新）、nbp2（AI 生图 Prompt 助手）、diagnose（全维度代码健康诊断）
 可选：是否有项目特定的高频操作值得封装为命令？
 ```
 
@@ -189,13 +189,13 @@ mkdir -p docs/roadmap
 │   ├── frontend.md
 │   └── backend.md
 ├── skills/
-│   ├── audit/SKILL.md
-│   ├── deep-audit/SKILL.md
+│   ├── audit/SKILL.md         # 浅层快速巡检
 │   ├── catchup/SKILL.md
-│   ├── handoff/SKILL.md       # 含自动 commit 逻辑（方案B）
-│   ├── spec/SKILL.md          # 讨论成果整理为设计文档
-│   ├── done/SKILL.md          # 功能完成收尾检查
-│   ├── docs/SKILL.md          # 开发文档梳理
+│   ├── handoff/SKILL.md       # 状态快照 + 恢复桥梁
+│   ├── spec/SKILL.md          # 讨论成果 → 执行契约
+│   ├── implement/SKILL.md     # 有纪律的单改动实施
+│   ├── done/SKILL.md          # 功能交付检查清单
+│   ├── docs/SKILL.md          # 文档生态守护者
 │   ├── release/SKILL.md       # Phase 完成文档刷新
 │   └── nbp2/SKILL.md          # AI 生图 Prompt 助手
 ├── agents/                    # 自定义子代理（可选）
@@ -254,17 +254,16 @@ disable-model-invocation: true    # 除非需要自动触发
 
 逐个创建（确保 workflow 步骤完整，不要只复制 frontmatter）：
 
-1. `audit/SKILL.md`：检查命令替换为项目实际的 lint/test 命令
-2. `deep-audit/SKILL.md`：扫描路径替换为项目实际目录结构
-3. `catchup/SKILL.md`：读取 CLAUDE.md 和 session-notes.md 恢复状态
-4. `handoff/SKILL.md`：**使用方案 B** — 先尝试正常 commit → 失败则 `wip:` + `--no-verify` → 写 session-notes.md
-5. `spec/SKILL.md`：讨论成果整理为设计文档，含 Implementation Phases 结构
-6. `implement/SKILL.md`：有纪律的单改动实施，含模式扫描（rg）+ 硬阈值 + Kent Beck 红灯 + Tidy First + ADR AskUserQuestion 触发
-7. `done/SKILL.md`：**注意 argument-hint 必须有**（`<完成了什么功能的描述>`），用户显式描述完成内容
-8. `docs/SKILL.md`：深度探索代码，梳理更新开发文档，支持按范围指定
-9. `release/SKILL.md`：Phase 完成系统性文档刷新（引用 `/docs` 全量 + Changelog + ADR）
-10. `nbp2/SKILL.md`：AI 生图 Prompt 助手（六要素公式 + 进阶技巧）
-11. `diagnose/SKILL.md`：全维度代码健康诊断（13 维度 + 分批重构计划）
+1. `audit/SKILL.md`：浅层巡检（3 种参数 / 自适应命令 / AskUserQuestion 修复引导 / 历史对比）
+2. `catchup/SKILL.md`：工作上下文重建 + 下一步指引（去重加载 / 参数聚焦 / AskUserQuestion 引导下一步）
+3. `handoff/SKILL.md`：状态快照 + 恢复桥梁（参数分流 quick/完整 / 6 段 session-notes / commit 失败 AskUserQuestion 询问，不自动 --no-verify）
+4. `spec/SKILL.md`：讨论成果 → 执行契约（Gate 三类型标注 `[auto]/[command]/[manual]` + EARS 句式 / 使用时机流程图）
+5. `implement/SKILL.md`：有纪律的单改动实施，含模式扫描（rg）+ 硬阈值 + Kent Beck 红灯 + Tidy First + ADR AskUserQuestion 触发
+6. `done/SKILL.md`：功能交付检查清单（9 步 checklist / Gate 三类型验证 / AskUserQuestion 决策点）
+7. `docs/SKILL.md`：**文档生态守护者**——四种操作（更新/新增/删除/审计）+ spec-code 一致性 + ADR 有效性 + Gate 可执行性
+8. `release/SKILL.md`：Phase 完成系统性文档刷新（引用 `/docs` 全量 + Changelog + ADR）
+9. `nbp2/SKILL.md`：AI 生图 Prompt 助手（六要素公式 + 进阶技巧）
+10. `diagnose/SKILL.md`：全维度代码健康诊断（13 维度 + 分批重构计划）
 
 #### 5.4 创建路径感知规则（Monorepo 或前后端分离项目）
 
@@ -307,7 +306,7 @@ CLAUDE.local.md
 
 ```bash
 echo "=== Skills (应为 11 个) ==="
-for f in audit deep-audit catchup handoff spec task done docs release nbp2 diagnose; do
+for f in audit catchup handoff spec implement done docs release nbp2 diagnose; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 echo "=== Hooks ==="
@@ -364,7 +363,7 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 - 子目录 CLAUDE.md: [数量] 个（如有）
 - .claude/rules/: [数量] 个规则文件（如有）
 - Hooks 已启用: [SessionStart / PreToolUse / PostToolUse / PreCompact / Stop / UserPromptSubmit（如有）]
-- Skills: audit / deep-audit / catchup / handoff / spec / task / done / docs / release / nbp2 / diagnose
+- Skills: audit / catchup / handoff / spec / implement / done / docs / release / nbp2 / diagnose（10 个）
 - 开发文档: docs/development/（[已生成的文档列表]）
 - Agent Teams: [已启用 / 未启用]
 
@@ -383,7 +382,7 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 - 接续任务：/catchup
 - 上下文接近 70%：/handoff → /clear → /catchup
 - 每周：/audit
-- 阶段完成：/release（系统性文档刷新）→ /deep-audit（代码审计）
+- 阶段完成：/release（系统性文档刷新）→ /diagnose（架构量化，如需）
 
 ### 参考
 完整使用说明：~/Downloads/00_project/guides/00-日常使用说明.md

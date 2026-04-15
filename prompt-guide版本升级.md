@@ -44,14 +44,17 @@ ls .claude/rules/ 2>/dev/null
 1. `CLAUDE.md`（根目录）
 2. `.claude/settings.json`
 3. `.claude/skills/audit/SKILL.md`
-4. `.claude/skills/deep-audit/SKILL.md`
-5. `.claude/skills/catchup/SKILL.md`
-6. `.claude/skills/handoff/SKILL.md`
-7. `.claude/skills/spec/SKILL.md`
+4. `.claude/skills/catchup/SKILL.md`
+5. `.claude/skills/handoff/SKILL.md`
+6. `.claude/skills/spec/SKILL.md`
+7. `.claude/skills/implement/SKILL.md`（v3.19 从 `task/` 重命名）
 8. `.claude/skills/done/SKILL.md`
-9. `.claude/skills/docs/SKILL.md`
-10. `.claude/skills/implement/SKILL.md`（v3.19 从 `task/` 重命名）
-11. `.claude/skills/diagnose/SKILL.md`
+9. `.claude/skills/docs/SKILL.md`（v3.25 扩展为文档生态守护者）
+10. `.claude/skills/release/SKILL.md`
+11. `.claude/skills/nbp2/SKILL.md`
+12. `.claude/skills/diagnose/SKILL.md`
+
+> **v3.25 起 `deep-audit/SKILL.md` 已废弃**，功能合并到 `/docs`。如项目仍存在该目录，参考下方 v3.25 迁移指令删除。
 12. `.claude/hooks/session-start.sh`
 10. `.claude/hooks/pre-commit-check.sh`
 11. `.claude/hooks/post-write.sh`
@@ -112,9 +115,11 @@ ls .claude/rules/ 2>/dev/null
 - 检查 lint/test 命令是否仍然与项目实际一致
 - 检查扫描路径是否准确
 
-**`deep-audit/SKILL.md`**：
-- 是否包含 `docs/specs/` 检查逻辑（stale spec 检查）
-- 是否覆盖 Phase 级收尾需要的全面审计项
+**`docs/SKILL.md`**（v3.25 扩展）：
+- 是否包含四种操作（更新/新增/删除/审计一致性）
+- 是否含 spec-code 一致性检查（原 deep-audit 功能）
+- 是否含 Gate `[command]` 可执行性检查（v3.23 对接）
+- 是否 `audit` 子模式（专注深度审计）
 
 **`catchup/SKILL.md`**：
 - 检查是否包含读取 `session-notes.md` 的步骤
@@ -226,7 +231,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.22-v3.24），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.23-v3.25），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -279,6 +284,28 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.25 新增**（重点检查，⚠️ 含 /deep-audit 废弃迁移）：
+- **`/deep-audit` 正式废弃，功能合并到 `/docs`**（MUST 迁移）：
+  1. 删除目录：`rm -rf .claude/skills/deep-audit`
+  2. 项目文档里所有 `/deep-audit` 引用改为 `/docs audit`（CLAUDE.md、docs/、README 等）
+  3. 用户习惯迁移：以后用 `/docs audit` 做深度文档审计（spec-code 一致性、ADR 有效性、Gate 可执行性）
+- **`/docs` 扩展为"文档生态守护者"**：检查 `.claude/skills/docs/SKILL.md` 是否已升级到 v3.25 模板。
+- **四种操作**（核心）：
+  - **更新**：文档描述和代码不一致
+  - **新增**：代码有了但文档没有
+  - **删除**：文档还在但代码没了
+  - **审计一致性**：spec 描述 vs 代码、ADR 是否仍生效、Gate `[command]` 是否可执行
+- **新增 `audit` 参数**：`/docs audit` 专注深度审计模式（不改架构文档）
+- **Gate 可执行性检查**（对接 v3.23）：扫描 implementing/implemented 的 spec 的 `[command]` Gate 条件，验证命令是否仍可执行
+- **AskUserQuestion 修改前审核**：改动 >10 处 → 弹窗让用户审核（只修 P0 / 全部修 / 只生成报告 / 自定义）
+- **历史对比**：保留 `docs/reports/docs-YYYY-MM-DD.md`，下次对比趋势
+- **默认不 push**（从 /deep-audit 继承的修复）
+- **三个审查类命令分工明确**：
+  - `/audit` = 代码质量 + 依赖 + 安全（浅层）
+  - `/docs` = 文档一致性（含 spec/ADR）
+  - `/diagnose` = 架构健康（13 维度量化）
+- **Skills 总数 11 → 10**（移除 /deep-audit）
 
 **v3.24 新增**（重点检查）：
 - **`/audit` 重新定位为"浅层快速巡检"**：检查 `.claude/skills/audit/SKILL.md` 是否已升级到 v3.24 模板。
@@ -494,10 +521,14 @@ chmod +x .claude/hooks/*.sh
 **⛔ 运行以下命令验证，输出完整结果**（不可跳过）：
 
 ```bash
-echo "=== Skills (应为 11 个) ==="
-for f in audit deep-audit catchup handoff spec task done docs release nbp2 diagnose; do
+echo "=== Skills (应为 10 个，v3.25 起 /deep-audit 废弃) ==="
+for f in audit catchup handoff spec implement done docs release nbp2 diagnose; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
+# 验证旧 /deep-audit 是否已删除
+if [ -d .claude/skills/deep-audit ]; then
+  echo "  ⚠️ deep-audit/ 目录仍存在，请按 v3.25 迁移指令删除（功能已合并到 /docs）"
+fi
 echo "=== Hooks ==="
 ls -la .claude/hooks/*.sh 2>/dev/null || echo "  ❌ 无 hook 脚本"
 echo "=== Settings ==="
@@ -530,7 +561,7 @@ find docs -type f -name "*.md" 2>/dev/null | sort
 
 ### 未改动（已是最新）
 - SessionStart / PreToolUse / PostToolUse Hook：配置正确
-- audit / deep-audit / catchup Skill：内容准确
+- audit / catchup / docs（v3.25 扩展）Skill：内容准确
 - .claude/rules/：路径配置正确
 - ...
 
