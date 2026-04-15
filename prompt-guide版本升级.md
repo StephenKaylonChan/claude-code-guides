@@ -231,7 +231,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.24-v3.26），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.25-v3.27），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -284,6 +284,27 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.27 新增**（重点检查）：
+- **`/release` 重新定位为"Phase 里程碑工作流（含可选对外发版）"**：检查 `.claude/skills/release/SKILL.md` 是否已升级到 v3.27 模板。
+- **核心洞察**：明确区分两件事——Phase 完成（内部里程碑）vs 对外发版（外部里程碑）。大多数 Phase 完成**不需要**对外发版。
+- **参数分流**：
+  - `/release`（默认）= **模式 A** Phase 内部里程碑
+  - `/release --publish` = **模式 A+B** 加版本号 + tag + 对外 Changelog
+- **模式 A 核心改动**：
+  - Step 1 对接 v3.25 /docs：`/docs`（无参全量守护四种操作）
+  - Step 1b（可选）：`/docs audit` 深度审计（AskUserQuestion 询问）
+  - Step 2 Phase 开始日期三种 fallback（Phase frontmatter → 上次 /release commit → 第一个 commit）
+  - Step 3 ADR 检查 AskUserQuestion（对齐 v3.19 四类触发，基于 commit message 推断）
+  - Step 4 生成**内部 Changelog**（Keep a Changelog 格式，项目团队可见）
+  - Step 7 精确 git add（不用 `git add docs/`）
+- **模式 B 额外（--publish）**：
+  - Step 6a 版本号升级（AskUserQuestion major/minor/patch）
+  - Step 6b 生成**对外 Changelog**（用户可见，和内部分开，写入 CHANGELOG.md）
+  - Step 6c git tag（annotated / lightweight / 跳过）
+- **默认不 push**（对齐 v3.25 /docs）
+- **Step 8 AskUserQuestion 引导下一步**（push / /diagnose / Phase N+1 规划 / 其他）
+- **明确排除**：hotfix 临时发版 / 日常文档刷新（/docs）/ 代码质量（/audit 或 /diagnose）
 
 **v3.26 新增**（重点检查）：
 - **`/diagnose` 细节优化**：检查 `.claude/skills/diagnose/SKILL.md` 是否已升级到 v3.26 模板。
