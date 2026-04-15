@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.23
+**版本**: v3.24
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -111,7 +111,30 @@ hooks:                                # Skill 作用域内的 Hooks（详见文�
 
 ---
 
-### 2.1 /audit — 项目健康检查
+### 2.1 /audit — 浅层快速巡检
+
+**用途**：5-10 分钟内跑一遍找"**明显问题**"——超行、硬编码密钥、过时依赖、.env 未忽略、stale spec 等。**不做深度分析、不改代码**。日常或 PR 前用。
+
+**定位**：**浅层快速巡检**。只**发现问题 + 弹窗询问修复策略**，不自动修复（那是 /deep-audit 的职责）。
+
+### 和 /deep-audit、/diagnose 的分工
+
+| 场景 | 用哪个 | 耗时 | 改代码？|
+|------|-------|-----|-------|
+| **日常快速巡检**（PR 前、每周、改配置后） | **`/audit`** | 5-10 分钟 | ❌ 只发现+询问 |
+| **PR 前安全扫描** | `/audit --security` | 5 分钟 | ❌ 只发现 |
+| **大版本前含构建测试的全面检查** | `/audit --deep` | 20-30 分钟 | ❌ 只发现 |
+| **Phase 完成前代码/文档一致性审计 + 修复** | `/deep-audit` | 30-60 分钟 | ✅ 自动修复 + commit |
+| **重构前代码架构量化评估** | `/diagnose` | 20-40 分钟 | ❌ 输出重构计划 |
+
+### v3.24 变化
+
+- **参数 5 种简化为 3 种**：`/audit` / `/audit --deep` / `/audit --security`（去掉 `--quick` 和 `--docs`——quick 和标准差别太小，docs 归 /deep-audit）
+- **命令自适应**：从 CLAUDE.md "常用命令" 段或 package.json 读实际 lint / test 命令（不硬编码 pnpm）
+- **AskUserQuestion 修复引导**：发现问题后弹窗询问处理方式
+- **历史对比**：保留 `docs/reports/audit-YYYY-MM-DD.md`，下次审计对比趋势
+- **文档同步并入标准检查**：CLAUDE.md 行数、rules 路径、roadmap 一致性、stale spec 每次都查
+- **Security 优先用 gitleaks**（如已安装），fallback grep
 
 **文件路径**: `.claude/skills/audit/SKILL.md`
 
@@ -119,20 +142,39 @@ hooks:                                # Skill 作用域内的 Hooks（详见文�
 ---
 name: audit
 description: |
-  项目健康检查。当需要检查代码质量、依赖安全、文档同步状态时使用。
-  触发关键词：健康检查、audit、代码质量检查、依赖检查
-argument-hint: "[--quick | --full | --security | --docs]"
+  浅层快速巡检项目健康状况（5-10 分钟）。只发现问题，不改代码。
+  默认标准模式；`--deep` 加构建/测试覆盖率；`--security` 专项安全扫描。
+  触发关键词：健康检查、audit、快速巡检、代码质量检查、依赖检查
+argument-hint: "[--deep | --security | 空=标准]"
 allowed-tools: Read, Bash, Grep, Glob
 disable-model-invocation: true
 ---
 
 <task>
-对项目进行健康检查，根据参数决定检查深度。
+对项目进行浅层快速巡检，发现"明显问题"。
+**只发现问题 + 询问修复策略，不自动改代码**（那是 /deep-audit 的职责）。
 </task>
 
 <workflow>
 
-## Step 0: 获取基本信息
+## Step 0: 读取项目实际命令
+
+从项目上下文推断实际 lint / test / build 命令（**不硬编码**）：
+
+1. 读 `CLAUDE.md` 的"常用命令"段落
+2. 读 `package.json` 的 `scripts` 字段
+3. 推断出的命令写入内部变量：`LINT_CMD`、`TEST_CMD`、`BUILD_CMD`
+
+**推断失败**（找不到这些命令） → AskUserQuestion：
+```
+Question: 未找到项目的 lint / test / build 命令，如何处理？
+
+Options:
+1. 跳过相关检查（只做不依赖这些命令的项目）
+2. 手动指定命令（自由输入）
+```
+
+## Step 1: 基本信息
 
 ```bash
 echo "=== 项目审计 $(date '+%Y-%m-%d %H:%M') ==="
@@ -142,103 +184,205 @@ echo "--- 未提交文件 ---"
 git status --short | head -20
 ```
 
-## Step 1: 解析参数
+## Step 2: 解析参数
 
-| 参数 | 检查范围 | 适用场景 |
-|------|---------|---------|
-| `--quick` | Git 状态 + CLAUDE.md 行数 | 每天快速检查 |
-| 无参数 | 代码质量 + 依赖 + 文档同步 | 每周常规 |
-| `--full` | 全部 + 构建测试 | 大版本发布前 |
-| `--security` | 安全漏洞 + 敏感信息扫描 | 上线前 |
-| `--docs` | 文档与代码同步深度检查 | Phase 完成后 |
+| 参数 | 执行哪些 Step | 适用场景 |
+|------|-------------|---------|
+| 无参数 | Step 3（标准）+ Step 6（报告） | 日常 / 每周 / PR 前 |
+| `--deep` | Step 3 + Step 4（构建测试）+ Step 6 | 大版本发布前 |
+| `--security` | Step 5（安全专项）+ Step 6 | 上线前 / 定期安全审计 |
 
-## Step 2: Quick 模式检查
+## Step 3: 标准巡检
 
-```bash
-# CLAUDE.md 行数（超过 200 行需要拆分）
-wc -l CLAUDE.md 2>/dev/null || echo "CLAUDE.md 不存在"
-
-# 未提交文件数量
-git status --short | wc -l
-```
-
-## Step 3: 标准模式检查（无参数）
-
-**代码质量**：
-```bash
-# ESLint 检查
-pnpm lint 2>&1 | tail -5
-
-# TODO/FIXME 统计
-grep -r "TODO\|FIXME\|HACK\|XXX" apps/ --include="*.ts" --include="*.tsx" --include="*.py" | wc -l
-```
-
-**依赖健康**：
-```bash
-# 过时依赖
-pnpm outdated 2>/dev/null | head -20
-
-# 安全漏洞
-pnpm audit --audit-level=high 2>&1 | tail -10
-```
-
-**文档同步**：
-- CLAUDE.md 是否在 200 行以内？
-- 技术栈版本是否与 package.json 一致？
-- .claude/rules/ 路径是否仍然有效？
-- docs/roadmap/ 是否存在？当前 Phase 文件是否与 CLAUDE.md 中的 `@` 引用一致？
-- docs/specs/ 中是否有状态为"实施中"超过 2 周且无相关 commit 的 spec（视为 stale）？是否有状态为"已确认"但未开始实施的 spec？
-
-## Step 4: Full 模式额外检查（--full）
+### 3a. 代码质量
 
 ```bash
-# 前端构建
-pnpm build:web 2>&1 | tail -5
+# Lint（从 Step 0 推断）
+$LINT_CMD 2>&1 | tail -5
 
-# 测试覆盖率
-pnpm test --coverage 2>&1 | tail -10
+# TODO/FIXME/HACK 统计（自适应识别源码目录）
+# 根据项目结构自动选择目录（apps/、src/、packages/ 等）
+find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.py" -o -name "*.java" \) \
+  -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' \
+  -exec grep -l "TODO\|FIXME\|HACK\|XXX" {} \; 2>/dev/null | wc -l
 ```
 
-## Step 5: Security 模式（--security）
+### 3b. 依赖健康（自适应包管理器）
 
 ```bash
-# 扫描硬编码密钥
-grep -r "password\|secret\|api_key\|token" apps/ --include="*.ts" --include="*.py" \
-  -i | grep -v "test\|spec\|example\|.env" | head -10
+# 检测包管理器
+if [ -f pnpm-lock.yaml ]; then PM=pnpm; fi
+if [ -f yarn.lock ]; then PM=yarn; fi
+if [ -f package-lock.json ]; then PM=npm; fi
+if [ -f poetry.lock ]; then PM=poetry; fi
+if [ -f pyproject.toml ] && [ -z "$PM" ]; then PM=pip; fi
 
-# .env 是否在 .gitignore
-grep "^\.env" .gitignore || echo "⚠️ .env 可能未被忽略"
+# 过时依赖 + 漏洞扫描（按包管理器）
+case "$PM" in
+  pnpm|npm|yarn) $PM outdated 2>/dev/null | head -20; $PM audit --audit-level=high 2>&1 | tail -10 ;;
+  poetry) poetry show --outdated 2>/dev/null | head -20 ;;
+  pip) pip list --outdated 2>/dev/null | head -20 ;;
+esac
 ```
 
-## Step 6: 输出审计报告
+### 3c. 文档同步（原 --docs，现在合并到标准）
+
+- [ ] CLAUDE.md 是否 < 200 行？（`wc -l CLAUDE.md`）
+- [ ] 技术栈版本与 package.json 一致？
+- [ ] `.claude/rules/` 的 paths glob 是否仍然匹配实际文件？
+- [ ] `docs/roadmap/` 与 CLAUDE.md 中 `@` 引用一致？
+- [ ] `docs/specs/` 中是否有 `status: implementing` **超过 2 周** 且无相关 commit 的 stale spec？
+- [ ] 是否有 `status: approved` 但**从未开始实施**的 spec？
+
+### 3d. Git 状态
+
+- [ ] 未提交文件数（> 20 → 提醒）
+- [ ] 未推送 commit 数（提醒 push）
+- [ ] 是否有 WIP commit 累积 > 3 天未整理？
+
+## Step 4: `--deep` 额外检查
+
+```bash
+# 构建（从 Step 0 推断）
+$BUILD_CMD 2>&1 | tail -5
+
+# 测试覆盖率（从 Step 0 推断）
+$TEST_CMD --coverage 2>&1 | tail -10
+```
+
+## Step 5: `--security` 专项安全
+
+### 5a. 硬编码密钥扫描（优先 gitleaks）
+
+```bash
+# 优先用 gitleaks（更精准，误报低）
+if command -v gitleaks &>/dev/null; then
+  gitleaks detect --no-git --redact 2>&1 | tail -20
+else
+  # fallback 到 grep（不推荐，误报多）
+  echo "⚠️ gitleaks 未安装，建议：brew install gitleaks"
+  find . -type f \( -name "*.ts" -o -name "*.py" -o -name "*.java" \) \
+    -not -path '*/node_modules/*' -not -path '*/.git/*' \
+    -exec grep -iE "(password|secret|api[_-]?key|token)\s*=\s*['\"][^'\"]+['\"]" {} + \
+    2>/dev/null | grep -v "test\|spec\|example" | head -10
+fi
+```
+
+### 5b. 环境文件检查
+
+- [ ] `.env` 是否在 `.gitignore`？
+- [ ] `.env.example` 是否存在（模板可复制）？
+- [ ] 未跟踪的 `.env*` 文件列表（可能被误提交）
+
+### 5c. 依赖漏洞高危
+
+```bash
+# 只看 high / critical 级别
+case "$PM" in
+  pnpm|npm|yarn) $PM audit --audit-level=high 2>&1 ;;
+esac
+```
+
+## Step 6: 历史对比 + 输出报告
+
+### 6a. 读取上次审计结果（如有）
+
+```bash
+LAST_REPORT=$(ls -t docs/reports/audit-*.md 2>/dev/null | head -1)
+```
+
+有则读取关键数值（CLAUDE.md 行数、过时依赖数、未提交文件数等）用于趋势对比。
+
+### 6b. 写入本次报告
+
+路径：`docs/reports/audit-YYYY-MM-DD.md`
+
+内容：
+
+```markdown
+# 项目审计报告 - YYYY-MM-DD
+
+**模式**: 标准 / --deep / --security
+
+## 总览（含趋势对比）
+
+| 维度 | 状态 | 数值 | 上次 | 趋势 |
+|------|------|-----|------|------|
+| 代码质量 | ✅/⚠️/❌ | [N] warnings | [M] | ↑/↓/→ |
+| 依赖健康 | ✅/⚠️/❌ | [N] 过时 / [M] 高危 | ... | ... |
+| 文档同步 | ✅/⚠️/❌ | CLAUDE.md [N] 行 | [M] | ... |
+| Git 状态 | ✅/⚠️/❌ | [N] 未提交 / [M] 未推送 | ... | ... |
+
+## 🔴 P0 立即处理
+[Critical 问题]
+
+## 🟡 P1 本周处理
+[Warning 问题]
+
+## 🟢 P2 有空再说
+[Info 问题]
+
+## 📈 趋势分析
+[和上次对比：哪些恶化，哪些改善]
+```
+
+### 6c. AskUserQuestion 引导修复
+
+**有问题** → 弹窗：
 
 ```
-## 📋 项目审计报告
+Question: 发现问题：P0 [X] 个 / P1 [Y] 个 / P2 [Z] 个。下一步？
 
-**时间**: [当前时间]
-**模式**: [quick/标准/full/security/docs]
+Options:
+1. (Recommended) 只看报告，我自己决定（报告已写入 docs/reports/）
+2. 启动 /implement 批量修复（按 P0 → P1 → P2 顺序）
+3. 只处理 P0（立即修复 Critical）
+4. 生成 TODO 清单到 Roadmap（留给后续）
+```
 
-### 总览
-| 维度 | 状态 | 说明 |
-|------|------|------|
-| 代码质量 | ✅/⚠️/❌ | [ESLint errors/warnings 数量] |
-| 依赖健康 | ✅/⚠️/❌ | [过时依赖数] |
-| 文档同步 | ✅/⚠️/❌ | [CLAUDE.md 行数] |
-| Git 状态 | ✅/⚠️/❌ | [未提交文件数] |
+选 2/3 → 调用 /implement 批量模式执行修复。
+选 1/4 → 仅输出报告。
 
-### 🔴 需要立即处理
-[列出 Critical 问题]
+## Step 7: 输出确认
 
-### 🟡 建议本周处理
-[列出 Warning 问题]
+```
+✅ 审计完成（模式：标准 / --deep / --security）
 
-### 🎯 行动建议（优先级排序）
-1. [最重要的问题]
-2. [次要问题]
+━━━━━━━━━━━━━━━━━━━━━━━━
+问题统计：P0 [X] / P1 [Y] / P2 [Z]
+趋势：[恶化 / 持平 / 改善]（对比 [上次日期]）
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+报告：docs/reports/audit-YYYY-MM-DD.md
+下一步：[根据弹窗选择输出]
 ```
 
 </workflow>
 ````
+
+**用法示例**：
+
+```bash
+# 日常 / PR 前 / 每周
+/audit
+
+# 大版本发布前（含构建 + 测试覆盖率）
+/audit --deep
+
+# 上线前 / 定期安全审计
+/audit --security
+```
+
+**与相关命令的关系**：
+
+| 场景 | 用哪个 |
+|------|-------|
+| 日常快速发现明显问题 | **`/audit`** |
+| 深度逐文件检查代码-文档一致性 + 修复 | `/deep-audit` |
+| 代码架构量化评估（13 维度） | `/diagnose` |
+| 发现问题后批量修复 | `/implement`（批量模式） |
+
+> **/audit 不改代码**——只发现问题 + 弹窗询问修复策略。要修复走 /implement 或 /deep-audit。
 
 ---
 
@@ -2832,7 +2976,7 @@ Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版�
 **何时用**：需要定期检查状态或重复执行任务时。
 
 ```bash
-/loop 5m /audit --quick        # 每 5 分钟跑一次快速审查
+/loop 1d /audit                # 每天跑一次健康巡检
 /loop 10m "检查 CI 状态"       # 每 10 分钟检查 CI
 ```
 
@@ -2907,10 +3051,9 @@ mkdir -p .claude/skills/diagnose
 ### 4.4 使用方式
 
 ```bash
-/audit              # 标准健康检查
-/audit --quick      # 快速检查
-/audit --security   # 安全扫描（上线前）
-/audit --full       # 完整检查（大版本后）
+/audit              # 浅层快速巡检（日常 / PR 前 / 每周）
+/audit --deep       # 加构建 + 测试覆盖率（大版本发布前）
+/audit --security   # 专项安全扫描（上线前 / 定期）
 
 /deep-audit         # 全面深度审计（Phase 完成后）
 /deep-audit --no-fix    # 仅生成报告
@@ -2938,5 +3081,5 @@ mkdir -p .claude/skills/diagnose
 
 ---
 
-**版本**: v3.23
-**更新日期**: 2026-04（v3.23）
+**版本**: v3.24
+**更新日期**: 2026-04（v3.24）
