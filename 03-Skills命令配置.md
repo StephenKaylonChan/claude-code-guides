@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.24
+**版本**: v3.25
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -104,7 +104,7 @@ hooks:                                # Skill 作用域内的 Hooks（详见文�
 
 | 类别 | Skills | 说明 |
 |------|--------|------|
-| **质量审查** | `/audit`、`/deep-audit`、`/diagnose` | 项目健康检查、文档一致性审计、代码架构诊断 |
+| **质量审查** | `/audit`、`/diagnose` | 项目健康浅层巡检、代码架构量化诊断（文档一致性归 `/docs`）|
 | **开发流程** | `/catchup`、`/handoff`、`/spec`、`/implement`、`/done` | 上下文恢复、会话交接、设计文档、单改动实施、收尾检查 |
 | **文档管理** | `/docs`、`/release` | 开发文档梳理、Phase 系统性刷新 |
 | **工具** | `/nbp2` | AI 生图 Prompt 助手 |
@@ -115,21 +115,21 @@ hooks:                                # Skill 作用域内的 Hooks（详见文�
 
 **用途**：5-10 分钟内跑一遍找"**明显问题**"——超行、硬编码密钥、过时依赖、.env 未忽略、stale spec 等。**不做深度分析、不改代码**。日常或 PR 前用。
 
-**定位**：**浅层快速巡检**。只**发现问题 + 弹窗询问修复策略**，不自动修复（那是 /deep-audit 的职责）。
+**定位**：**浅层快速巡检**。只**发现问题 + 弹窗询问修复策略**，不自动修复（代码问题交 `/implement`，文档问题交 `/docs`）。
 
-### 和 /deep-audit、/diagnose 的分工
+### 和 /docs、/diagnose 的分工
 
 | 场景 | 用哪个 | 耗时 | 改代码？|
 |------|-------|-----|-------|
 | **日常快速巡检**（PR 前、每周、改配置后） | **`/audit`** | 5-10 分钟 | ❌ 只发现+询问 |
 | **PR 前安全扫描** | `/audit --security` | 5 分钟 | ❌ 只发现 |
 | **大版本前含构建测试的全面检查** | `/audit --deep` | 20-30 分钟 | ❌ 只发现 |
-| **Phase 完成前代码/文档一致性审计 + 修复** | `/deep-audit` | 30-60 分钟 | ✅ 自动修复 + commit |
+| **代码/文档一致性审计 + 文档修复**（spec/ADR 准确性、Gate 可执行性） | `/docs`（文档生态守护者） | 30-60 分钟 | ✅ 只改文档 + commit |
 | **重构前代码架构量化评估** | `/diagnose` | 20-40 分钟 | ❌ 输出重构计划 |
 
 ### v3.24 变化
 
-- **参数 5 种简化为 3 种**：`/audit` / `/audit --deep` / `/audit --security`（去掉 `--quick` 和 `--docs`——quick 和标准差别太小，docs 归 /deep-audit）
+- **参数 5 种简化为 3 种**：`/audit` / `/audit --deep` / `/audit --security`（去掉 `--quick` 和 `--docs`——quick 和标准差别太小，docs 归 /docs）
 - **命令自适应**：从 CLAUDE.md "常用命令" 段或 package.json 读实际 lint / test 命令（不硬编码 pnpm）
 - **AskUserQuestion 修复引导**：发现问题后弹窗询问处理方式
 - **历史对比**：保留 `docs/reports/audit-YYYY-MM-DD.md`，下次审计对比趋势
@@ -152,7 +152,7 @@ disable-model-invocation: true
 
 <task>
 对项目进行浅层快速巡检，发现"明显问题"。
-**只发现问题 + 询问修复策略，不自动改代码**（那是 /deep-audit 的职责）。
+**只发现问题 + 询问修复策略，不自动改代码/文档**（代码归 `/implement`，文档归 `/docs`）。
 </task>
 
 <workflow>
@@ -378,176 +378,15 @@ Options:
 | 场景 | 用哪个 |
 |------|-------|
 | 日常快速发现明显问题 | **`/audit`** |
-| 深度逐文件检查代码-文档一致性 + 修复 | `/deep-audit` |
+| 深度逐文件检查代码-文档一致性 + 修文档 | `/docs`（文档生态守护者） |
 | 代码架构量化评估（13 维度） | `/diagnose` |
 | 发现问题后批量修复 | `/implement`（批量模式） |
 
-> **/audit 不改代码**——只发现问题 + 弹窗询问修复策略。要修复走 /implement 或 /deep-audit。
+> **/audit 不改代码**——只发现问题 + 弹窗询问修复策略。要修复走 `/implement`（代码）或 `/docs`（文档）。
 
 ---
 
-### 2.2 /deep-audit — 全面深度审计
-
-**文件路径**: `.claude/skills/deep-audit/SKILL.md`
-
-````markdown
----
-name: deep-audit
-description: |
-  全面深度审计，逐文件检查代码与文档一致性，自动修复并提交。
-  Phase 完成后、大版本发布前使用。
-argument-hint: "[--no-fix | --no-push]"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-disable-model-invocation: true
----
-
-<task>
-执行全面深度审计：扫描所有代码文件和文档，识别不一致，自动修复，提交变更。
-
-**默认行为**：审计 → 修复 → 提交
-**参数**：
-- `--no-fix`: 仅审计报告，不修复
-- `--no-push`: 修复并提交，但不推送
-</task>
-
-<workflow>
-
-## Step 0: 初始化
-
-```bash
-AUDIT_DATE=$(date +%Y-%m-%d)
-AUDIT_TIME=$(date +%H:%M)
-echo "=== 深度审计开始 $AUDIT_DATE $AUDIT_TIME ==="
-```
-
-## Step 1: 变更摘要 + 代码结构扫描
-
-先定位"上次审计以来改了什么"，再全量扫描：
-
-```bash
-# 最近变更摘要（优先扫描这些区域）
-echo "=== 最近 30 个 commit ==="
-git log --oneline -30
-echo "=== 变更密集的文件 ==="
-git log --since="1 month ago" --name-only --pretty=format: | sort | uniq -c | sort -rn | head -20
-echo "=== 新增的文件 ==="
-git log --since="1 month ago" --diff-filter=A --name-only --pretty=format: | sort -u
-```
-
-然后全量扫描所有源文件，记录实际状态：
-
-```bash
-# 前端文件统计
-find apps/web/src -name "*.tsx" -o -name "*.ts" | wc -l
-find apps/web/src/components -name "*.tsx" | sort
-
-# 后端文件统计
-find apps/api -name "*.py" | wc -l
-
-# 所有文档文件
-find . -name "*.md" -not -path "*/node_modules/*" | sort
-```
-
-**审计优先级**：Step 2-3 MUST 优先检查上方标记的变更密集区域和新增文件，确保这些区域的文档覆盖完整。
-
-## Step 2: 文档系统检查
-
-逐一读取并验证：
-
-- `CLAUDE.md`：行数是否 < 200？内容是否准确？
-- `.claude/rules/`：路径 glob 是否仍然匹配实际文件？
-- `docs/roadmap/`：各 Phase 功能描述是否准确反映代码现状？README.md 进度统计是否正确？
-- `docs/specs/`：各 spec 的设计描述是否仍然准确反映代码现状？状态是否正确（是否有"实施中"但功能已完成的 spec）？
-- `docs/architecture/README.md`：架构认知地图是否与代码现状一致（模块划分、组件分层、数据流、非直觉设计）？
-- `docs/architecture/adr/`：ADR 是否反映实际决策？
-- `docs/development/`：部署文档和上手指南是否与代码同步？
-
-## Step 3: 对比分析
-
-**组件 vs 文档**：
-- 实际组件数 vs 文档记录数
-- 找出文档缺失的组件
-
-**API 自动文档**：
-- 检查 FastAPI `/docs` 或 springdoc `/swagger-ui` 是否正常可访问
-- 检查 CLAUDE.md 中是否指明了 API 路由和数据模型的源码路径
-
-**package.json vs CLAUDE.md**：
-- 实际依赖版本 vs CLAUDE.md 声明的版本
-
-## Step 4: 识别问题，按优先级分类
-
-```
-P0 - 严重（立即修复）:
-1. CLAUDE.md 内容与代码不符（会让 Claude 理解错误）
-2. 安全漏洞或硬编码密钥
-
-P1 - 中等（今日修复）:
-1. 文档缺失的组件/API
-2. 版本声明不一致
-
-P2 - 轻微（本周修复）:
-1. 冗余文档内容
-2. 过期的注释
-```
-
-## Step 5: 生成审计报告
-
-写入 `docs/reports/deep-audit-$AUDIT_DATE.md`
-
-## Step 6: 执行修复（除非 --no-fix）
-
-按 P0 → P1 → P2 顺序修复：
-- 更新 CLAUDE.md
-- 更新 .claude/rules/
-- 更新 docs/ 各文档
-
-## Step 7: 提交（除非 --no-push）
-
-```bash
-git add .
-git commit -m "docs: 深度审计与自动优化 $AUDIT_DATE
-
-- 修复 P0 问题: [数量] 处
-- 修复 P1 问题: [数量] 处
-- 生成审计报告: docs/reports/deep-audit-$AUDIT_DATE.md
-
-🤖 Generated with Claude Code"
-
-# 如果没有 --no-push 参数
-git push
-```
-
-## Step 8: 输出完成报告
-
-```
-═══════════════════════════════════
-✅ 深度审计完成
-═══════════════════════════════════
-
-📊 扫描统计:
-├── 代码文件: [X] 个
-├── 文档文件: [X] 个
-└── 检查项目: [X] 项
-
-🔧 修复统计:
-├── P0 严重: [X] 处 ✅
-├── P1 中等: [X] 处 ✅
-└── P2 轻微: [X] 处 ✅
-
-📝 报告: docs/reports/deep-audit-$AUDIT_DATE.md
-⏰ 下次建议: 下一个 Phase 完成后
-═══════════════════════════════════
-```
-
-</workflow>
-````
-
----
-
-
-
-### 2.3 /catchup — 工作上下文重建 + 下一步指引
+### 2.2 /catchup — 工作上下文重建 + 下一步指引
 
 **用途**：在 `/clear` 之后、或新会话开始（隔了几天）时，快速重建工作状态——**只读 @ 不会自动加载的**（避免重复读），支持参数聚焦，用 **AskUserQuestion** 引导下一步。
 
@@ -753,7 +592,7 @@ Options:
 
 ---
 
-### 2.4 /handoff — 会话状态快照 + 下次恢复桥梁
+### 2.3 /handoff — 会话状态快照 + 下次恢复桥梁
 
 **用途**：会话中断前（/clear 之前 / 结束一天任务未完成 / 临时中断 / WIP 状态）生成结构化交接，供下次 /catchup 快速恢复。
 
@@ -1054,7 +893,7 @@ Spec Gate 检测：
 
 ---
 
-### 2.5 /spec — 讨论成果整理为执行契约
+### 2.4 /spec — 讨论成果整理为执行契约
 
 **用途**：需求讨论到一定程度后，将对话中的讨论成果整理为**结构化执行契约**，持久化到 `docs/specs/` 目录。支持增量更新（跨多次上下文持续完善同一份 spec）。
 
@@ -1460,7 +1299,7 @@ Gate 类型分布：[auto] X 条 / [command] Y 条 / [manual] Z 条
 
 ---
 
-### 2.6 /implement — 有纪律的单改动实施
+### 2.5 /implement — 有纪律的单改动实施
 
 **用途**：处理不需要 Spec 的单个代码改动——业务小需求、Bug 修复、功能微调、技术改进。与 `/spec` 互补：`/spec` 关注"做什么"（产品/UI/API 设计讨论），`/implement` 关注"**在现有代码里怎么做才一致**"（代码层面的快速对齐）。支持批量模式，一个会话连续处理多个改动（每个独立走完整流程）。
 
@@ -1690,7 +1529,7 @@ Options:
 
 ---
 
-### 2.7 /done — 功能交付检查清单
+### 2.6 /done — 功能交付检查清单
 
 **用途**：功能或 Spec Phase 完成 commit 之后，**按 checklist 逐项验证交付完整性**——测试覆盖、Roadmap 状态、Spec 进度、开发文档、代码审查。像飞行员起飞前的 checklist：逐项检查"是否到位"，不到位就**弹窗询问**（AskUserQuestion），到位就放行。
 
@@ -2070,9 +1909,37 @@ Roadmap Phase 状态：还剩 [M] 个功能 / 🎯 本 Phase 全部完成，已�
 
 ---
 
-### 2.8 /docs — 开发文档梳理
+### 2.7 /docs — 文档生态守护者
 
-**用途**：深度探索项目代码，梳理并更新开发文档。可全量刷新，也可按范围指定。日常高频使用，保持文档与代码同步。
+**用途**：对照代码实际状态，对项目所有文档做**四种操作**——更新 / 新增 / 删除 / 审计一致性。**不只局限于更新**——发现代码有文档没有 → 新增；文档还在代码没了 → 删除；spec/ADR 描述对不上代码 → 更新或标记失效。
+
+**定位**：**文档生态守护者**。职责范围覆盖 `CLAUDE.md`、`docs/architecture/`、`docs/development/`、`docs/specs/`、`docs/architecture/adr/` 等所有文档。核心原则：**文档必须反映代码实际状态**。
+
+### 四种操作
+
+| 操作 | 触发条件 | 举例 |
+|------|---------|------|
+| **更新** | 文档描述和代码不一致 | CLAUDE.md 技术栈版本过时 |
+| **新增** | 代码有了但文档没有 | 新增模块但架构文档没写 |
+| **删除** | 文档还在但代码没了 | 旧组件已删除但文档还引用 |
+| **审计一致性** | 跨文档交叉验证 | spec 描述 vs 代码实现、ADR 是否仍生效、Gate `[command]` 是否可执行 |
+
+### v3.25 重要变化
+
+- **定位扩展**：从"开发文档梳理"扩展为"文档生态守护者"（四种操作）
+- **合并 /deep-audit 功能**（已废弃）：逐文件代码-文档一致性审计、spec/ADR 审计、历史对比
+- **Gate 可执行性检查**（v3.23 对接）：每个 `implementing` / `implemented` 的 spec 的 `[command]` Gate 条件是否仍能跑
+- **AskUserQuestion 修改前审核**：发现大量改动（>10 处）时弹窗让用户审核
+- **历史对比**：保留 `docs/reports/docs-YYYY-MM-DD.md`，下次对比趋势
+- **默认不 push**（从 /deep-audit 继承的修复）
+
+### 和 /audit、/diagnose 的分工
+
+| 维度 | 命令 | 做什么 |
+|------|------|-------|
+| **代码质量 + 依赖 + 安全** | `/audit` | 浅层巡检发现明显问题（不改代码/文档）|
+| **文档一致性**（含 spec/ADR） | **`/docs`** | 四种操作守护文档生态（改文档）|
+| **架构健康** | `/diagnose` | 13 维度量化 + 重构计划（不改代码）|
 
 **文件路径**: `.claude/skills/docs/SKILL.md`
 
@@ -2080,16 +1947,22 @@ Roadmap Phase 状态：还剩 [M] 个功能 / 🎯 本 Phase 全部完成，已�
 ---
 name: docs
 description: |
-  深度探索代码逻辑，梳理并更新开发文档（架构、上手指南、部署）。
-  当用户说"更新文档"、"梳理架构"、"写一下开发文档"时使用。
-  触发关键词：更新文档、梳理文档、docs、架构梳理、文档同步
-argument-hint: "[architecture | frontend | backend | getting-started | deployment | 空=全量]"
+  文档生态守护者：对照代码实际状态，对所有文档做更新 / 新增 / 删除 / 审计一致性。
+  覆盖 CLAUDE.md、架构文档、开发文档、spec、ADR 等所有文档。
+  Gate 可执行性检查、spec 描述 vs 代码对齐、历史趋势对比。
+  触发关键词：更新文档、梳理文档、docs、架构梳理、文档同步、文档审计、spec 一致性
+argument-hint: "[架构范围 | audit | 空=全量]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 disable-model-invocation: true
 ---
 
 <task>
-深度探索项目代码，对比现有开发文档，增量更新。保持文档准确反映代码现状。
+对项目所有文档执行"文档生态守护"：
+1. 扫描代码实际状态 + 对比所有文档（architecture / development / specs / ADR / CLAUDE.md）
+2. 识别四种操作：更新（不一致）/ 新增（代码有文档缺）/ 删除（文档有代码缺）/ 审计（spec-code、ADR 有效性、Gate 可执行性）
+3. 改动 >10 处 → AskUserQuestion 审核；≤10 处直接修
+4. 只改文档，**不改代码**（代码问题输出到报告让 /implement 修）
+5. **不自动 push**
 </task>
 
 <workflow>
@@ -2098,17 +1971,18 @@ disable-model-invocation: true
 
 解析 `$ARGUMENTS`：
 
-| 参数 | 更新范围 |
+| 参数 | 执行范围 |
 |------|---------|
-| 无参数 | 全量：architecture + getting-started + deployment |
+| 无参数 | **全量守护**：所有四种操作 × 所有文档（architecture + development + specs + ADR + CLAUDE.md） |
 | `architecture` | `docs/architecture/` 全部（README + frontend + backend） |
 | `frontend` | `docs/architecture/frontend.md` |
 | `backend` | `docs/architecture/backend.md` |
 | `getting-started` | `docs/development/getting-started.md` |
 | `deployment` | `docs/development/deployment.md` |
+| `audit` | **深度审计模式**：专注 spec-code 一致性、ADR 有效性、Gate 可执行性（不改架构文档） |
 
 ```bash
-mkdir -p docs/architecture docs/development
+mkdir -p docs/architecture docs/development docs/reports
 ```
 
 ## Step 1: 变更锚定（增量检测基准）
@@ -2166,21 +2040,70 @@ git log --oneline $LAST_DOC_COMMIT..HEAD | head -30
 
 ## Step 3: 读取现有文档 + 变更覆盖检查
 
-读取对应的现有文档文件（如存在），标记：
-- ✅ 仍然准确的内容
-- ⚠️ 需要更新的内容（代码已变但文档未同步）
-- ❌ 已过时需删除的内容
-- 🆕 代码中有但文档中缺失的内容
+读取对应的现有文档文件（如存在），标记**四种操作**：
+- ✅ 仍然准确的内容（**保持**）
+- ⚠️ 需要**更新**的内容（代码已变但文档未同步）
+- ❌ 需要**删除**的内容（文档还在但代码已删除 / 过时引用）
+- 🆕 需要**新增**的内容（代码中有但文档中缺失）
 
 **变更覆盖检查**（基于 Step 1 锚定结果）：
 逐一检查 Step 1 中每个变更模块，确认文档是否覆盖：
-- 新增的文件/模块 → 文档是否提及？
+- 新增的文件/模块 → 文档是否提及？（如缺 → 🆕 新增）
 - 新增的机制/流程（从 commit message 的 `feat:` / `refactor:` 识别）→ 文档是否描述？
-- 删除/重构的功能 → 文档是否还在引用已不存在的内容？
+- 删除/重构的功能 → 文档是否还在引用已不存在的内容？（如是 → ❌ 删除）
 
-未覆盖的变更 MUST 在 Step 4 中补充到对应文档。
+未覆盖的变更 MUST 在 Step 5 中补充到对应文档。
 
-## Step 4: 增量更新
+## Step 4: Spec / ADR / Gate 审计（全量模式或 `audit` 模式）
+
+**仅在无参数（全量）或 `audit` 参数时执行**。架构/frontend/backend/getting-started/deployment 单独参数时跳过。
+
+### 4a. Spec 描述 vs 代码实现一致性
+
+扫描 `docs/specs/` 所有 `status: implementing` 或 `status: implemented` 的 spec：
+
+对每个 spec：
+- **spec 里提到的模块/文件/函数是否仍存在**？
+  ```bash
+  # 提取 spec 里引用的路径（如 apps/api/auth/login.py）
+  grep -oE '[a-zA-Z_/]+\.(ts|tsx|py|java)' docs/specs/<name>.md | sort -u
+  # 逐一验证文件是否存在
+  ```
+- **spec 里的设计方案是否和代码实现一致**？（读 spec 的"最终方案"段，对比实际代码）
+- **spec 里描述的数据流/状态机是否仍然有效**？
+
+**不一致 → 询问用户**：
+- spec 过时 → 更新 spec 描述对齐代码
+- 代码偏离 spec → 输出到报告，建议用户用 /implement 修代码（不在本命令修）
+
+### 4b. ADR 有效性检查
+
+扫描 `docs/architecture/adr/` 所有 ADR：
+
+- **ADR 里的决策是否仍在代码中生效**？（如 "MUST 使用 Zustand 而非 Redux" → grep `redux` 看有无违反）
+- **ADR 提到的技术/库是否仍在项目中**？（package.json / pyproject.toml）
+- **有没有代码违反 ADR 约定**？
+
+**发现违反 → 询问**：
+- ADR 已不再适用 → 标记为 `deprecated` 或 `superseded`（不直接删，保留历史）
+- 代码违反 ADR → 输出报告让 /implement 修复
+
+### 4c. Gate `[command]` 可执行性检查（v3.23 对接）
+
+扫描 `docs/specs/` 中的 Gate 条件，提取 `[command: <shell>]` 类型：
+
+```bash
+# 提取所有 [command: xxx] 条件
+grep -oE '\[command: [^]]+\]' docs/specs/*.md
+```
+
+对每个 `[command]` 条件：
+- 试跑一次（`--dry-run` 模式或加 `echo` 前缀）看命令是否仍存在、参数是否仍有效
+- 如命令已失效（如引用的测试文件路径不存在）→ 标记为 stale，提示用户更新 spec
+
+**不自动修**——输出到报告，在 Step 5 询问用户。
+
+## Step 5: 增量更新
 
 按以下规范写入/更新文档：
 
@@ -2225,38 +2148,119 @@ git log --oneline $LAST_DOC_COMMIT..HEAD | head -30
 - 不写数据库表结构（看 ORM 模型）
 - 已有内容只增量更新，不全量重写
 
-## Step 5: 提交
+## Step 6: AskUserQuestion 审核（改动 >10 处时）
+
+统计 Step 3-5 识别的总改动数（更新 + 新增 + 删除）。
+
+**改动 ≤10 处** → 直接执行修改（Step 7）。
+
+**改动 >10 处** → **MUST 用 AskUserQuestion 让用户审核**：
+
+```
+Question: 检测到 [X] 处文档需要修改：
+- 更新 [Y] 处（文档对不上代码）
+- 新增 [Z] 处（代码有文档缺）
+- 删除 [W] 处（文档引用已删除的代码）
+- spec/ADR/Gate 审计问题 [V] 处
+
+如何处理？
+
+Options:
+1. (Recommended) 全部修（我已 review 报告）
+2. 只修 P0（只改明显过时 + 代码已删除引用）
+3. 只生成报告（完全手动处理）
+4. 自定义范围（自由输入）
+```
+
+报告路径：`docs/reports/docs-YYYY-MM-DD.md`（含完整改动清单，供用户 review）。
+
+## Step 7: 执行修改 + 提交
+
+根据用户选择执行修改。精确 `git add` 相关目录：
 
 ```bash
-git add docs/architecture/ docs/development/
-git commit -m "docs: 更新开发文档 — [更新范围描述]"
+git add docs/architecture/ docs/development/ docs/specs/ docs/architecture/adr/ CLAUDE.md
+git commit -m "docs: [实际变更描述]"
 ```
 
-## Step 6: 输出报告
+**commit message 按实际变更动态生成**：
+- 主要是架构文档更新 → `docs: 同步架构文档（[模块] 新增 / 更新 [N] 处）`
+- 主要是 spec/ADR 审计 → `docs: spec-code 一致性审计修复（[N] 处）`
+- 混合 → `docs: 文档生态守护 — [N] 处更新 + [M] 处新增 + [W] 处删除`
+
+**MUST NOT `git push`**——push 必须用户显式要求。
+
+## Step 8: 输出报告
 
 ```
-✅ 开发文档已更新
+✅ 文档生态守护完成（范围：[全量 / architecture / audit / ...]）
 
-更新范围：[全量 / architecture / frontend / backend / getting-started / deployment]
-变更锚定：基于 [hash] 以来 [N] 个 commit，[M] 个模块有变更 / 首次运行（全量探索）
+━━━━━━━━━━━━━━━━━━━━━━━━
+变更锚定：基于 [hash] 以来 [N] 个 commit / 首次运行（全量探索）
 
-变更摘要：
+四种操作统计：
+- 更新 [Y] 处 ✅
+- 新增 [Z] 处 ✅
+- 删除 [W] 处 ✅
+- 审计问题 [V] 处（spec-code / ADR / Gate）
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+文档改动清单：
+- CLAUDE.md: [新建 / 更新 N 处 / 无变更]
 - docs/architecture/README.md: [新建 / 更新 N 处 / 无变更]
-- docs/architecture/frontend.md: [新建 / 更新 N 处 / 无变更]
-- docs/architecture/backend.md: [新建 / 更新 N 处 / 无变更]
-- docs/development/getting-started.md: [新建 / 更新 N 处 / 无变更]
-- docs/development/deployment.md: [新建 / 更新 N 处 / 无变更]
+- docs/architecture/frontend.md: ...
+- docs/architecture/backend.md: ...
+- docs/development/getting-started.md: ...
+- docs/development/deployment.md: ...
+- docs/specs/: [审计 N 个 spec，修复 M 处]
+- docs/architecture/adr/: [审计 N 个 ADR，标记 M 个 deprecated]
 
-主要变更：
-- [列出 2-3 个最重要的文档变更]
+历史趋势：
+- 上次审计 [日期]：X 处问题
+- 本次：Y 处问题（↑恶化 / →持平 / ↓改善）
+
+需用户关注（代码问题，/docs 未修）：
+- [列出需要用 /implement 修的代码不一致项]
+
+报告：docs/reports/docs-YYYY-MM-DD.md
+下一步：git push（如需）/ /implement 修复代码不一致项
 ```
 
 </workflow>
 ````
 
+**用法示例**：
+
+```bash
+# 全量守护（四种操作 + 全文档）
+/docs
+
+# 只刷新架构文档
+/docs architecture
+
+# 只做 spec/ADR/Gate 审计（不碰架构文档）
+/docs audit
+
+# 按子范围
+/docs frontend
+/docs deployment
+```
+
+**与相关命令的关系**：
+
+| 场景 | 用哪个 |
+|------|-------|
+| 日常快速发现明显问题 | `/audit`（浅层）|
+| 守护文档生态（更新/新增/删除/审计一致性） | **`/docs`** |
+| 代码架构量化评估 | `/diagnose` |
+| Phase 完成后发版（含 /docs 全量） | `/release` |
+| 发现代码问题批量修复 | `/implement`（批量模式）|
+
+> **/docs 只改文档**——代码问题（spec 描述对不上代码等）会输出到报告，由 /implement 修复。**默认不 push**。
+
 ---
 
-### 2.9 /release — Phase 完成系统性文档刷新
+### 2.8 /release — Phase 完成系统性文档刷新
 
 **用途**：一个 Roadmap Phase 的所有功能完成后，进行**系统性文档刷新**——全量执行 `/docs`、生成 Changelog、检查 ADR、更新 Phase 状态。与 `/docs` 的区别：`/docs` 是日常随时可用的轻量更新，`/release` 是 Phase 里程碑节点的全面梳理。
 
@@ -2355,7 +2359,7 @@ git commit -m "docs: Phase N [Phase名称] 完成 — 系统性文档刷新"
 
 下一步建议：
 - git push 推送更新
-- /deep-audit 全面代码审计
+- /docs 全面文档审计（spec/ADR 一致性、命令可执行性）
 - 开始规划 Phase N+1
 ```
 
@@ -2364,7 +2368,7 @@ git commit -m "docs: Phase N [Phase名称] 完成 — 系统性文档刷新"
 
 ---
 
-### 2.10 /nbp2 — AI 生图 Prompt 助手（Nano Banana Pro 2）
+### 2.9 /nbp2 — AI 生图 Prompt 助手（Nano Banana Pro 2）
 
 **用途**：帮助编写针对 Google Nano Banana Pro / Nano Banana 2 优化的高质量图片生成 Prompt。不同 AI 生图模型有不同的 prompt 写法，此 Skill 内嵌 NBP2 最佳实践，直接输出可用 prompt。
 
@@ -2580,9 +2584,9 @@ No watermark, no text overlays.
 
 ---
 
-### 2.11 /diagnose — 全维度代码健康诊断
+### 2.10 /diagnose — 全维度代码健康诊断
 
-**用途**：独立于功能开发的系统性代码健康诊断。覆盖结构、实现、卫生、战略四层共 13 个维度，输出量化评分 + 完整问题清单 + 分批重构计划。与 `/audit`（项目卫生检查）和 `/deep-audit`（文档一致性审计）互补——`/diagnose` 关注代码架构与长期可维护性。
+**用途**：独立于功能开发的系统性代码健康诊断。覆盖结构、实现、卫生、战略四层共 13 个维度，输出量化评分 + 完整问题清单 + 分批重构计划。与 `/audit`（项目卫生检查）和 `/docs`（文档一致性守护）互补——`/diagnose` 关注代码架构与长期可维护性。
 
 **设计依据**：CodeScene 热点分析 + ISO 25010 质量模型 + SonarQube 三维度体系 + Martin Fowler 重构方法论。核心原则——全维度扫描确保无死角，热点分析决定执行优先级。
 
@@ -2900,7 +2904,7 @@ previous_score: [上次得分，如有]
 |------|--------|--------|
 | `/simplify` | 本次改动的代码质量 | 功能完成后、PR 前 |
 | `/audit` | 项目卫生（lint/依赖/文档） | 每周 |
-| `/deep-audit` | 文档与代码一致性 | Phase 完成后 |
+| `/docs` | 文档与代码一致性 + spec/ADR 准确性 | Phase 完成后、需要深度文档审计时 |
 | **`/diagnose`** | **代码架构与可维护性** | **独立会话，定期或迭代前** |
 
 **推荐频率**：
@@ -3014,7 +3018,6 @@ Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版�
 ```bash
 # 创建 Skills 目录
 mkdir -p .claude/skills/audit
-mkdir -p .claude/skills/deep-audit
 mkdir -p .claude/skills/catchup
 mkdir -p .claude/skills/handoff
 mkdir -p .claude/skills/spec
@@ -3030,7 +3033,6 @@ mkdir -p .claude/skills/diagnose
 
 将上述各 Skill 内容分别写入：
 - `.claude/skills/audit/SKILL.md`
-- `.claude/skills/deep-audit/SKILL.md`
 - `.claude/skills/catchup/SKILL.md`
 - `.claude/skills/handoff/SKILL.md`
 - `.claude/skills/spec/SKILL.md`
@@ -3055,9 +3057,6 @@ mkdir -p .claude/skills/diagnose
 /audit --deep       # 加构建 + 测试覆盖率（大版本发布前）
 /audit --security   # 专项安全扫描（上线前 / 定期）
 
-/deep-audit         # 全面深度审计（Phase 完成后）
-/deep-audit --no-fix    # 仅生成报告
-
 /catchup            # 清空上下文后恢复
 /handoff            # 会话结束前生成交接文档
 
@@ -3081,5 +3080,5 @@ mkdir -p .claude/skills/diagnose
 
 ---
 
-**版本**: v3.24
-**更新日期**: 2026-04（v3.24）
+**版本**: v3.25
+**更新日期**: 2026-04（v3.25）
