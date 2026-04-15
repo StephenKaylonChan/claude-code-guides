@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.29（2026-04）
+> **版本**: v3.30（2026-04）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -36,7 +36,7 @@
 
 ## 🎯 命令体系
 
-命令分三类：**Bundled Skills**（Anthropic 内置，5 个）、**自定义 Skills**（安装到 `.claude/skills/`，11 个）、**系统命令**（内置，无需配置）。
+命令分三类：**Bundled Skills**（Anthropic 内置，5 个）、**自定义 Skills**（安装到 `.claude/skills/`，12 个）、**系统命令**（内置，无需配置）。
 
 完整命令速查表见 [00-日常使用说明.md](./00-日常使用说明.md) Section 7。
 
@@ -54,7 +54,7 @@ project-root/
 │   ├── rules/
 │   │   ├── frontend.md            # 前端路径感知规则
 │   │   └── backend.md             # 后端路径感知规则
-│   ├── skills/                    # 自定义命令（11 个，v3.29 新增 fix-permission）
+│   ├── skills/                    # 自定义命令（12 个，v3.29 fix-permission、v3.30 codex）
 │   │   ├── audit/SKILL.md
 │   │   ├── catchup/SKILL.md
 │   │   ├── handoff/SKILL.md
@@ -65,7 +65,8 @@ project-root/
 │   │   ├── release/SKILL.md
 │   │   ├── nbp2/SKILL.md
 │   │   ├── diagnose/SKILL.md
-│   │   └── fix-permission/SKILL.md
+│   │   ├── fix-permission/SKILL.md
+│   │   └── codex/SKILL.md
 │   ├── agents/                    # 自定义子代理（可选）
 │   └── hooks/                     # Hook 脚本
 │       ├── session-start.sh
@@ -112,6 +113,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.30 | 2026-04 | `/codex` **首次写入 03 模板** + 混合使用模式，**Skills 体系梳理完成**（v3.19-v3.30 共梳理 12 个 skill + 废弃 1 个 /deep-audit）。Skills 总数 **11 → 12**。**核心改动**：**混合使用模式**（有参数快速 / 无参数 AskUserQuestion 引导 7 类任务 / 参数模糊时细化）+ **生成文件防覆盖**（已存在时 AskUserQuestion 覆盖/时间戳/取消）+ **粒度控制**（源文件 <30 全包含 / 30-100 最近改动 / ≥100 弹窗选范围）+ **大任务拆分提示**（估算 >50k tokens 时）+ **Step 1 自适应扫描**（读 CLAUDE.md 技术栈）+ **生成文档加 frontmatter**（generated/task_type/estimated_tokens）+ **description 明确适用范围**（Codex/GPT/Gemini/其他 Claude 等任意外部 AI）|
 | v3.29 | 2026-04 | `/fix-permission` **首次写入 03 模板**（之前只存在于 guides 本地），Skills 总数 **10 → 11**。**核心能力升级**：**三级 settings 扫描**（用户级 `~/.claude/settings.json` / 项目级 `./.claude/settings.json` / 项目本地 `./.claude/settings.local.json`）+ **AskUserQuestion 选择写入级别**（根据规则性质选最合适）+ **写入前预演确认**（显示将添加规则 + 弹窗）+ **Step 4A 更新**（`Bash(*)` 仍被拦截时的 4 种解法：更具体规则 / deny 优先 / Auto mode / 手动确认）+ **扩展诊断表**（加管道、后台进程等常见拦截）|
 | v3.28 | 2026-04 | `/nbp2` 轻度优化（工具类 skill，改动最小）：**Step 1 分流**——有参数（`/nbp2 <主题>`）直接走默认 NBP2；**无参数 AskUserQuestion 一次问清**（场景 + 目标模型 5 选项含自定义）。**模型对比表加注**（价格/速度/Model ID 数据截至 2026-04，以 Google 官方最新定价为准）。**加"与其他 skill 的关系"段**（声明 /nbp2 是独立工具，不对接开发工作流；专注 Nano Banana 生态，不适用其他生图模型）。**加用法示例段**（有参数推荐 / 无参数弹窗两种）。**不加** `disable-model-invocation: true`（工具类保持自动触发，"Nano Banana / NBP2 / Gemini 生图" 是强信号）。专业知识（六要素公式、进阶技巧、5 个示例）全部保留 |
 | v3.27 | 2026-04 | `/release` 重新定位为"**Phase 里程碑工作流（含可选对外发版）**"：**明确区分两件事**——Phase 完成（内部里程碑）vs 对外发版（外部里程碑）。**参数分流**：`/release`（默认 A，Phase 内部里程碑）/ `/release --publish`（A+B，加版本号 bump + git tag + 对外 Changelog）。**对接 v3.25 /docs 新流程**：Step 1 全量 /docs + Step 1b 可选 /docs audit 深度审计。**ADR 检查 AskUserQuestion**：识别模式对齐 v3.19 /implement 四类触发（跨模块依赖 / 替换实现 / 新依赖 / 数据流向），基于 Phase 期间 commit message 推断。**Phase 开始日期三种 fallback**（Phase 文件 frontmatter → 上次 /release commit → 第一个 commit）。**精确 git add**（不用 `git add docs/` 宽泛 stage）。**默认不 push**（对齐 v3.25 /docs）。**Step 8 AskUserQuestion 引导下一步**（push / /diagnose / 规划 Phase N+1 / 其他）。明确排除临时 hotfix 场景（直接 `git tag` 更快）|
@@ -150,4 +152,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-04（v3.29）
+**最后更新**: 2026-04（v3.30）
