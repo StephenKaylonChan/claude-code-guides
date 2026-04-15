@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.25
+**版本**: v3.26
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -2664,6 +2664,7 @@ disable-model-invocation: true
 - 后端 API 是否有请求级集成测试（走完整 路由→service→DB 链路，不只是测 service 函数）
 - 测试是否在测实现细节而非用户行为（如直接检查 state 值而非检查页面显示内容）
 - 紧耦合导致无法测试的模块
+- **Spec Gate 对齐**（v3.23 对接）：扫 `docs/specs/` 中 `status: implementing` / `implemented` 的 spec，检查 `[command: xxx]` Gate 条件对应的测试命令是否存在、是否仍可执行（如 `pnpm test tests/auth/` → 对应测试目录是否有文件）；Gate 引用了测试但实际不存在 → 标记为"假 Gate"
 
 ### 卫生层（认知负担）
 
@@ -2676,6 +2677,10 @@ disable-model-invocation: true
 - 同一功能多种实现（如 HTTP 客户端既用 fetch 又用 axios）
 - 命名风格不统一（camelCase 和 snake_case 混用）
 - 错误处理/日志格式不统一
+- **重复模式 → lint 建议**（Addy Osmani "重复犯错升级为 lint 规则"理念）：
+  - 发现 2+ 次重复的反模式（如多处 `style={{}}`、多处裸 SQL、多处 `@ts-ignore`）→ 标记为"建议升级为 lint 规则或 `.claude/rules/` 红线"
+  - 输出具体 lint 配置建议（如 ESLint `no-restricted-syntax` 规则 / `.claude/rules/*.md` MUST NOT 条款）
+  - 该类问题单独列为"lint 建议"维度，不和 P0-P3 混淆
 
 ### 战略层（投入产出比）
 
@@ -2706,17 +2711,28 @@ echo "=== 代码健康诊断 $(date '+%Y-%m-%d %H:%M') ==="
 
 ## Step 1: 探索项目结构 → 决定扫描策略
 
+**自适应文件类型识别**（不硬编码，从项目上下文推断）：
+
+1. **读 CLAUDE.md "技术栈"段**：识别主要语言（如 "TypeScript + Python"）
+2. **读 package.json / pyproject.toml / pom.xml / Cargo.toml**：补充识别
+3. **基于识别结果决定扫描的文件扩展名**：
+   - TypeScript / JavaScript → `*.ts`, `*.tsx`, `*.js`, `*.jsx`
+   - Python → `*.py`
+   - Java → `*.java`
+   - Go → `*.go`
+   - Rust → `*.rs`
+   - （根据实际情况扩展）
+
 ```bash
-# 源文件统计（排除依赖和构建产物）
-find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.java" \) \
-  -not -path "*/node_modules/*" -not -path "*/.next/*" -not -path "*/dist/*" -not -path "*/__pycache__/*" | wc -l
+# 示例：识别出 TS + Python 后动态构造 find 命令
+find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.py" \) \
+  -not -path "*/node_modules/*" -not -path "*/.next/*" -not -path "*/dist/*" -not -path "*/__pycache__/*" -not -path "*/.venv/*" | wc -l
 
 # 顶层目录结构
 ls -d */ 2>/dev/null
 ```
 
-- 从 `package.json` / `pyproject.toml` / `pom.xml` 识别技术栈
-- 识别模块边界（目录划分方式）
+- 识别模块边界（目录划分方式：monorepo `apps/` / 单包 `src/` / 自定义）
 - 检查 `$ARGUMENTS`，限定扫描范围
 
 **扫描策略**：
@@ -2730,6 +2746,8 @@ ls -d */ 2>/dev/null
 SubAgent 指令要点：
 > 扫描 [范围] 下的所有源文件，按 13 个维度逐一检查。
 > 每个问题输出：维度编号、文件路径:行号、严重性(P0-P3)、置信度(高/中/低)、问题描述、判断依据。
+> **D9 补充**：如 `docs/specs/` 存在 implementing/implemented 的 spec，扫其 `[command: xxx]` Gate 条件对应的测试命令是否存在/可执行（假 Gate 问题列为 P1）。
+> **D11 补充**：发现 2+ 次重复的反模式 → 输出到独立的"lint 建议"清单（含具体 lint 配置建议），不和 P0-P3 混淆。
 > **不改代码，只输出发现。**
 
 ## Step 2: 热点分析（可选）
@@ -2779,11 +2797,27 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.py" -o -name "*.java
 
 ## Step 5: 生成重构计划
 
-将 P0-P2 问题分批：
+将 P0-P2 问题**分三类**处理：
+
+### 5a. 进入 Batch 重构（主体）
+
 1. **同一模块的问题合并到同一 Batch**（减少上下文切换）
 2. **有依赖关系的 Batch 标注前置条件**
 3. **每个 Batch 预估不超过 1 个会话**
 4. **每个 Batch 有明确验收标准**
+
+### 5b. 标记为"不做"（投入产出比低）
+
+满足任一条件 → 明确标记"**不做**"并说明理由（不浪费精力）：
+- 修改面大但收益小（如修 1 个 any 要动 20 个文件）
+- 即将被废弃的模块（和 Roadmap 对照）
+- 成本收益未明（需要更多信息才能决策）
+
+**不是所有问题都值得修**——明确标记反而减少决策负担。
+
+### 5c. lint 建议（D11 产出的独立清单）
+
+不进入 Batch 重构，而是输出到报告的**"lint 建议"章节**，让用户自己评估是否加到 ESLint / `.claude/rules/` 配置。
 
 P3 观察项单独列出，不进入重构计划。
 
@@ -2836,6 +2870,27 @@ previous_score: [上次得分，如有]
 ### ℹ️ P3 — 观察项
 ...
 
+### 🚫 不做（投入产出比低）
+[编号]. [问题] — **不做理由**: [修改面大/即将废弃/成本收益未明]
+
+## 🔧 lint 建议（D11 独立清单）
+
+发现以下重复反模式，建议升级为 lint 规则或 `.claude/rules/` 红线：
+
+| 模式 | 出现次数 | 建议 |
+|------|---------|------|
+| `style={{}}` | 8 处 | ESLint `no-restricted-syntax` 或 `.claude/rules/frontend.md` MUST NOT |
+| 裸 SQL 字符串 | 5 处 | `.claude/rules/backend.md` MUST 使用 ORM |
+
+具体配置示例：
+```json
+// .eslintrc
+"no-restricted-syntax": [
+  "error",
+  { "selector": "JSXAttribute[name.name='style']", "message": "使用 Tailwind/CSS Modules 替代 inline style" }
+]
+```
+
 ## 跨边界观察
 [scope 限定时检测到的跨边界问题，注明对侧未完整分析]
 
@@ -2857,26 +2912,41 @@ previous_score: [上次得分，如有]
 3. 跑测试确认不破坏
 4. commit
 
+**lint 建议**：用户自行评估后加到 ESLint / `.claude/rules/` 配置（一次投入，长期防御）。
+
 全部完成后再次运行 `/diagnose` 验证改善效果。
 ```
 
-## Step 7: 输出确认
+## Step 7: AskUserQuestion 引导下一步
+
+**MUST 用 AskUserQuestion**（不散文建议，和其他 skill 保持一致）：
+
+```
+Question: 诊断完成，发现 [X] 个 Batch 的重构计划。下一步？
+
+Options:
+1. (Recommended) 启动 /implement 批量模式执行 Batch 1（按依赖顺序）
+2. 生成 Roadmap TODO（留给后续迭代）
+3. 只看报告（稍后手动处理）
+4. 重新诊断特定范围（自由输入，如"只看 backend"）
+```
+
+**报告文件 MUST 已在 Step 6 写入**（无论用户选择什么），供后续查阅。
+
+## Step 8: 输出确认
 
 ```
 ✅ 代码健康诊断完成
 
-综合健康度: X.X/10 [与上次对比]
+综合健康度: X.X/10 [与上次对比 ↑/→/↓]
 扫描范围: [scope]
 扫描文件: [N] 个
 发现问题: P0 [N] 个 | P1 [N] 个 | P2 [N] 个 | P3 [N] 个
 重构计划: [N] 个 Batch，预估 [N] 个会话
+lint 建议: [M] 条（重复模式 ≥2 次，建议升级为 lint/rules）
 
 报告: docs/reports/diagnose-YYYY-MM-DD.md
-
-下一步：
-- 查看报告，确认优先级排序
-- 按 Batch 顺序用 /implement 批量模式执行重构
-- 全部完成后再次 /diagnose 验证改善
+执行状态: ✅ 已启动 /implement Batch 1 / 📝 已写入 Roadmap / ⏭️ 只看报告
 ```
 
 </workflow>
@@ -3080,5 +3150,5 @@ mkdir -p .claude/skills/diagnose
 
 ---
 
-**版本**: v3.25
-**更新日期**: 2026-04（v3.25）
+**版本**: v3.26
+**更新日期**: 2026-04（v3.26）
