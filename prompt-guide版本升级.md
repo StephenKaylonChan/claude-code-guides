@@ -226,7 +226,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.21-v3.23），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.22-v3.24），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -279,6 +279,23 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.24 新增**（重点检查）：
+- **`/audit` 重新定位为"浅层快速巡检"**：检查 `.claude/skills/audit/SKILL.md` 是否已升级到 v3.24 模板。
+- **参数简化**（5 种 → 3 种）：
+  - `/audit`（默认）= 标准巡检（代码质量 + 依赖 + 文档同步 + Git 状态）
+  - `/audit --deep` = 加构建 + 测试覆盖率
+  - `/audit --security` = 专项安全扫描
+  - **去掉** `--quick`（标准模式已足够快）和 `--docs`（归 /deep-audit）
+- **命令自适应**（核心）：从 CLAUDE.md "常用命令"段或 package.json 读实际 lint/test/build 命令，不硬编码 pnpm。自动识别包管理器（pnpm/npm/yarn/poetry/pip）。
+- **AskUserQuestion 修复引导**：发现问题后弹窗 4 选项（只看报告 / 启动 /implement 批量修复 / 只修 P0 / 写入 Roadmap TODO），不再"只输出报告让用户看"。
+- **历史对比**：保留 `docs/reports/audit-YYYY-MM-DD.md`，下次审计对比趋势（↑恶化/→持平/↓改善）。
+- **文档同步并入标准检查**：原 `--docs` 的检查合并到标准（CLAUDE.md 行数、rules 路径、roadmap 一致性、stale spec 每次都查）。
+- **Security 优先用 gitleaks**：`command -v gitleaks` 有则用（精准低误报），无则 fallback grep（含安装建议）。
+- **职责边界明确**（重要）：
+  - `/audit`（浅层）= 只发现问题 + 询问修复策略
+  - `/deep-audit`（深度）= 逐文件检查 + 自动修复 + commit
+  - `/diagnose`（架构量化）= 13 维度评分 + 重构计划
 
 **v3.23 新增**（重点检查）：
 - **`/spec` 重新定位为"执行契约"** + **Gate 三类型机器判定**：检查 `.claude/skills/spec/SKILL.md` 和 `done/SKILL.md` 是否已升级到 v3.23 模板。
