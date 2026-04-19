@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.30（2026-04）
+> **版本**: v3.31（2026-04）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -113,6 +113,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.31 | 2026-04 | **AGENTS.md 兼容 Step 1**（调研 + 共存指南）。01-CLAUDE配置架构指南 新增 **Section 9 "与 AGENTS.md 共存"**：背景（2025-12 Linux Foundation 接管、AAIF founding project、6 万+ repo 采用）+ **Claude Code 当前不原生支持**（issue #6235 / #34235 仍 Open，订正旧 TODO 误传）+ **何时需要写 AGENTS.md**（多工具协作 / 外部贡献者 / `/codex` 跨 AI）+ **共存两种方案**（`@import` 推荐 / symlink 备选，对比优缺点）+ **v4.0 迁移触发信号**（Anthropic 官方原生支持 / AAIF schema 标准化 / 团队多工具占比）。Phase 4 roadmap 同步拆分为 Step 1（v3.31 已完成）+ Step 2（等 Claude Code 原生支持后做 v4.0 迁移指南）。Phase 4 进度 **7/10 → 8/11** |
 | v3.30 | 2026-04 | `/codex` **首次写入 03 模板** + 混合使用模式，**Skills 体系梳理完成**（v3.19-v3.30 共梳理 12 个 skill + 废弃 1 个 /deep-audit）。Skills 总数 **11 → 12**。**核心改动**：**混合使用模式**（有参数快速 / 无参数 AskUserQuestion 引导 7 类任务 / 参数模糊时细化）+ **生成文件防覆盖**（已存在时 AskUserQuestion 覆盖/时间戳/取消）+ **粒度控制**（源文件 <30 全包含 / 30-100 最近改动 / ≥100 弹窗选范围）+ **大任务拆分提示**（估算 >50k tokens 时）+ **Step 1 自适应扫描**（读 CLAUDE.md 技术栈）+ **生成文档加 frontmatter**（generated/task_type/estimated_tokens）+ **description 明确适用范围**（Codex/GPT/Gemini/其他 Claude 等任意外部 AI）|
 | v3.29 | 2026-04 | `/fix-permission` **首次写入 03 模板**（之前只存在于 guides 本地），Skills 总数 **10 → 11**。**核心能力升级**：**三级 settings 扫描**（用户级 `~/.claude/settings.json` / 项目级 `./.claude/settings.json` / 项目本地 `./.claude/settings.local.json`）+ **AskUserQuestion 选择写入级别**（根据规则性质选最合适）+ **写入前预演确认**（显示将添加规则 + 弹窗）+ **Step 4A 更新**（`Bash(*)` 仍被拦截时的 4 种解法：更具体规则 / deny 优先 / Auto mode / 手动确认）+ **扩展诊断表**（加管道、后台进程等常见拦截）|
 | v3.28 | 2026-04 | `/nbp2` 轻度优化（工具类 skill，改动最小）：**Step 1 分流**——有参数（`/nbp2 <主题>`）直接走默认 NBP2；**无参数 AskUserQuestion 一次问清**（场景 + 目标模型 5 选项含自定义）。**模型对比表加注**（价格/速度/Model ID 数据截至 2026-04，以 Google 官方最新定价为准）。**加"与其他 skill 的关系"段**（声明 /nbp2 是独立工具，不对接开发工作流；专注 Nano Banana 生态，不适用其他生图模型）。**加用法示例段**（有参数推荐 / 无参数弹窗两种）。**不加** `disable-model-invocation: true`（工具类保持自动触发，"Nano Banana / NBP2 / Gemini 生图" 是强信号）。专业知识（六要素公式、进阶技巧、5 个示例）全部保留 |
@@ -152,4 +153,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-04（v3.30）
+**最后更新**: 2026-04（v3.31）

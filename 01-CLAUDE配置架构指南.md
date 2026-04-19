@@ -2,7 +2,7 @@
 
 > Claude Code 原生记忆系统 — 告别手动维护，拥抱自动化记忆
 
-**版本**: v3.30
+**版本**: v3.31
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -17,6 +17,7 @@
 6. [路径感知规则 .claude/rules/](#6-路径感知规则-clauderules)
 7. [初始化流程](#7-初始化流程)
 8. [维护指南](#8-维护指南)
+9. [与 AGENTS.md 共存](#9-与-agentsmd-共存)
 
 ---
 
@@ -439,5 +440,99 @@ paths:
 
 ---
 
-**版本**: v3.30
-**更新日期**: 2026-04（v3.30）
+## 9. 与 AGENTS.md 共存
+
+> AGENTS.md 是跨 AI 工具的配置文件事实标准。**Claude Code 当前不原生读 AGENTS.md**，但团队里出现多工具协作（Cursor / Aider / Codex / Gemini CLI 等）时，本节给出共存方案。
+
+### 9.1 AGENTS.md 是什么
+
+放在仓库根的 Markdown 文件，给 AI coding agent 提供项目上下文（技术栈、构建步骤、测试命令、代码约定）。定位类似"给 agent 看的 README"。
+
+- **无强制 schema**：free-form Markdown，常见段落 Project overview / Build & test / Code style / Testing instructions / Security considerations
+- **官网**：https://agents.md/
+- **Linux Foundation 接管**：2025-12-09 成立 Agentic AI Foundation (AAIF)，AGENTS.md 由 OpenAI 捐赠，与 MCP（Anthropic 捐）、goose（Block 捐）并列为 founding projects
+- **采用规模**：60,000+ open source projects（LF 官方数据）
+
+### 9.2 Claude Code 当前支持现状
+
+**Claude Code 不原生读 AGENTS.md**（2026-04 确认）：
+
+- Feature request issue 仍 Open：[#6235](https://github.com/anthropics/claude-code/issues/6235)、[#34235](https://github.com/anthropics/claude-code/issues/34235)
+- Claude Code 只加载 `CLAUDE.md`，完全忽略同目录的 `AGENTS.md`
+- 二手文章"Claude Code uses AGENTS.md as fallback"为误传，未在 Anthropic 官方文档得到证实
+
+**官方支持 AGENTS.md 的工具**（部分）：OpenAI Codex、Cursor、Aider、Gemini CLI、GitHub Copilot、Jules、Devin、Warp、JetBrains Junie、Zed、Windsurf 等 25+。
+
+### 9.3 何时需要写 AGENTS.md
+
+触发条件（任一满足）：
+
+| 场景                              | 为什么                                    |
+|-----------------------------------|-------------------------------------------|
+| 团队里有人用 Cursor / Aider / Codex | 他们的工具只读 AGENTS.md                   |
+| 外部贡献者不一定用 Claude Code     | 开源项目默认兼容更广工具                  |
+| 用 `/codex` 跨 AI 协作成高频动作   | 外部 AI 原生读 AGENTS.md，少写一次 prompt  |
+
+**不需要的场景**：纯 Claude Code 团队 + 内部仓库 + 不跨 AI 协作 → 继续用 CLAUDE.md 单文件，不引入复杂度。
+
+### 9.4 共存方案
+
+两种社区实战方案，**推荐 `@import` 方案**。
+
+#### 方案 A：`@import` 引用（推荐）
+
+`CLAUDE.md` 保留为 Claude Code 的入口，用 `@` 引用同内容的 `AGENTS.md`：
+
+```markdown
+# CLAUDE.md（仓库根）
+
+@AGENTS.md
+
+<!-- 以下是 Claude Code 专属补充（skill 调用约定、Auto Memory 偏好等） -->
+...
+```
+
+**优点**：
+- 单一事实源（`AGENTS.md` 维护，Claude Code 通过 import 读）
+- 跨平台（Windows / macOS / Linux 均可）
+- 允许 Claude Code 添加"专属补充"（放在 `@AGENTS.md` 下方）
+
+**缺点**：`AGENTS.md` 和 `CLAUDE.md` 两个文件都得提交，但内容差异清晰。
+
+#### 方案 B：Symlink（备选）
+
+```bash
+mv CLAUDE.md AGENTS.md
+ln -s AGENTS.md CLAUDE.md
+echo "CLAUDE.md" >> .gitignore
+```
+
+**优点**：真正的单一事实源（磁盘上只有一份文件）。
+
+**缺点**：
+- Windows 对 symlink 支持有限
+- Claude Code 专属内容无处放（必须和通用内容混在 AGENTS.md 里）
+- `.gitignore` 排除 CLAUDE.md 后，其他 Claude Code 用户 clone 仓库需要手动 `ln -s`
+
+**建议**：全 Linux/macOS 团队 + 无 Claude Code 专属配置时用；否则用方案 A。
+
+### 9.5 迁移路径（v4.0 触发信号）
+
+guides 项目**当前不做 CLAUDE.md → AGENTS.md 整体迁移**，理由：
+
+1. Claude Code 未原生支持，盲目切换导致核心工具体验退化
+2. 方案 A `@import` 已经能满足跨工具协作，不需要推翻重来
+3. AAIF 的治理细则、AGENTS.md schema 标准化仍未完全落地
+
+**v4.0 迁移触发信号**（任一）：
+
+- Anthropic 官方宣布 Claude Code 原生读 AGENTS.md（跟踪 issue [#6235](https://github.com/anthropics/claude-code/issues/6235) / [#34235](https://github.com/anthropics/claude-code/issues/34235) 关闭状态）
+- AAIF 发布 AGENTS.md 正式 schema（给 agent 解析提供稳定结构）
+- 团队内部超过 50% 成员切换到非 Claude Code 工具
+
+届时 guides 会出 `prompt-迁移-agents-md.md` 迁移脚本 + CLAUDE.md 全量改造指南。
+
+---
+
+**版本**: v3.31
+**更新日期**: 2026-04（v3.31）

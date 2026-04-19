@@ -7,7 +7,8 @@
 
 - [ ] Claude Code 新版本功能研究与整合
 - [ ] 新增 Hook 事件 / Skills 能力的文档更新
-- [ ] AGENTS.md 兼容（2025-12 Linux Foundation 接管标准，Claude/Cursor/Aider/Codex 均兼容，6 万+ repo 采用）
+- [x] AGENTS.md 兼容 Step 1（调研 + 共存指南） ✅ 2026/04/19 — v3.31 01 新增 Section 9 "与 AGENTS.md 共存"：`@import` 方案（推荐）+ symlink 备选 + Claude Code 当前不原生支持说明（issue #6235 / #34235 Open）+ 迁移路径 v4.0 触发信号。订正旧 TODO 误传："Claude/Cursor/Aider/Codex 均兼容" 对 Claude Code **不成立**
+- [ ] AGENTS.md 兼容 Step 2（等 Claude Code 原生支持 AGENTS.md 后做 v4.0 迁移指南）— 跟踪 [issue #6235](https://github.com/anthropics/claude-code/issues/6235) / [#34235](https://github.com/anthropics/claude-code/issues/34235) 关闭状态
 
 ## 待探索：自研需求
 
