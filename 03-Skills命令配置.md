@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.31
+**版本**: v3.32
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -24,15 +24,15 @@
 ```yaml
 ---
 name: skill-name                      # 斜杠命令名称（max 64 字符，小写+数字+连字符）
-description: |                        # Claude 自动检测触发的描述（max 1024 字符，超过 250 字符在列表中截断）
+description: |                        # Claude 自动检测触发的描述（max 1024 字符，列表显示上限 1536 字符，v2.1.105+）
   当用户需要做 X 时使用此命令。
   触发关键词：X、Y、Z
 argument-hint: "[参数说明]"           # 命令行自动补全提示
 allowed-tools: Read, Grep, Bash       # 免确认工具（注意：不是限制可用，其他工具仍可调用但需确认）
 model: haiku                          # 模型覆盖（haiku/sonnet/opus/inherit）
 effort: medium                        # 思考深度覆盖（low/medium/high/max）
-context: fork                         # fork = 在隔离子代理中运行
-agent: Explore                        # 搭配 context:fork，指定子代理类型
+context: fork                         # fork = 在隔离子代理中运行（v2.1.101+ 修复后生效）
+agent: Explore                        # 搭配 context:fork，指定子代理类型（v2.1.101+ 修复后生效）
 disable-model-invocation: false       # true = 只能用户触发，Claude 不能自动调用
 user-invocable: true                  # false = 隐藏，只能 Claude 内部调用
 paths:                                # 限定自动激活的文件路径 glob
@@ -80,7 +80,7 @@ hooks:                                # Skill 作用域内的 Hooks（详见文�
 
 ### `description` 的重要性
 
-`description` 字段控制 Claude 是否会**自动检测并调用** Skill。写得越具体，自动触发越准确。**超过 250 字符会在列表中被截断**——关键用例放在前面。如果不希望自动触发，设置 `disable-model-invocation: true`。
+`description` 字段控制 Claude 是否会**自动检测并调用** Skill。写得越具体，自动触发越准确。**列表显示上限 1,536 字符**（v2.1.105 起，此前为 250；超限时 Claude Code 启动会显示警告）——关键用例仍 MUST 放在前面以保证截断时不丢失。如果不希望自动触发，设置 `disable-model-invocation: true`。
 
 ### `` !`command` `` 动态上下文注入
 
@@ -3781,7 +3781,9 @@ scope: [包含范围，如 "全部源文件" / "最近改动" / "apps/api/ 模�
 
 ## 3. Anthropic 内置命令（Bundled Skills）
 
-Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版本自动更新，**无需手动配置，直接使用**。
+Claude Code 2.x 内置了七个由 Anthropic 维护的 bundled 命令（v2.1.111+ 清单），随版本自动更新，**无需手动配置，直接使用**。
+
+> **v2.1.108+ 新机制**：`/init`、`/review`、`/security-review` 等内置命令现在也可以被**模型通过 Skill tool 自动发现和调用**（此前仅用户输入触发）。这让它们和自定义 Skills 在调用路径上趋同——工作流里提到"做一次安全审查"，Claude 可能直接调 `/security-review` 而不用你手动输入。
 
 ### 3.1 /simplify — 代码简化审查
 
@@ -3861,9 +3863,34 @@ Claude Code 2.x 内置了五个由 Anthropic 维护的 bundled 命令，随版�
 
 ---
 
+### 3.6 /less-permission-prompts — 减少权限弹窗（v2.1.111+）
+
+**何时用**：Claude Code 频繁弹权限窗打断节奏时，一次性梳理常用只读操作生成白名单。
+
+```bash
+/less-permission-prompts
+```
+
+**内部机制**：扫描会话 transcript，识别常被用户批准的只读 Bash 和 MCP 工具调用，按优先级生成 `.claude/settings.json` 的 `permissions.allow` 建议清单。和 `/fix-permission` 互补——`/fix-permission` 处理"这次拦截"，`/less-permission-prompts` 做"**历史回溯 + 批量治理**"。
+
+---
+
+### 3.7 /ultrareview — 云端并行代码审查（v2.1.111+）
+
+**何时用**：改动涉及多文件、复杂逻辑、需要多角度 review 时，在提 PR 前跑一遍。
+
+```bash
+/ultrareview                   # 审查当前 branch 相对 main 的改动
+/ultrareview 123               # 审查 GitHub PR #123
+```
+
+**内部机制**：在云端启动**并行多 agent 分析 + 批评**，覆盖代码质量、架构、测试、安全多个视角。v2.1.113 加速启动（parallelized checks）并在启动对话框显示 diffstat。和本地的 `/simplify` 互补——`/simplify` 是"本地 3 agent 并行修复"，`/ultrareview` 是"云端多 agent 深度审查"，后者更重、更全，适合大型改动。
+
+---
+
 ### 区分 Bundled 命令 vs 自定义 Skills
 
-| 维度 | Bundled（/simplify /batch /debug /loop /claude-api） | 自定义 Skills |
+| 维度 | Bundled（/simplify /batch /debug /loop /claude-api /less-permission-prompts /ultrareview） | 自定义 Skills |
 |------|---------------------------|--------------|
 | 维护方 | Anthropic（随版本更新） | 你自己 |
 | 配置位置 | 无需配置，内置 | `.claude/skills/*/SKILL.md` |
@@ -3950,5 +3977,5 @@ mkdir -p .claude/skills/codex
 
 ---
 
-**版本**: v3.31
-**更新日期**: 2026-04（v3.31）
+**版本**: v3.32
+**更新日期**: 2026-04（v3.32）

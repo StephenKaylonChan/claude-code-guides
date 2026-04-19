@@ -233,7 +233,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.28-v3.30），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.30-v3.32），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -287,7 +287,20 @@ ls .claude/rules/ 2>/dev/null
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
 
-**v3.30 新增**（重点检查，⚠️ 含 /codex 新增）：
+**v3.32 新增**（重点检查，⚠️ Claude Code 2.1.89-114 功能跟进）：
+- **Bundled 命令 5 → 7**（Anthropic 内置，无需配置）：
+  - `/less-permission-prompts`（v2.1.111+）：扫描会话 transcript，生成 `.claude/settings.json` 常用只读操作白名单。和 `/fix-permission` 互补（后者处理"这次拦截"，前者"批量治理"）
+  - `/ultrareview [PR#]`（v2.1.111+）：云端并行多 agent 代码审查，比 `/simplify` 更重更全，适合大型改动
+- **03 文档变化**：
+  - Skill description 列表显示上限 **250 → 1,536 字符**（v2.1.105+），关键用例仍 MUST 放前面
+  - `context: fork` / `agent` 字段 v2.1.101+ 修复后真正生效（此前为 bug）
+  - **v2.1.108+ 新机制**：模型可通过 Skill tool 主动发现并调用 `/init`、`/review`、`/security-review` 等内置命令（此前仅用户输入触发）——工作流里提到某操作时，Claude 可能自动调用对应内置命令
+- **02 文档变化**：PreCompact Hook 新增**阻塞能力**（v2.1.105+）：可通过 `exit code 2` 或返回 `{"decision":"block"}` 阻止压缩。适用场景：检测到实施中 spec 未保存进度就阻塞，提示先跑 /handoff
+- **00 文档变化**：高频命令表新增 `/recap`（v2.1.108 返回会话摘要，`CLAUDE_CODE_ENABLE_AWAY_SUMMARY` 控制）、`/tui fullscreen`（v2.1.110 无闪烁全屏）、`/focus`（v2.1.110 独立命令）、`/team-onboarding`（v2.1.101 团队新成员 ramp-up）、`/effort xhigh`（v2.1.111 Opus 4.7 专属等级，在 high 和 max 之间）、`/undo` = `/rewind` 别名（v2.1.108+）
+- **迁移**：已装 `/simplify` 等 5 个 bundled 的项目，Claude Code 升级到 v2.1.111+ 后自动有新的 2 个。无需手动装；只需在 00 日常文档里更新说明。自定义 Skill 如需更新 frontmatter，描述超 250 字符现在可以展开到更长（可选，旧的仍能用）
+- **Skills 总数不变**（仍 12 个自定义）
+
+**v3.30 新增**（⚠️ 含 /codex 新增）：
 - **`/codex` 首次写入 03 模板**（之前只存在于 guides 本地）
 - **迁移**：旧版本项目需要新增 `.claude/skills/codex/SKILL.md`，从 guide 03 Section 2.12 复制
   ```bash
@@ -512,7 +525,7 @@ ls .claude/rules/ 2>/dev/null
 - **`/diagnose` D9 维度扩展**：从"可测试性"扩展为"测试覆盖"——检查关键用户交互是否有集成测试、是否存在"假覆盖"（单元测试全过但链路没测）。
 
 **Bundled 命令**：
-- **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`** 共 5 个内置命令，无需配置，但日常使用规范中是否已知晓？
+- **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`、`/less-permission-prompts`、`/ultrareview`** 共 7 个内置命令（v3.32 起），无需配置，但日常使用规范中是否已知晓？
 - **Agent Teams**：是否需要启用？如需要，在 settings.json 中加入：
   ```json
   "env": {"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"}
@@ -643,7 +656,7 @@ find docs -type f -name "*.md" 2>/dev/null | sort
 - ...
 
 ### 新功能说明
-- /simplify、/batch、/debug、/loop、/claude-api 共 5 个内置命令，无需配置，直接使用即可
+- /simplify、/batch、/debug、/loop、/claude-api、/less-permission-prompts、/ultrareview 共 7 个内置命令（v3.32+ Claude Code 2.1.111），无需配置，直接使用即可
 - [如启用 Agent Teams] 已在 settings.json 中启用 CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
 
 ### 参考

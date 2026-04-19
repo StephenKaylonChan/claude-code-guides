@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.31（2026-04）
+> **版本**: v3.32（2026-04）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -36,7 +36,7 @@
 
 ## 🎯 命令体系
 
-命令分三类：**Bundled Skills**（Anthropic 内置，5 个）、**自定义 Skills**（安装到 `.claude/skills/`，12 个）、**系统命令**（内置，无需配置）。
+命令分三类：**Bundled Skills**（Anthropic 内置，7 个）、**自定义 Skills**（安装到 `.claude/skills/`，12 个）、**系统命令**（内置，无需配置）。
 
 完整命令速查表见 [00-日常使用说明.md](./00-日常使用说明.md) Section 7。
 
@@ -113,6 +113,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.32 | 2026-04 | **Claude Code 2.1.89-114 功能跟进 + guides 自身配置优化**。**00 文档**：Bundled 命令 **5 → 7**（新增 `/less-permission-prompts` v2.1.111 扫描 transcript 生成权限白名单、`/ultrareview` v2.1.111 云端并行多 agent 审查）+ 高频命令表补 `/recap`（v2.1.108 返回会话摘要）、`/tui fullscreen`（v2.1.110 无闪烁全屏）、`/focus`（v2.1.110 独立命令）、`/team-onboarding`（v2.1.101）、`/effort` 新增 `xhigh` 等级（v2.1.111 Opus 4.7 专属）、`/undo` = `/rewind` 别名（v2.1.108）。**02 文档**：PreCompact Hook 新增**阻塞能力**（v2.1.105 `exit 2` / `{"decision":"block"}`），附示例代码。**03 文档**：Frontmatter description 列表显示上限 **250 → 1,536 字符**（v2.1.105）+ `context: fork` / `agent` 字段 v2.1.101 起修复后真正生效 + Bundled Skills 新增 2 个 + **v2.1.108 新机制**（模型可通过 Skill tool 主动发现和调用 `/init` `/review` `/security-review` 等内置命令）。**自身配置优化**：guides 本地 `.claude/skills/` 新增 4 个定制版 skill（implement/docs/audit/release），针对文档项目适配（移除 ADR 触发、测试/lint/构建检查等代码项目专属逻辑），连同之前 7 个共 **11 个**本地 skill（/diagnose 维度全代码属性，对文档项目空转，跳过）。识别 6 条自验证 insights 待 v3.33 反馈通用版模板。Phase 4 进度 **8/11 → 10/11** |
 | v3.31 | 2026-04 | **AGENTS.md 兼容 Step 1**（调研 + 共存指南）。01-CLAUDE配置架构指南 新增 **Section 9 "与 AGENTS.md 共存"**：背景（2025-12 Linux Foundation 接管、AAIF founding project、6 万+ repo 采用）+ **Claude Code 当前不原生支持**（issue #6235 / #34235 仍 Open，订正旧 TODO 误传）+ **何时需要写 AGENTS.md**（多工具协作 / 外部贡献者 / `/codex` 跨 AI）+ **共存两种方案**（`@import` 推荐 / symlink 备选，对比优缺点）+ **v4.0 迁移触发信号**（Anthropic 官方原生支持 / AAIF schema 标准化 / 团队多工具占比）。Phase 4 roadmap 同步拆分为 Step 1（v3.31 已完成）+ Step 2（等 Claude Code 原生支持后做 v4.0 迁移指南）。Phase 4 进度 **7/10 → 8/11** |
 | v3.30 | 2026-04 | `/codex` **首次写入 03 模板** + 混合使用模式，**Skills 体系梳理完成**（v3.19-v3.30 共梳理 12 个 skill + 废弃 1 个 /deep-audit）。Skills 总数 **11 → 12**。**核心改动**：**混合使用模式**（有参数快速 / 无参数 AskUserQuestion 引导 7 类任务 / 参数模糊时细化）+ **生成文件防覆盖**（已存在时 AskUserQuestion 覆盖/时间戳/取消）+ **粒度控制**（源文件 <30 全包含 / 30-100 最近改动 / ≥100 弹窗选范围）+ **大任务拆分提示**（估算 >50k tokens 时）+ **Step 1 自适应扫描**（读 CLAUDE.md 技术栈）+ **生成文档加 frontmatter**（generated/task_type/estimated_tokens）+ **description 明确适用范围**（Codex/GPT/Gemini/其他 Claude 等任意外部 AI）|
 | v3.29 | 2026-04 | `/fix-permission` **首次写入 03 模板**（之前只存在于 guides 本地），Skills 总数 **10 → 11**。**核心能力升级**：**三级 settings 扫描**（用户级 `~/.claude/settings.json` / 项目级 `./.claude/settings.json` / 项目本地 `./.claude/settings.local.json`）+ **AskUserQuestion 选择写入级别**（根据规则性质选最合适）+ **写入前预演确认**（显示将添加规则 + 弹窗）+ **Step 4A 更新**（`Bash(*)` 仍被拦截时的 4 种解法：更具体规则 / deny 优先 / Auto mode / 手动确认）+ **扩展诊断表**（加管道、后台进程等常见拦截）|

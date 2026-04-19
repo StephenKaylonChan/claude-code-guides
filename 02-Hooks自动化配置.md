@@ -2,7 +2,7 @@
 
 > Claude Code 生命周期钩子系统 — 在 AI 操作的关键节点插入自定义逻辑
 
-**版本**: v3.31
+**版本**: v3.32
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -656,6 +656,19 @@ export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=90
 
 > 设高可延迟触发但留给压缩的 buffer 更小。建议范围 80-90，不建议超过 95。
 
+**阻止压缩（v2.1.105+）**：PreCompact Hook 可通过 `exit code 2` 或返回 `{"decision":"block"}` JSON **阻止本次压缩**。适用场景：检测到当前会话有未保存的关键状态（如 Spec 实施中段），需要先处理再压缩。
+
+```bash
+#!/bin/bash
+# 示例：检测到实施中的 spec 未保存进度就阻塞
+if [ -n "$SPEC_STATUS" ] && [ ! -f ".claude/session-notes.md" ]; then
+  echo '{"decision":"block","reason":"有实施中 spec 但未写 session-notes，请先 /handoff"}'
+  exit 0
+fi
+```
+
+也可以用 `exit 2`（stderr 输出原因）实现同样效果。
+
 ---
 
 ### 5.8 PostCompact：压缩后恢复验证（v3.12 新增）
@@ -1039,5 +1052,5 @@ echo "退出码: $?"
 
 ---
 
-**版本**: v3.31
-**更新日期**: 2026-04（v3.31）
+**版本**: v3.32
+**更新日期**: 2026-04（v3.32）
