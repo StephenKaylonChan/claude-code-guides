@@ -233,7 +233,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.30-v3.32），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.31-v3.33），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -286,6 +286,22 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.33 新增**（重点检查，⚠️ /fix-permission Web 类增强）：
+- **`/fix-permission` Step 2 诊断表新增 Web 类小表**：
+  - `Claude wants to fetch content from X` → `WebFetch(domain:X)`，**首选用户级**（跨项目复用价值大）
+  - WebSearch 弹窗 → `WebSearch`（不带括号、无 domain，零风险全局开）
+- **Step 5 写入级别建议加 Web 类条目**：WebFetch domain / WebSearch 都建议用户级
+- **新增"`Yes, and don't ask again` 沉淀位置陷阱"说明**：默认进 `settings.local.json` 项目本地，跨项目不复用，建议定期提升至用户级 `~/.claude/settings.json`
+- **新增"`settings.local.json` 残骸清理"小节**：识别 Claude Code 对 for-loop / heredoc 拆词错误产生的假规则（`Bash(do)` / `Bash(done)` / `Bash(for f:*)` / `Read(//tmp/**)` 等），跑完 fix-permission 顺手扫一眼删除
+- **与 Bundled `/fewer-permission-prompts` 分工说明**：
+  - `/fix-permission` = 单条精确诊断 + 用户级写入（含 Web 类）
+  - `/fewer-permission-prompts` = 批量补全项目级白名单（仅 Bash + MCP，不覆盖 Web）
+- **迁移**：升级本地 `.claude/skills/fix-permission/SKILL.md`，从 guide 03 Section 2.11 复制最新模板
+  ```bash
+  # 从 guide 复制 SKILL.md 内容（03 Section 2.11）
+  ```
+- **Skills 总数不变**（仍 12 个）
 
 **v3.32 新增**（重点检查，⚠️ Claude Code 2.1.89-114 功能跟进）：
 - **Bundled 命令 5 → 7**（Anthropic 内置，无需配置）：

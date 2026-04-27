@@ -19,6 +19,7 @@
 - [x] Skills 体系梳理（逐个重新定位） ✅ 2026/04/14-15 — v3.19-v3.30 共梳理 12 个 skill + 废弃 1 个（/deep-audit）：/implement、/done、/catchup、/handoff、/spec+/done Gate 三类型、/audit、**/docs 扩展为文档生态守护者**、/diagnose、/release 参数分流、/nbp2、**/fix-permission 写入模板**、**/codex 写入模板**
 - [x] "重复模式 → lint 建议"维度 ✅ 2026/04/15 — v3.26 加入 /diagnose D11 一致性维度（Addy Osmani "重复犯错升级为 lint 规则"理念，2+ 次重复输出独立清单含 ESLint/.claude/rules/ 配置建议）
 - [x] guides 自身配置优化 ✅ 2026/04/19 — v3.32 本地 `.claude/skills/` 新增 4 个文档项目定制版 skill（/implement /docs /audit /release），针对文档项目适配：/implement 移除 ADR 触发、/docs 改"源头-副本"一致性、/audit 换"文档质量+session-notes 新鲜度"、/release 移除 --publish 模式。/diagnose 跳过（13 维度全代码属性文档项目空转）。共 11 个本地 skill。识别 6 条自验证 insights（写入各 skill `<notes>` 段）可反馈 v3.33 通用版模板
+- [x] /fix-permission Web 类诊断扩展 ✅ 2026/04/27 — v3.33 基于真实使用反馈（60+ WebFetch 域名分散在 settings.local.json 跨项目不复用 + 截图 14/17 弹窗为 Web 类）。Step 2 加 Web 类小表（WebFetch domain → 用户级 / WebSearch 零风险全局开）+ Step 5 写入级别建议加 Web 类 + "Yes, and don't ask again" 沉淀位置陷阱说明 + settings.local.json 残骸清理小节（拆词错误假规则识别）+ 与 Bundled /fewer-permission-prompts 分工说明。同步用户全局 settings.json 加 56 个 WebFetch domain + WebSearch noargs（实跑收尾）
 
 ## 待吸收：社区实践
 

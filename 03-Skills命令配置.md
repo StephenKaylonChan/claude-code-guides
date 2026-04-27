@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.32
+**版本**: v3.33
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -3284,6 +3284,13 @@ lint 建议: [M] 条（重复模式 ≥2 次，建议升级为 lint/rules）
 - **写入前预演**：显示将要添加的规则 + 弹窗确认
 - **Step 4A 更新**：加 Auto mode / deny 优先 / 更具体规则等解法
 
+### v3.33 新增
+
+- **Web 类拦截诊断**（`Claude wants to fetch content from X` / WebSearch 弹窗）独立小表 + 写入级别建议（**WebFetch domain 首选用户级**，跨项目复用价值大；**WebSearch 零风险全局开**）
+- **"Yes, and don't ask again" 沉淀位置陷阱说明**：默认写入 `settings.local.json`，跨项目不复用 → 建议定期提升至用户级
+- **`settings.local.json` 残骸清理**：Claude Code 对 for-loop / heredoc 命令拆词错误产生假规则（`Bash(do)` / `Bash(done)` / `Bash(for f:*)` 等），跑完 fix-permission 后扫一眼删掉
+- **与 Bundled `/fewer-permission-prompts` 分工**：`/fix-permission` 单条精确诊断 + 用户级写入 vs Bundled 批量补全项目级白名单
+
 ### 和其他 skill 的关系
 
 /fix-permission 是**独立工具**，不对接开发工作流（不像 /implement/done/release 等配套使用）。
@@ -3321,7 +3328,7 @@ allowed-tools: Read, Edit, Bash
 
 ## Step 2: 诊断原因
 
-常见拦截原因分类：
+### Bash 类拦截
 
 | 拦截提示 | 根因 | 需要的权限规则 |
 |---------|------|--------------|
@@ -3333,6 +3340,19 @@ allowed-tools: Read, Edit, Bash
 | pipe command (\|) | 管道命令 | `Bash(cmd1 \| cmd2 *)` 或 `Bash(*)` |
 | background process (&) | 后台运行 | `Bash(cmd * &)` 或 `Bash(*)` |
 | Permission rule ... requires confirmation | 命令不在 allow 列表 | 添加对应 `Bash(cmd *)` 到 allow |
+
+### Web 类拦截
+
+| 拦截提示 | 根因 | 需要的权限规则 |
+|---------|------|--------------|
+| Claude wants to fetch content from X | 域名 X 不在 WebFetch allow | `WebFetch(domain:X)`（**首选用户级**，跨项目复用价值大） |
+| WebSearch 弹窗 | 全局缺 WebSearch | `WebSearch`（**不带括号 / 无 domain 概念**，零风险全局开） |
+
+> **💡 "Yes, and don't ask again" 的沉淀位置陷阱**
+> 用户在弹窗点 "Yes, and don't ask again" 时，规则**默认写入 `./.claude/settings.local.json`**（项目本地，gitignored）。
+> - **后果**：跨项目浏览同一批技术博客 / 文档站时，每个新项目都要重新同意一遍
+> - **建议**：定期把 `settings.local.json` 里高频 `WebFetch(domain:*)` 提升到用户级 `~/.claude/settings.json`
+> - **诊断信号**：用户反馈"经常被同一域名拦截" → 先 `cat ~/.claude/settings.json` 看用户级是否覆盖
 
 ## Step 3: 读取三级 settings 配置
 
@@ -3388,6 +3408,8 @@ Options:
 ```
 
 **选择建议**：
+- **WebFetch domain** → 用户级（跨项目复用价值大，技术博客 / 文档站浏览模式）
+- **WebSearch**（无 domain）→ 用户级（零风险，搜索结果文本不直接抓任意 URL）
 - 通用 Bash 命令（`ls`、`git status`）→ 用户级
 - 项目特定脚本（`pnpm` / `poetry run` 等）→ 项目级（团队统一）
 - 个人实验或敏感配置 → 项目本地
@@ -3441,6 +3463,26 @@ git add .claude/settings.json  # 仅项目级才需要
 ```
 
 </workflow>
+
+## ⚠️ settings.local.json 残骸清理
+
+Claude Code 在用户对包含 for-loop / heredoc / 复杂引号的命令点 "Yes, and don't ask again" 时，会**拆词错误**写入假权限规则，例如：
+
+- `Bash(do)` / `Bash(done)` / `Bash(for f:*)` / `Bash(for file:*)` — for-loop 关键字被当成独立命令
+- `Read(//tmp/**)` / `Read(//Users/...)` — 双斜杠路径残留
+- `Bash(/tmp/verification_checklist.txt:*)` — 文件路径被当命令名
+
+这些规则**无害但累赘**。可在 `/fix-permission` 跑完后扫一眼 `settings.local.json`，删除明显异常项。
+
+## 与 `/fewer-permission-prompts` 的分工
+
+Anthropic 提供 Bundled Skill `/fewer-permission-prompts`，自动扫 transcript 生成白名单（写到**项目级** `.claude/settings.json`）。两者关系：
+
+| 场景 | 用哪个 |
+|------|-------|
+| 拦截已发生，**单条规则**精确诊断 + 用户级写入 | **`/fix-permission`** |
+| 项目长期使用后**批量补全**项目级白名单 | **`/fewer-permission-prompts`**（Bundled） |
+| Web 类（WebFetch domain）跨项目复用 | **`/fix-permission`** → 用户级（`/fewer-permission-prompts` 只写项目级） |
 ````
 
 **用法示例**：
@@ -3977,5 +4019,5 @@ mkdir -p .claude/skills/codex
 
 ---
 
-**版本**: v3.32
-**更新日期**: 2026-04（v3.32）
+**版本**: v3.33
+**更新日期**: 2026-04（v3.33）
