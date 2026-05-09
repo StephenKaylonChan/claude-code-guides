@@ -2,7 +2,7 @@
 
 > Claude Code 原生记忆系统 — 告别手动维护，拥抱自动化记忆
 
-**版本**: v3.33
+**版本**: v3.34
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -15,9 +15,10 @@
 4. [项目根 CLAUDE.md 模板](#4-项目根-claudemd-模板)
 5. [全局 CLAUDE.md 模板](#5-全局-claudemd-模板)
 6. [路径感知规则 .claude/rules/](#6-路径感知规则-clauderules)
-7. [初始化流程](#7-初始化流程)
-8. [维护指南](#8-维护指南)
-9. [与 AGENTS.md 共存](#9-与-agentsmd-共存)
+7. [环境变量与模型配置](#7-环境变量与模型配置)
+8. [初始化流程](#8-初始化流程)
+9. [维护指南](#9-维护指南)
+10. [与 AGENTS.md 共存](#10-与-agentsmd-共存)
 
 ---
 
@@ -393,7 +394,58 @@ paths:
 
 ---
 
-## 7. 初始化流程
+## 7. 环境变量与模型配置
+
+CLAUDE.md 管项目知识，环境变量和模型设置管 Claude Code **运行时行为**。两者互补。
+
+### 7.1 常用环境变量
+
+| 变量                              | 值      | 说明                                                  |
+|-----------------------------------|---------|-----------------------------------------------------|
+| `CLAUDE_CODE_DISABLE_AUTO_MEMORY` | `1`     | 禁用 Auto Memory 自动记录（详见 Section 1.2）         |
+| `CLAUDE_CODE_ENABLE_AWAY_SUMMARY` | `1`     | 返回会话时自动显示上下文摘要（配合 `/recap` 命令）     |
+| `ENABLE_PROMPT_CACHING_1H`       | `1`     | 延长 prompt cache TTL 到 1 小时（降低 API 成本）       |
+| `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | `1-100` | Auto-compact 触发百分比，默认 ~83%（详见文档 02）     |
+| `CLAUDE_CODE_USE_POWERSHELL_TOOL` | `1`     | Windows 使用 PowerShell 替代 Bash                     |
+
+**持久化**：通过 `settings.json` 的 `env` 字段设定，避免每次手动 `export`：
+
+```json
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_AWAY_SUMMARY": "1"
+  }
+}
+```
+
+> `env` 字段支持用户级（`~/.claude/settings.json`）和项目级（`.claude/settings.json`）。跨项目生效的偏好放用户级，团队统一的配置放项目级。
+
+### 7.2 模型与 Effort 选择
+
+**模型切换**（`/model` 命令）：
+
+| 模型        | 定位           | 适用场景                           |
+|------------|----------------|----------------------------------|
+| Opus 4.7   | 最强推理        | 复杂架构设计、跨文件重构、疑难 Bug  |
+| Opus 4.6   | 旗舰（默认）    | 日常开发、功能实现、代码审查        |
+| Sonnet 4.6 | 性价比          | 简单修改、文档编写、格式化          |
+| Haiku 4.5  | 轻量快速        | 快问快答、简单查询                  |
+
+**Effort 等级**（`/effort` 命令，无参数打开交互式滑块）：
+
+| 等级    | 说明                                    |
+|---------|----------------------------------------|
+| `low`   | 最少思考，简单是非问题                    |
+| `medium`| 标准深度，常规任务                        |
+| `high`  | 深度思考（默认），需要仔细推理的任务        |
+| `xhigh` | 极深思考（Opus 4.7 专属，v2.1.111+）      |
+| `max`   | 仅当前轮次最大思考                        |
+
+> **`/fast`**：Opus 4.6 快速输出模式（约 2.5x 速度），适合输出量大但推理不复杂的任务。通过 `/fast` 切换，不降级模型。
+
+---
+
+## 8. 初始化流程
 
 新项目初始化通过 `prompt-新项目初始化.md` 执行——在目标项目中启动 Claude Code，@ 引用该 prompt 文件，Claude 会自主完成全部配置。
 
@@ -414,7 +466,7 @@ paths:
 
 ---
 
-## 8. 维护指南
+## 9. 维护指南
 
 ### 每月检查清单
 
@@ -440,11 +492,11 @@ paths:
 
 ---
 
-## 9. 与 AGENTS.md 共存
+## 10. 与 AGENTS.md 共存
 
 > AGENTS.md 是跨 AI 工具的配置文件事实标准。**Claude Code 当前不原生读 AGENTS.md**，但团队里出现多工具协作（Cursor / Aider / Codex / Gemini CLI 等）时，本节给出共存方案。
 
-### 9.1 AGENTS.md 是什么
+### 10.1 AGENTS.md 是什么
 
 放在仓库根的 Markdown 文件，给 AI coding agent 提供项目上下文（技术栈、构建步骤、测试命令、代码约定）。定位类似"给 agent 看的 README"。
 
@@ -453,7 +505,7 @@ paths:
 - **Linux Foundation 接管**：2025-12-09 成立 Agentic AI Foundation (AAIF)，AGENTS.md 由 OpenAI 捐赠，与 MCP（Anthropic 捐）、goose（Block 捐）并列为 founding projects
 - **采用规模**：60,000+ open source projects（LF 官方数据）
 
-### 9.2 Claude Code 当前支持现状
+### 10.2 Claude Code 当前支持现状
 
 **Claude Code 不原生读 AGENTS.md**（2026-04 确认）：
 
@@ -463,7 +515,7 @@ paths:
 
 **官方支持 AGENTS.md 的工具**（部分）：OpenAI Codex、Cursor、Aider、Gemini CLI、GitHub Copilot、Jules、Devin、Warp、JetBrains Junie、Zed、Windsurf 等 25+。
 
-### 9.3 何时需要写 AGENTS.md
+### 10.3 何时需要写 AGENTS.md
 
 触发条件（任一满足）：
 
@@ -475,7 +527,7 @@ paths:
 
 **不需要的场景**：纯 Claude Code 团队 + 内部仓库 + 不跨 AI 协作 → 继续用 CLAUDE.md 单文件，不引入复杂度。
 
-### 9.4 共存方案
+### 10.4 共存方案
 
 两种社区实战方案，**推荐 `@import` 方案**。
 
@@ -516,7 +568,7 @@ echo "CLAUDE.md" >> .gitignore
 
 **建议**：全 Linux/macOS 团队 + 无 Claude Code 专属配置时用；否则用方案 A。
 
-### 9.5 迁移路径（v4.0 触发信号）
+### 10.5 迁移路径（v4.0 触发信号）
 
 guides 项目**当前不做 CLAUDE.md → AGENTS.md 整体迁移**，理由：
 
@@ -534,5 +586,5 @@ guides 项目**当前不做 CLAUDE.md → AGENTS.md 整体迁移**，理由：
 
 ---
 
-**版本**: v3.33
-**更新日期**: 2026-04（v3.33）
+**版本**: v3.34
+**更新日期**: 2026-05（v3.34）

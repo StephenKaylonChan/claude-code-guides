@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.33（2026-04）
+> **版本**: v3.34（2026-05）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -113,6 +113,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.34 | 2026-05 | **01 新增 Section 7 "环境变量与模型配置"**。新增独立章节（~45 行）整合此前分散在各文档的运行时配置知识：**常用环境变量表**（`CLAUDE_CODE_ENABLE_AWAY_SUMMARY` / `ENABLE_PROMPT_CACHING_1H` / `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` / `CLAUDE_CODE_USE_POWERSHELL_TOOL`，含 `settings.json` `env` 字段持久化方法和用户级/项目级选择建议）+ **模型选择策略**（Opus 4.7 / 4.6 / Sonnet 4.6 / Haiku 4.5 定位与适用场景）+ **Effort 等级指南**（`low` ~ `max` 含 `xhigh` Opus 4.7 专属）+ `/fast` 模式说明。原 Section 7-9 顺延为 8-10。Skills 总数不变（12 个）|
 | v3.33 | 2026-04 | **`/fix-permission` Web 类诊断扩展**（基于真实使用反馈：60+ WebFetch 域名分散在 `settings.local.json` 跨项目不复用 + 截图 14/17 弹窗为 Web 类）。**Step 2 诊断表新增 Web 类小表**（`Claude wants to fetch content from X` → `WebFetch(domain:X)` 首选用户级 / `WebSearch` 弹窗 → 零风险全局开 noargs 形式）。**Step 5 写入级别建议加 Web 类**（WebFetch domain 跨项目复用价值大，强烈建议用户级；WebSearch 文本无 URL 抓取风险）。**新增"`Yes, and don't ask again` 沉淀位置陷阱"说明**：默认进 `settings.local.json` 项目本地不复用，建议定期提升至用户级。**新增"`settings.local.json` 残骸清理"小节**：识别 Claude Code 对 for-loop / heredoc 拆词错误产生的假规则（`Bash(do)` / `Bash(done)` / `Bash(for f:*)` 等），跑完 `/fix-permission` 顺手扫一眼删除。**与 Bundled `/fewer-permission-prompts` 分工说明**：单条精确诊断 + 用户级写入 vs 批量补全项目级白名单。Skills 总数不变（12 个）|
 | v3.32 | 2026-04 | **Claude Code 2.1.89-114 功能跟进 + guides 自身配置优化**。**00 文档**：Bundled 命令 **5 → 7**（新增 `/less-permission-prompts` v2.1.111 扫描 transcript 生成权限白名单、`/ultrareview` v2.1.111 云端并行多 agent 审查）+ 高频命令表补 `/recap`（v2.1.108 返回会话摘要）、`/tui fullscreen`（v2.1.110 无闪烁全屏）、`/focus`（v2.1.110 独立命令）、`/team-onboarding`（v2.1.101）、`/effort` 新增 `xhigh` 等级（v2.1.111 Opus 4.7 专属）、`/undo` = `/rewind` 别名（v2.1.108）。**02 文档**：PreCompact Hook 新增**阻塞能力**（v2.1.105 `exit 2` / `{"decision":"block"}`），附示例代码。**03 文档**：Frontmatter description 列表显示上限 **250 → 1,536 字符**（v2.1.105）+ `context: fork` / `agent` 字段 v2.1.101 起修复后真正生效 + Bundled Skills 新增 2 个 + **v2.1.108 新机制**（模型可通过 Skill tool 主动发现和调用 `/init` `/review` `/security-review` 等内置命令）。**自身配置优化**：guides 本地 `.claude/skills/` 新增 4 个定制版 skill（implement/docs/audit/release），针对文档项目适配（移除 ADR 触发、测试/lint/构建检查等代码项目专属逻辑），连同之前 7 个共 **11 个**本地 skill（/diagnose 维度全代码属性，对文档项目空转，跳过）。识别 6 条自验证 insights 待 v3.33 反馈通用版模板。Phase 4 进度 **8/11 → 10/11** |
 | v3.31 | 2026-04 | **AGENTS.md 兼容 Step 1**（调研 + 共存指南）。01-CLAUDE配置架构指南 新增 **Section 9 "与 AGENTS.md 共存"**：背景（2025-12 Linux Foundation 接管、AAIF founding project、6 万+ repo 采用）+ **Claude Code 当前不原生支持**（issue #6235 / #34235 仍 Open，订正旧 TODO 误传）+ **何时需要写 AGENTS.md**（多工具协作 / 外部贡献者 / `/codex` 跨 AI）+ **共存两种方案**（`@import` 推荐 / symlink 备选，对比优缺点）+ **v4.0 迁移触发信号**（Anthropic 官方原生支持 / AAIF schema 标准化 / 团队多工具占比）。Phase 4 roadmap 同步拆分为 Step 1（v3.31 已完成）+ Step 2（等 Claude Code 原生支持后做 v4.0 迁移指南）。Phase 4 进度 **7/10 → 8/11** |
@@ -155,4 +156,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-04（v3.31）
+**最后更新**: 2026-05（v3.34）

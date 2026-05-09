@@ -5,7 +5,7 @@
 
 ## 待跟进：官方更新
 
-- [x] Claude Code 新版本功能研究与整合 ✅ 2026/04/19 — v3.32 跟进 v2.1.89-114（26 个小版本）。Bundled 命令 5→7（+/less-permission-prompts、+/ultrareview）；PreCompact 可阻塞（exit 2 / decision:block）；Skill description 上限 250→1536；frontmatter `context: fork` + `agent` 修复后生效；模型可通过 Skill tool 主动发现并调用内置命令；`/recap` Session Recap、`/tui fullscreen`、`/effort xhigh`（Opus 4.7）等。**未处理的**（v3.33 候选）：01 无"环境变量/模型配置"段落，`ENABLE_PROMPT_CACHING_1H`、`CLAUDE_CODE_ENABLE_AWAY_SUMMARY`、`sandbox.network.deniedDomains`（v2.1.113）、plugin `monitors` manifest 待新开段落
+- [x] Claude Code 新版本功能研究与整合 ✅ 2026/04/19 — v3.32 跟进 v2.1.89-114（26 个小版本）。Bundled 命令 5→7（+/less-permission-prompts、+/ultrareview）；PreCompact 可阻塞（exit 2 / decision:block）；Skill description 上限 250→1536；frontmatter `context: fork` + `agent` 修复后生效；模型可通过 Skill tool 主动发现并调用内置命令；`/recap` Session Recap、`/tui fullscreen`、`/effort xhigh`（Opus 4.7）等。**v3.34 已处理**：01 新增 Section 7"环境变量与模型配置"（含 `ENABLE_PROMPT_CACHING_1H`、`CLAUDE_CODE_ENABLE_AWAY_SUMMARY` 等）。**仍未处理**：02 新增 `sandbox.network.deniedDomains`（v2.1.113）段落、plugin `monitors` manifest 待新开段落
 - [ ] 新增 Hook 事件 / Skills 能力的文档更新（合并到上条，v3.32 已覆盖本阶段）
 - [x] AGENTS.md 兼容 Step 1（调研 + 共存指南） ✅ 2026/04/19 — v3.31 01 新增 Section 9 "与 AGENTS.md 共存"：`@import` 方案（推荐）+ symlink 备选 + Claude Code 当前不原生支持说明（issue #6235 / #34235 Open）+ 迁移路径 v4.0 触发信号。订正旧 TODO 误传："Claude/Cursor/Aider/Codex 均兼容" 对 Claude Code **不成立**
 - [ ] AGENTS.md 兼容 Step 2（等 Claude Code 原生支持 AGENTS.md 后做 v4.0 迁移指南）— 跟踪 [issue #6235](https://github.com/anthropics/claude-code/issues/6235) / [#34235](https://github.com/anthropics/claude-code/issues/34235) 关闭状态

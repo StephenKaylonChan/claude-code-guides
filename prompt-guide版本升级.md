@@ -233,7 +233,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.31-v3.33），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.32-v3.34），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -286,6 +286,17 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.34 新增**（重点检查，01 新增章节）：
+- **01 新增 Section 7 "环境变量与模型配置"**：之前分散在 00（命令表）、01（Auto Memory 禁用）、02（auto-compact 阈值）的运行时配置知识，现在有统一参考章节
+  - **常用环境变量表**：`CLAUDE_CODE_ENABLE_AWAY_SUMMARY`、`ENABLE_PROMPT_CACHING_1H`、`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`、`CLAUDE_CODE_USE_POWERSHELL_TOOL`
+  - **`settings.json` `env` 字段持久化**：用户级 vs 项目级选择建议
+  - **模型选择策略**：Opus 4.7 / 4.6 / Sonnet 4.6 / Haiku 4.5 定位与适用场景
+  - **Effort 等级指南**：`low` ~ `max`，含 `xhigh`（Opus 4.7 专属，v2.1.111+）
+  - **`/fast` 模式说明**
+- **01 章节重编号**：原 Section 7-9 顺延为 8-10（Section 10 = 与 AGENTS.md 共存）
+- **不影响迁移**：新增 Section 是知识参考，不产生新配置文件或 Skill
+- **Skills 总数不变**（仍 12 个）
 
 **v3.33 新增**（重点检查，⚠️ /fix-permission Web 类增强）：
 - **`/fix-permission` Step 2 诊断表新增 Web 类小表**：
