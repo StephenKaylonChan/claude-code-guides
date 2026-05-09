@@ -28,7 +28,7 @@
 | 文档 | 说明 | 优先阅读 |
 |------|------|-----------|
 | [01-CLAUDE配置架构指南.md](./01-CLAUDE配置架构指南.md) | CLAUDE.md 层级结构 + Auto Memory 管理 | 配置参考 |
-| [02-Hooks自动化配置.md](./02-Hooks自动化配置.md) | 21个 Hook 事件 + 实用模板（测试门禁/自动格式化/通知/压缩恢复） | 配置参考 |
+| [02-Hooks自动化配置.md](./02-Hooks自动化配置.md) | 26 个 Hook 事件 + 实用模板（测试门禁/自动格式化/通知/压缩恢复） | 配置参考 |
 | [03-Skills命令配置.md](./03-Skills命令配置.md) | 替代旧 Slash Commands 的 Skills 系统配置 | 第三读 |
 | [04-工作流最佳实践.md](./04-工作流最佳实践.md) | Explore→Plan→Code→Verify→Simplify→Commit、Worktrees、MCP 选型、反模式 | 随时参考 |
 
@@ -36,7 +36,7 @@
 
 ## 🎯 命令体系
 
-命令分三类：**Bundled Skills**（Anthropic 内置，7 个）、**自定义 Skills**（安装到 `.claude/skills/`，12 个）、**系统命令**（内置，无需配置）。
+命令分三类：**Bundled Skills**（Anthropic 内置，7 个）、**自定义 Skills**（安装到 `.claude/skills/`，13 个）、**系统命令**（内置，无需配置）。
 
 完整命令速查表见 [00-日常使用说明.md](./00-日常使用说明.md) Section 7。
 
@@ -54,7 +54,7 @@ project-root/
 │   ├── rules/
 │   │   ├── frontend.md            # 前端路径感知规则
 │   │   └── backend.md             # 后端路径感知规则
-│   ├── skills/                    # 自定义命令（12 个，v3.29 fix-permission、v3.30 codex）
+│   ├── skills/                    # 自定义命令（13 个，v3.35 visual）
 │   │   ├── audit/SKILL.md
 │   │   ├── catchup/SKILL.md
 │   │   ├── handoff/SKILL.md
@@ -66,7 +66,8 @@ project-root/
 │   │   ├── nbp2/SKILL.md
 │   │   ├── diagnose/SKILL.md
 │   │   ├── fix-permission/SKILL.md
-│   │   └── codex/SKILL.md
+│   │   ├── codex/SKILL.md
+│   │   └── visual/SKILL.md
 │   ├── agents/                    # 自定义子代理（可选）
 │   └── hooks/                     # Hook 脚本
 │       ├── session-start.sh
