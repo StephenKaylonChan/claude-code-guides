@@ -651,8 +651,8 @@ chmod +x .claude/hooks/*.sh
 **⛔ 运行以下命令验证，输出完整结果**（不可跳过）：
 
 ```bash
-echo "=== Skills (应为 12 个，v3.29 含 fix-permission / v3.30 含 codex / v3.25 起 /deep-audit 废弃) ==="
-for f in audit catchup handoff spec implement done docs release nbp2 diagnose fix-permission codex; do
+echo "=== Skills (应为 13 个，v3.35 含 visual / v3.25 起 /deep-audit 废弃) ==="
+for f in audit catchup handoff spec implement done docs release nbp2 diagnose fix-permission codex visual; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 # 验证旧 /deep-audit 是否已删除
