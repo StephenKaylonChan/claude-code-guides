@@ -233,7 +233,7 @@ ls .claude/rules/ 2>/dev/null
 
 #### 2.7 新功能知识
 
-以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.32-v3.34），更早版本的功能如果项目已配置到位则跳过。
+以下是各版本 guide 新增的内容。**重点检查最近 3 个版本**（v3.33-v3.35），更早版本的功能如果项目已配置到位则跳过。
 
 **v3.5-v3.8 累积功能**（如项目已跟上这些版本可跳过，否则逐条检查）：
 - 六步开发循环 `Explore→Plan→Code→Verify→Simplify→Commit`、复杂度分级、Clear 主动策略（v3.5）
@@ -286,6 +286,19 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.35 新增**（重点检查，⚠️ 新增 /visual Skill）：
+- **`/visual` 首次写入 03 模板**：项目数据可视化仪表盘
+- **迁移**：新增 `.claude/skills/visual/SKILL.md`，从 guide 03 Section 2.13 复制最新模板
+  ```bash
+  mkdir -p .claude/skills/visual
+  # 从 guide 复制 SKILL.md 内容（03 Section 2.13）
+  ```
+- **`.gitignore` 建议加**：`docs/reports/*.html`（HTML 报告是一次性产物，不进版本控制）
+- **4 种场景**：`/visual roadmap` / `/visual audit` / `/visual changes` / 自由描述
+- **内置暗色设计系统**：CSS 变量色板（绿主色 `#6bc4a0` / 琥珀警示 / 深灰层次）+ 4 种布局模式（仪表盘 / 时间线 / 风险地图 / 变更地图）
+- **零外部依赖**：纯 HTML + inline CSS + vanilla JS，无 CDN
+- **Skills 总数 12 → 13**（新增 /visual）
 
 **v3.34 新增**（重点检查，01 新增章节）：
 - **01 新增 Section 7 "环境变量与模型配置"**：之前分散在 00（命令表）、01（Auto Memory 禁用）、02（auto-compact 阈值）的运行时配置知识，现在有统一参考章节
