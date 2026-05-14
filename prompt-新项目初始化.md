@@ -77,7 +77,7 @@ Stop：是否需要完成通知？（macOS / Linux）
 **Skills 选择**：
 
 ```
-必须：audit（浅层巡检）、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理为执行契约）、implement（有纪律的单改动实施）、done（功能交付检查清单）、docs（文档生态守护者：更新/新增/删除/审计 spec-code/ADR/Gate）、release（Phase 里程碑工作流 + 可选 --publish 对外发版）、nbp2（AI 生图 Prompt 助手）、diagnose（全维度代码健康诊断）、fix-permission（权限拦截自动诊断修复）、codex（为外部 AI 生成自包含任务文档）、visual（项目数据可视化仪表盘）
+必须：audit（浅层巡检）、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理为执行契约）、implement（有纪律的单改动实施）、done（功能交付检查清单）、docs（文档生态守护者：更新/新增/删除/审计 spec-code/ADR/Gate）、release（Phase 里程碑工作流 + 可选 --publish 对外发版）、nbp2（AI 生图 Prompt 助手）、diagnose（全维度代码健康诊断）、fix-permission（权限拦截自动诊断修复）、codex（为外部 AI 生成自包含任务文档，三档输出：md / Codex CLI exec 闭环 / Mac App 手动）、visual（项目数据可视化仪表盘）
 可选：是否有项目特定的高频操作值得封装为命令？
 ```
 

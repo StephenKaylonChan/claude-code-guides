@@ -20,6 +20,7 @@
 - [x] "重复模式 → lint 建议"维度 ✅ 2026/04/15 — v3.26 加入 /diagnose D11 一致性维度（Addy Osmani "重复犯错升级为 lint 规则"理念，2+ 次重复输出独立清单含 ESLint/.claude/rules/ 配置建议）
 - [x] guides 自身配置优化 ✅ 2026/04/19 — v3.32 本地 `.claude/skills/` 新增 4 个文档项目定制版 skill（/implement /docs /audit /release），针对文档项目适配：/implement 移除 ADR 触发、/docs 改"源头-副本"一致性、/audit 换"文档质量+session-notes 新鲜度"、/release 移除 --publish 模式。/diagnose 跳过（13 维度全代码属性文档项目空转）。共 11 个本地 skill。识别 6 条自验证 insights（写入各 skill `<notes>` 段）可反馈 v3.33 通用版模板
 - [x] /fix-permission Web 类诊断扩展 ✅ 2026/04/27 — v3.33 基于真实使用反馈（60+ WebFetch 域名分散在 settings.local.json 跨项目不复用 + 截图 14/17 弹窗为 Web 类）。Step 2 加 Web 类小表（WebFetch domain → 用户级 / WebSearch 零风险全局开）+ Step 5 写入级别建议加 Web 类 + "Yes, and don't ask again" 沉淀位置陷阱说明 + settings.local.json 残骸清理小节（拆词错误假规则识别）+ 与 Bundled /fewer-permission-prompts 分工说明。同步用户全局 settings.json 加 56 个 WebFetch domain + WebSearch noargs（实跑收尾）
+- [x] /codex 三档输出升级（Codex CLI / Mac App 分化跟进） ✅ 2026/05/14 — v3.36 Codex 2025-2026 重启后分化为 **CLI**（npm `@openai/codex` v0.130.0+，Rust 实现）+ **Mac App**（独立桌面 App，Computer Use / Chrome 扩展 / Automations）。**新增 exec 模式**（CLI 闭环）：`cat .codex-task.md | codex exec --sandbox workspace-write --ask-for-approval never -`，Claude 直调拿回结果无需用户中转。**关键 flag 内置**（`--sandbox workspace-write` / `--ask-for-approval never` / 末尾 `-` / 可选 `--model X`）+ **未提交改动护栏**（exec 前 `git status` 提醒先 commit/stash） + **CLI 不可用降级 md 模式** + **app 模式提示段**（明示 Mac App 无法被自动调起 — `codex://` 仅打开面板、Automations 无外部 API，仅 Computer Use / Chrome 扩展场景手动选）。**Step 0 加 0-pre 检测段** + **Question 2 输出方式弹窗**（md / CLI exec / Mac App 手动 3 选项）
 
 ## 待吸收：社区实践
 

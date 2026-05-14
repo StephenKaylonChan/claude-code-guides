@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.35（2026-05）
+> **版本**: v3.36（2026-05）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -54,7 +54,7 @@ project-root/
 │   ├── rules/
 │   │   ├── frontend.md            # 前端路径感知规则
 │   │   └── backend.md             # 后端路径感知规则
-│   ├── skills/                    # 自定义命令（13 个，v3.35 visual）
+│   ├── skills/                    # 自定义命令（13 个，v3.36 codex 升级）
 │   │   ├── audit/SKILL.md
 │   │   ├── catchup/SKILL.md
 │   │   ├── handoff/SKILL.md
@@ -114,6 +114,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.36 | 2026-05 | **`/codex` 三档输出升级——Codex 2025-2026 重启后分化为 CLI（`@openai/codex` v0.130.0+，Rust 实现）+ Mac App（独立桌面 App，Computer Use / Chrome 扩展 / Automations）两个独立产品**。**新增 exec 模式**（CLI 闭环）：`cat .codex-task.md \| codex exec --sandbox workspace-write --ask-for-approval never -`，Claude 直调 CLI 拿回结果，无需用户中转。**关键 flag 内置**：`--sandbox workspace-write`（默认 `read-only` 写不了文件） + `--ask-for-approval never`（exec 自动化跳过交互） + 末尾 `-`（从 stdin 读 prompt） + 可选 `--model X`（如 `gpt-5-pro` 长上下文）。**未提交改动护栏**（exec 前 `git status` 提醒先 commit/stash，因 codex 会直接改文件） + **CLI 不可用自动降级为 md 模式**（`brew install codex` / `npm i -g @openai/codex`） + **新增 app 模式提示段**：明示 Mac App **无法被自动调起**（`codex://` URL scheme 仅打开面板、Automations 无外部 API），仅在需要 Computer Use（操作桌面 app）/ Chrome 扩展（复用已登录 session）/ Automations（定时触发）场景手动选。**Step 0 加 0-pre 检测段**（`--exec` / `--model X` / 中文触发词如"直接执行""让codex做"） + **Question 2 输出方式弹窗**（md / CLI exec / Mac App 手动 3 选项）。Skills 总数不变（仍 13 个） |
 | v3.35 | 2026-05 | **`/visual` 首次写入 03 模板**——项目数据可视化仪表盘 Skill。把 roadmap 进度、audit 报告、跨文件变更等渲染为**自包含 HTML 仪表盘**（零依赖、暗色主题、浏览器直接打开）。参考 Anthropic 工程师 Thariq Shihipar "HTML is ridiculously effective" 实践。**4 种场景**（roadmap / audit / changes / 自由描述）+ **内置设计系统**（CSS 变量色板 + 4 种布局模式）+ **`.gitignore` 建议**（一次性产物不进版本控制）。Skills 总数 **12 → 13** |
 | v3.34 | 2026-05 | **01 新增 Section 7 "环境变量与模型配置"**。新增独立章节（~45 行）整合此前分散在各文档的运行时配置知识：**常用环境变量表**（`CLAUDE_CODE_ENABLE_AWAY_SUMMARY` / `ENABLE_PROMPT_CACHING_1H` / `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` / `CLAUDE_CODE_USE_POWERSHELL_TOOL`，含 `settings.json` `env` 字段持久化方法和用户级/项目级选择建议）+ **模型选择策略**（Opus 4.7 / 4.6 / Sonnet 4.6 / Haiku 4.5 定位与适用场景）+ **Effort 等级指南**（`low` ~ `max` 含 `xhigh` Opus 4.7 专属）+ `/fast` 模式说明。原 Section 7-9 顺延为 8-10。Skills 总数不变（12 个）|
 | v3.33 | 2026-04 | **`/fix-permission` Web 类诊断扩展**（基于真实使用反馈：60+ WebFetch 域名分散在 `settings.local.json` 跨项目不复用 + 截图 14/17 弹窗为 Web 类）。**Step 2 诊断表新增 Web 类小表**（`Claude wants to fetch content from X` → `WebFetch(domain:X)` 首选用户级 / `WebSearch` 弹窗 → 零风险全局开 noargs 形式）。**Step 5 写入级别建议加 Web 类**（WebFetch domain 跨项目复用价值大，强烈建议用户级；WebSearch 文本无 URL 抓取风险）。**新增"`Yes, and don't ask again` 沉淀位置陷阱"说明**：默认进 `settings.local.json` 项目本地不复用，建议定期提升至用户级。**新增"`settings.local.json` 残骸清理"小节**：识别 Claude Code 对 for-loop / heredoc 拆词错误产生的假规则（`Bash(do)` / `Bash(done)` / `Bash(for f:*)` 等），跑完 `/fix-permission` 顺手扫一眼删除。**与 Bundled `/fewer-permission-prompts` 分工说明**：单条精确诊断 + 用户级写入 vs 批量补全项目级白名单。Skills 总数不变（12 个）|
@@ -158,4 +159,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-05（v3.35）
+**最后更新**: 2026-05（v3.36）

@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.35
+**版本**: v3.36
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -3509,11 +3509,21 @@ Anthropic 提供 Bundled Skill `/fewer-permission-prompts`，自动扫 transcrip
 
 ### 2.12 /codex — 外部 AI 任务文档生成器
 
-**用途**：为 **Codex / GPT / ChatGPT / Gemini / 其他 Claude 实例** 等任意外部 AI 生成**自包含任务文档**。打包项目上下文 + 任务说明，让外部 AI 读完就能直接执行，无需额外说明。
+**用途**：为 **Codex CLI / Codex Mac App / GPT / Gemini / 其他 Claude 实例** 等任意外部 AI 生成**自包含任务文档**。支持三种输出方式：**md 文件**（默认，最通用） / **Codex CLI 直接执行**（闭环，Claude 直调拿回结果） / **Mac App 手动粘贴**（Computer Use / Chrome 扩展 / Automations 场景）。
 
 **定位**：**跨 AI 协作工具**——用于交叉审查、外部意见、不同 AI 互补。独立工具 skill，不对接开发工作流。
 
-> **命名说明**：`codex` 是历史命名（OpenAI 原 Codex 2021 产品已停）。实际适用**任何外部 AI**——因使用习惯保留命名，不改名。
+> **命名说明**：`codex` 是历史命名（OpenAI 原 Codex 2021 产品已停）。当前 `codex` 是 OpenAI 在 2025-2026 重启的新产品线（CLI v0.130.0+ / Mac App），实际也适用任何其他外部 AI——保留命名。
+
+### v3.36 新增
+
+- **三档输出方式**：`md`（默认）/ `exec`（Codex CLI 闭环）/ `app`（Mac App 手动）
+- **exec 模式自动化闭环**：`cat .codex-task.md | codex exec --sandbox workspace-write --ask-for-approval never -`，Claude 直调 CLI 并拿回结果，无需用户中转
+- **关键 flag 内置**：`--sandbox workspace-write`（默认 read-only 写不了文件）+ `--ask-for-approval never`（不卡交互）+ 末尾 `-`（从 stdin 读 prompt，不加会当文件名）+ 可选 `--model X`（如 `gpt-5-pro`）
+- **参数解析支持 `--model X`**：透传给 `codex exec`，否则用 CLI 默认 `gpt-5-codex`
+- **未提交改动护栏**：exec 前检查 `git status`，提醒先 commit/stash（codex 会直接改文件）
+- **CLI 不可用降级**：`which codex` 失败时自动降级为 md 模式 + 安装提示（`brew install codex` / `npm i -g @openai/codex`）
+- **Mac App 提示段**：明示 Mac App **无法被自动调起**（`codex://` URL scheme 仅打开面板、Automations 无外部 API），仅在需要 Computer Use（操作桌面 app）/ Chrome 扩展（复用已登录 session）/ Automations（定时触发）时手动选
 
 ### v3.30 新增
 
@@ -3541,43 +3551,71 @@ Anthropic 提供 Bundled Skill `/fewer-permission-prompts`，自动扫 transcrip
 ---
 name: codex
 description: |
-  为 Codex / GPT / ChatGPT / Gemini / 其他 Claude 实例等任意外部 AI 生成自包含的任务文档。
+  为 Codex CLI / Codex Mac App / GPT / Gemini / 其他 Claude 实例等任意外部 AI 生成自包含的任务文档。
   打包项目上下文 + 任务说明，让外部 AI 读完就能直接执行，无需额外说明。
+  支持三种输出方式：生成 .md 文件（默认） / Codex CLI 直接执行（闭环） / Mac App 手动粘贴（computer use 场景）。
   触发关键词：codex、让 Codex 看看、交叉审查、cross review、外部 AI、让 GPT 审查
-argument-hint: "[任务描述] 或留空进入引导模式"
+argument-hint: "[任务描述] [--exec] [--model X] 或留空进入引导模式"
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
 <task>
 根据用户的任务描述 + 当前项目上下文，生成一份自包含的任务文档给外部 AI 执行。
 
+三种输出方式：
+- **md 模式**（默认）：生成 `.codex-task.md`，用户手动喂给外部 AI（GPT / Gemini / 其他 Claude / Codex 任意端均可）
+- **exec 模式**（CLI 闭环）：生成后直接 `cat .codex-task.md | codex exec --sandbox workspace-write --ask-for-approval never -`，Claude 拿回结果无需用户中转
+- **app 模式**（Mac App 手动）：生成文档后用户粘进 Codex Mac App。**Mac App 无法被自动调起**（`codex://` URL scheme 仅打开面板，Automations 无外部 API），仅在需要 Computer Use / Chrome 扩展 / Automations 场景时选
+
+exec 模式触发方式（任一）：
+- 参数含 `--exec` / `exec` / `直接执行` / `直接跑` / `让codex做`
+- AskUserQuestion 中选择 CLI 执行
+
+模型选择：
+- 参数含 `--model X` → 透传给 `codex exec --model X`
+- 否则用 CLI 默认（当前为 `gpt-5-codex`）
+
 混合使用模式：
 - 有参数且明确 → 直接生成
-- 无参数 → AskUserQuestion 引导任务类型 + 细化
+- 无参数 → AskUserQuestion 引导任务类型 + 输出方式
 - 有参数但模糊 → AskUserQuestion 细化
 
 MUST 原则：
 - 外部 AI 读完文档即可直接执行，**不需要任何额外说明**
-- 防覆盖（已有 .codex-task.md 时 AskUserQuestion 询问）
+- 防覆盖（已有 `.codex-task.md` 时 AskUserQuestion 询问）
 - 大任务估算 tokens，超出建议拆分
+- exec 模式 MUST 先检查 `codex` CLI 可用 + 提醒未提交改动（codex 会直接改文件）
 </task>
 
 <workflow>
 
-## Step 0: 解析任务（混合模式）
+## Step 0: 解析参数 + 输出模式
+
+### 0-pre. 检测输出模式 + 模型
+
+从参数中提取以下信号，剩余部分作为任务描述：
+
+| 参数模式 | 含义 | 设置 |
+|---|---|---|
+| `--exec` / `exec` / `直接执行` / `直接跑` / `让codex做` | CLI 闭环 | `outputMode = 'exec'` |
+| `--model X`（如 `--model gpt-5-pro`） | 模型覆盖 | `modelFlag = X` |
+| 否 | 默认 | `outputMode = 'md'`，`modelFlag` 空 |
+
+示例：
+- `/codex exec 审查登录安全性` → exec + 任务 "审查登录安全性"
+- `/codex --exec --model gpt-5-pro 代码质量评审` → exec + gpt-5-pro + 任务 "代码质量评审"
+- `/codex 审查登录安全性` → md + 任务 "审查登录安全性"
 
 ### 0a. 有参数且明确（快速路径）
 
-如 `/codex 审查登录功能的安全性` → 明确的动作 + 明确的对象 → 直接进入 Step 1。
-
-**明确的判定**：参数含动词（审查 / 对比 / 评审）+ 具体名词（功能名 / 方案名）。
+参数含动词（审查 / 对比 / 评审）+ 具体名词（功能名 / 方案名） → 直接进入 Step 1。
 
 ### 0b. 无参数（引导路径）
 
-**AskUserQuestion**：
+**AskUserQuestion**（两个问题，串行）：
 
 ```
-Question: 让外部 AI 做什么？
+Question 1: 让外部 AI 做什么？
 
 Options:
 1. Bug 审查（全面排查隐藏问题）
@@ -3587,10 +3625,19 @@ Options:
 5. 特定功能审查（后续追问"哪个功能"）
 6. 方案对比（A vs B，后续追问具体方案）
 7. 自定义（自由输入）
+
+Question 2: 输出方式？
+Header: "输出方式"
+Options:
+1. 生成 .md 文件（手动喂给外部 AI，最通用）
+2. Codex CLI 直接执行（闭环，需已装 codex）
+3. Mac App 手动粘贴（需 Computer Use / Chrome 扩展场景）
 ```
 
-选 5/6 → 第二次 AskUserQuestion 或自由输入追问细节。
-选 7 → 用户自由输入，Claude 提取任务。
+Q1 选 5/6 → 第二次 AskUserQuestion 或自由输入追问细节
+Q1 选 7 → 用户自由输入，Claude 提取任务
+Q2 选 2 → `outputMode = 'exec'`
+Q2 选 3 → `outputMode = 'app'`（功能上等同 md 模式，差异仅在 Step 7 提示文案）
 
 ### 0c. 有参数但模糊（细化路径）
 
@@ -3601,11 +3648,12 @@ Options:
 ### 1a. 读项目技术栈
 
 ```bash
-# 优先从 CLAUDE.md 的 "技术栈" 段读
-# 或从 package.json / pyproject.toml / pom.xml 推断
+# 优先从 CLAUDE.md 的 "Tech Stack" / "技术栈" 段读
+# 或从 package.json / app.json / pyproject.toml / pom.xml 推断
 ```
 
-基于技术栈决定扫描哪些文件类型（不硬编码 `*.ts/*.py`）。
+从当前项目的 CLAUDE.md 和文件结构自动识别技术栈，不硬编码。
+基于实际任务 scope 决定扫描哪些文件类型。
 
 ### 1b. 基础信息
 
@@ -3619,14 +3667,15 @@ echo ""
 git status --short
 echo ""
 echo "=== 源文件统计 ==="
-# 根据识别的技术栈动态 find
+# 根据项目实际技术栈选择文件扩展名
+find . -type f \( -name "*.js" -o -name "*.ts" -o -name "*.tsx" -o -name "*.java" -o -name "*.py" -o -name "*.wxml" \) \
+  -not -path '*/node_modules/*' -not -path '*/target/*' -not -path '*/.next/*' -not -path '*/.git/*' | wc -l
 ```
 
 读取（如存在）：
 1. `CLAUDE.md`
-2. `docs/architecture/README.md`
-3. `docs/architecture/frontend.md` / `backend.md`
-4. `package.json` / `pyproject.toml` / `pom.xml`
+2. 架构文档（`docs/architecture/`、`notes/architecture/` 等）
+3. 依赖声明（`package.json`、`app.json`、`pom.xml`、`pyproject.toml` 等）
 
 ## Step 2: 粒度控制（按文件数量分档）
 
@@ -3645,8 +3694,8 @@ Question: 项目共 [N] 个源文件，全部包含会超出外部 AI 上下文�
 
 Options:
 1. 只包含最近 1 周改动文件（[M] 个）
-2. 只包含 [specific-dir]（核心业务模块）
-3. 只包含 [task] 相关的文件（Claude 根据任务推断）
+2. 只包含 [task] 相关的文件（Claude 根据任务推断）
+3. 只包含特定目录（Claude 列出项目顶层目录供选择）
 4. 自定义（自由输入路径 glob）
 ```
 
@@ -3770,7 +3819,9 @@ scope: [包含范围，如 "全部源文件" / "最近改动" / "apps/api/ 模�
 - 输出格式要求是否明确
 - 估算 tokens 是否合理
 
-## Step 7: 输出确认
+## Step 7: 输出（按 outputMode 分支）
+
+### 7a. md 模式（默认）
 
 ```
 ✅ 外部 AI 任务文档已生成
@@ -3782,11 +3833,115 @@ scope: [包含范围，如 "全部源文件" / "最近改动" / "apps/api/ 模�
 估算: [M]k tokens
 
 使用方式：
-1. 启动外部 AI（Codex / GPT / ChatGPT / Gemini / 其他 Claude）
+1. 启动外部 AI（GPT / ChatGPT / Gemini / 其他 Claude / Codex CLI / Codex Mac App 均可）
 2. 让它读取 [文件路径]
 3. 无需额外说明，它会直接开始执行
 
 完成后将外部 AI 的输出反馈给我，我来落地执行修改。
+```
+
+### 7b. exec 模式（Codex CLI 闭环）
+
+#### 7b-1. 可用性检查
+
+```bash
+which codex >/dev/null 2>&1 && codex --version || echo "NOT_FOUND"
+```
+
+NOT_FOUND → **降级为 md 模式**，提示安装：
+
+```
+⚠️ codex CLI 未安装，已降级为 md 模式（文件已生成）。
+
+安装方式：
+  brew install codex          # macOS 推荐
+  npm i -g @openai/codex      # 跨平台
+```
+
+#### 7b-2. 未提交改动检查
+
+```bash
+git status --short
+```
+
+有未提交内容 → AskUserQuestion 提醒（codex 会直接改文件，未提交改动会与 codex 改动混在一起难以区分）：
+
+```
+⚠️ 检测到 [N] 个未提交改动。codex exec 会直接修改文件，可能与现有改动混在一起。
+
+Options:
+1. (Recommended) 先 git commit / git stash 再执行
+2. 继续执行（确认能区分 codex 改动）
+3. 取消
+```
+
+#### 7b-3. 确认执行
+
+```
+⚡ 即将启动 Codex CLI 执行任务
+
+文件: .codex-task.md
+任务: [一句话概括]
+估算: [M]k tokens
+模型: [modelFlag 或 CLI 默认 gpt-5-codex]
+沙箱: workspace-write（仅当前工作目录可写）
+审批: never（exec 自动化模式，跳过交互确认）
+
+执行命令:
+  cat .codex-task.md | codex exec \
+    --sandbox workspace-write \
+    --ask-for-approval never \
+    [--model X] \
+    -
+```
+
+#### 7b-4. Bash 执行
+
+```bash
+# modelFlag 非空时附加 --model
+if [ -n "$modelFlag" ]; then
+  cat .codex-task.md | codex exec --sandbox workspace-write --ask-for-approval never --model "$modelFlag" - 2>&1
+else
+  cat .codex-task.md | codex exec --sandbox workspace-write --ask-for-approval never - 2>&1
+fi
+```
+
+> **关键 flag 说明**：
+> - `--sandbox workspace-write`：允许写当前工作目录（默认 `read-only` 写不了文件）
+> - `--ask-for-approval never`：跳过交互确认（默认 `on-request` 在 exec 模式下会卡住）
+> - 末尾 `-`：从 stdin 读 prompt（不加会把管道内容当文件名）
+> - `--model X`：仅在用户显式指定时附加
+
+#### 7b-5. 完成提示
+
+```
+✅ Codex CLI 执行完成
+
+查看改动: git diff
+如需保留: git add -A && git commit
+如需回滚: git checkout -- .
+
+可让我继续审查 / 测试 / 调整 codex 的改动。
+```
+
+### 7c. app 模式（Codex Mac App 手动）
+
+```
+✅ 外部 AI 任务文档已生成
+
+文件: .codex-task.md
+任务: [一句话概括]
+估算: [M]k tokens
+
+⚠️ Codex Mac App 无法被自动调起（`codex://` URL scheme 仅打开面板，Automations 无外部 API）。手动步骤：
+
+1. 打开 Codex Mac App
+2. 复制 .codex-task.md 全部内容粘贴到新对话
+3. 如需 Computer Use（看屏幕 / 点 Chrome / 操作其他桌面 app）→ 在 App 内启用对应工具
+4. 完成后把 App 输出粘回给我，由我落地修改
+
+> **Mac App 独有能力**：Computer Use（操作桌面 app）、Chrome 扩展（复用已登录 session 访问 Gmail / LinkedIn / 内部工具）、Automations（定时 / 心跳触发）。
+> 不需要这些能力时，推荐用 exec 模式（CLI 闭环更短，无需中转）。
 ```
 
 </workflow>
@@ -3795,11 +3950,16 @@ scope: [包含范围，如 "全部源文件" / "最近改动" / "apps/api/ 模�
 **用法示例**：
 
 ```bash
-# 快速路径（任务明确）
+# md 模式（默认，生成 .codex-task.md 让用户手动发给任意 AI）
 /codex 审查登录功能的安全性
 /codex 对比 axios vs fetch 在本项目的替代方案
 
-# 引导路径（无参数，弹窗选类型）
+# exec 模式（Codex CLI 闭环，Claude 直调拿回结果）
+/codex --exec 审查登录安全性
+/codex exec 代码质量评审
+/codex --exec --model gpt-5-pro 架构评审  # 复杂任务用 gpt-5-pro
+
+# 引导路径（无参数，弹窗选任务类型 + 输出方式）
 /codex
 
 # 细化路径（参数模糊，弹窗细化）
@@ -3809,15 +3969,18 @@ scope: [包含范围，如 "全部源文件" / "最近改动" / "apps/api/ 模�
 
 **适用的外部 AI**：
 
-| AI | 适用 | 上下文窗口（2026-04）|
-|----|-----|------|
-| Codex / GPT-5 | ✅ | 128k-1M |
-| ChatGPT（网页版）| ✅ | 32k-128k |
-| Gemini 2.5 Pro | ✅（长上下文优势）| 1M-2M |
-| 其他 Claude 实例 | ✅（交叉审查）| 200k-1M |
-| DeepSeek / Qwen 等 | ✅ | 按各自文档 |
+| AI | 适用 | 推荐模式 | 上下文窗口（2026-05）|
+|----|-----|---------|------|
+| **Codex CLI**（`@openai/codex` v0.130.0+）| ✅ 闭环最短 | `--exec`（Claude 直调）| `gpt-5-codex` 默认 / `gpt-5-pro` 长上下文 |
+| **Codex Mac App**（独立 macOS App）| ✅ 独有 Computer Use / Chrome 扩展 / Automations | `app` 模式（手动粘贴）| 同 ChatGPT Plus/Pro |
+| ChatGPT（网页版）| ✅ | md 模式 | 32k-128k |
+| Gemini 2.5 Pro | ✅（长上下文优势）| md 模式 | 1M-2M |
+| 其他 Claude 实例 | ✅（交叉审查）| md 模式 | 200k-1M |
+| DeepSeek / Qwen 等 | ✅ | md 模式 | 按各自文档 |
 
 > **核心**：任意读取 markdown + 能生成代码分析的 LLM 都适用。生成的文档是**自包含的**，不依赖特定 AI 的特性。
+>
+> **CLI vs App 选择**：自动化闭环（Claude 直调，无需中转）选 **CLI exec 模式**；需要 Computer Use（操作桌面 app）/ Chrome 扩展（复用已登录 session）/ Automations（定时触发）选 **Mac App**；目标不是 OpenAI 系或不需要执行能力选 **md 模式**（最通用）。
 
 ---
 
@@ -4208,5 +4371,5 @@ mkdir -p .claude/skills/codex
 
 ---
 
-**版本**: v3.35
-**更新日期**: 2026-05（v3.35）
+**版本**: v3.36
+**更新日期**: 2026-05（v3.36）

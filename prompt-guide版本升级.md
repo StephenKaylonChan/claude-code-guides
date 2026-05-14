@@ -54,7 +54,7 @@ ls .claude/rules/ 2>/dev/null
 11. `.claude/skills/nbp2/SKILL.md`
 12. `.claude/skills/diagnose/SKILL.md`
 13. `.claude/skills/fix-permission/SKILL.md`（v3.29 新增到模板）
-14. `.claude/skills/codex/SKILL.md`（v3.30 新增到模板）
+14. `.claude/skills/codex/SKILL.md`（v3.30 新增到模板，v3.36 三档输出升级：md / exec / app）
 
 > **v3.25 起 `deep-audit/SKILL.md` 已废弃**，功能合并到 `/docs`。如项目仍存在该目录，参考下方 v3.25 迁移指令删除。
 12. `.claude/hooks/session-start.sh`
@@ -286,6 +286,22 @@ ls .claude/rules/ 2>/dev/null
 - **大项目 SubAgent 并行**：≥ 50 源文件时自动按模块拆分 SubAgent 并行扫描，每个 SubAgent 做全维度检查。
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
+
+**v3.36 新增**（重点检查，⚠️ /codex skill 三档输出升级）：
+- **`/codex` 三档输出方式**：`md`（默认，最通用） / `exec`（Codex CLI 闭环） / `app`（Mac App 手动）
+- **exec 模式自动化闭环**：`cat .codex-task.md | codex exec --sandbox workspace-write --ask-for-approval never -`，Claude 直接调用 CLI 拿回结果，无需用户中转
+- **关键 flag 内置**：`--sandbox workspace-write`（默认 `read-only` 写不了文件） + `--ask-for-approval never`（exec 自动化跳过交互） + 末尾 `-`（从 stdin 读 prompt，不加会把管道内容当文件名） + 可选 `--model X`（透传给 codex，如 `gpt-5-pro` 复杂任务用）
+- **参数解析支持 `--model X`**：透传给 `codex exec --model X`，否则用 CLI 默认 `gpt-5-codex`
+- **未提交改动护栏**：exec 前 `git status --short`，有未提交内容则 AskUserQuestion 提醒先 commit/stash（codex 会直接改文件）
+- **CLI 不可用降级为 md 模式**：`which codex` 失败时给安装提示（`brew install codex` / `npm i -g @openai/codex`）
+- **Mac App 提示段**（新增 7c）：明示 Mac App **无法被自动调起**（`codex://` URL scheme 仅打开面板、Automations 无外部 API），仅在需要 Computer Use（操作桌面 app）/ Chrome 扩展（复用已登录 session）/ Automations（定时触发）场景手动选
+- **Step 0 加 0-pre 检测段**（`--exec` / `--model X` / 中文触发词如"直接执行""让codex做"） + **Question 2 输出方式弹窗**（md / CLI exec / Mac App 手动 3 选项）
+- **迁移**：升级本地 `.claude/skills/codex/SKILL.md`，从 guide 03 Section 2.12 复制最新模板
+  ```bash
+  # 从 guide 复制 SKILL.md 内容（03 Section 2.12）
+  ```
+- **权限**：使用 exec 模式时确保 `codex` CLI 已装（`codex --version` 检查）。如全局 `~/.claude/settings.json` 已含 `Bash(*)` 规则，则无需单独加 `Bash(codex:*)`；否则建议加 `Bash(codex:*)` 避免首次弹窗
+- **Skills 总数不变**（仍 13 个）
 
 **v3.35 新增**（重点检查，⚠️ 新增 /visual Skill）：
 - **`/visual` 首次写入 03 模板**：项目数据可视化仪表盘
