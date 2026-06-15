@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.36
+**版本**: v3.37
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -4252,15 +4252,15 @@ Claude Code 2.x 内置了七个由 Anthropic 维护的 bundled 命令（v2.1.111
 
 ---
 
-### 3.6 /less-permission-prompts — 减少权限弹窗（v2.1.111+）
+### 3.6 /fewer-permission-prompts — 减少权限弹窗（v2.1.111+）
 
 **何时用**：Claude Code 频繁弹权限窗打断节奏时，一次性梳理常用只读操作生成白名单。
 
 ```bash
-/less-permission-prompts
+/fewer-permission-prompts
 ```
 
-**内部机制**：扫描会话 transcript，识别常被用户批准的只读 Bash 和 MCP 工具调用，按优先级生成 `.claude/settings.json` 的 `permissions.allow` 建议清单。和 `/fix-permission` 互补——`/fix-permission` 处理"这次拦截"，`/less-permission-prompts` 做"**历史回溯 + 批量治理**"。
+**内部机制**：扫描会话 transcript，识别常被用户批准的只读 Bash 和 MCP 工具调用，按优先级生成 `.claude/settings.json` 的 `permissions.allow` 建议清单。和 `/fix-permission` 互补——`/fix-permission` 处理"这次拦截"，`/fewer-permission-prompts` 做"**历史回溯 + 批量治理**"。
 
 ---
 
@@ -4279,7 +4279,7 @@ Claude Code 2.x 内置了七个由 Anthropic 维护的 bundled 命令（v2.1.111
 
 ### 区分 Bundled 命令 vs 自定义 Skills
 
-| 维度 | Bundled（/simplify /batch /debug /loop /claude-api /less-permission-prompts /ultrareview） | 自定义 Skills |
+| 维度 | Bundled（/simplify /code-review /batch /debug /loop /deep-research /workflows /claude-api /fewer-permission-prompts） | 自定义 Skills |
 |------|---------------------------|--------------|
 | 维护方 | Anthropic（随版本更新） | 你自己 |
 | 配置位置 | 无需配置，内置 | `.claude/skills/*/SKILL.md` |
@@ -4371,5 +4371,5 @@ mkdir -p .claude/skills/codex
 
 ---
 
-**版本**: v3.36
+**版本**: v3.37
 **更新日期**: 2026-05（v3.36）

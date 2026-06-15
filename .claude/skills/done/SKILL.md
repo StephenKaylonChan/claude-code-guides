@@ -121,13 +121,12 @@ Roadmap 更新: [已更新 / 跳过]
 
 ```bash
 git add -A
-git commit -m "feat: vX.Y 一句话概括本次改动
-
-Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>"
+git commit -m "feat: vX.Y 一句话概括本次改动"
 ```
 
 - commit message 从 `$ARGUMENTS` 和实际改动中提炼
 - 格式遵循项目规范：`feat: vX.Y 一句话概括` 或 `fix: vX.Y 修复内容`
 - 如果有 roadmap 文件变更，一并包含在同一个 commit 中
+- **不要手写 `Co-Authored-By` trailer**：Claude Code 提交时会按当前真实模型自动追加（手写会写死版本号、易过时，且与自动追加重复）
 
 </workflow>

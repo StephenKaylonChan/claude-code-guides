@@ -287,6 +287,14 @@ ls .claude/rules/ 2>/dev/null
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
 
+**v3.37 新增**（重点检查，⚠️ Claude Code 官方更新跟进 v2.1.114→176）：
+- **模型升级**（01 §7.2 + 00 命令表）：**Fable 5**（Mythos 级，最强）+ **Opus 4.8**（当前默认旗舰）。Model ID：`claude-fable-5` / `claude-opus-4-8` / `claude-sonnet-4-6` / `claude-haiku-4-5`。检查项目文档是否仍写"Opus 4.6 默认"等过时信息
+- **Effort / Fast 修正**：`xhigh` 为 Opus 4.7/4.8 专属；`/fast` 适用 Opus 4.8/4.7/4.6（不再是"Opus 4.6 专属"）
+- **Dynamic Workflows**（04 §9.4）：JavaScript 脚本确定性编排数十~数百子代理。`ultracode` 关键词触发 / `/deep-research` 内置工作流 / `/workflows` 查看。⚠️ 成本大，MUST 用户显式选择
+- **Bundled 命令 7 → 9**：新增 `/code-review`（diff 审查，`ultra` = 云端深审）、`/deep-research`、`/workflows`；`/ultrareview` 降级为 `/code-review ultra` 的废弃别名
+- **命令名订正**：`/less-permission-prompts` → **`/fewer-permission-prompts`**（真实命令名，旧文档误写需全局改）
+- **未跟进项**（本版未做，下版候选）：Hooks 新事件（WorktreeCreate/Remove、FileChanged、PermissionDenied）、settings 新字段（autoMode、worktree.baseRef、enforceAvailableModels）——均待官方 changelog 核实版本号后再写
+
 **v3.36 新增**（重点检查，⚠️ /codex skill 三档输出升级）：
 - **`/codex` 三档输出方式**：`md`（默认，最通用） / `exec`（Codex CLI 闭环） / `app`（Mac App 手动）
 - **exec 模式自动化闭环**：`cat .codex-task.md | codex exec --sandbox workspace-write --ask-for-approval never -`，Claude 直接调用 CLI 拿回结果，无需用户中转
@@ -345,7 +353,7 @@ ls .claude/rules/ 2>/dev/null
 
 **v3.32 新增**（重点检查，⚠️ Claude Code 2.1.89-114 功能跟进）：
 - **Bundled 命令 5 → 7**（Anthropic 内置，无需配置）：
-  - `/less-permission-prompts`（v2.1.111+）：扫描会话 transcript，生成 `.claude/settings.json` 常用只读操作白名单。和 `/fix-permission` 互补（后者处理"这次拦截"，前者"批量治理"）
+  - `/fewer-permission-prompts`（v2.1.111+）：扫描会话 transcript，生成 `.claude/settings.json` 常用只读操作白名单。和 `/fix-permission` 互补（后者处理"这次拦截"，前者"批量治理"）
   - `/ultrareview [PR#]`（v2.1.111+）：云端并行多 agent 代码审查，比 `/simplify` 更重更全，适合大型改动
 - **03 文档变化**：
   - Skill description 列表显示上限 **250 → 1,536 字符**（v2.1.105+），关键用例仍 MUST 放前面
@@ -581,7 +589,7 @@ ls .claude/rules/ 2>/dev/null
 - **`/diagnose` D9 维度扩展**：从"可测试性"扩展为"测试覆盖"——检查关键用户交互是否有集成测试、是否存在"假覆盖"（单元测试全过但链路没测）。
 
 **Bundled 命令**：
-- **`/simplify`、`/batch`、`/debug`、`/loop`、`/claude-api`、`/less-permission-prompts`、`/ultrareview`** 共 7 个内置命令（v3.32 起），无需配置，但日常使用规范中是否已知晓？
+- **`/simplify`、`/code-review`、`/batch`、`/debug`、`/loop`、`/deep-research`、`/workflows`、`/claude-api`、`/fewer-permission-prompts`** 共 9 个内置命令（v3.37 起），无需配置，但日常使用规范中是否已知晓？
 - **Agent Teams**：是否需要启用？如需要，在 settings.json 中加入：
   ```json
   "env": {"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"}
@@ -712,7 +720,7 @@ find docs -type f -name "*.md" 2>/dev/null | sort
 - ...
 
 ### 新功能说明
-- /simplify、/batch、/debug、/loop、/claude-api、/less-permission-prompts、/ultrareview 共 7 个内置命令（v3.32+ Claude Code 2.1.111），无需配置，直接使用即可
+- /simplify、/code-review、/batch、/debug、/loop、/deep-research、/workflows、/claude-api、/fewer-permission-prompts 共 9 个内置命令（v3.37+），无需配置，直接使用即可（`/ultrareview` 为 `/code-review ultra` 废弃别名）
 - [如启用 Agent Teams] 已在 settings.json 中启用 CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
 
 ### 参考

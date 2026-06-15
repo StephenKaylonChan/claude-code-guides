@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.36（2026-05）
+> **版本**: v3.37（2026-06）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -36,7 +36,7 @@
 
 ## 🎯 命令体系
 
-命令分三类：**Bundled Skills**（Anthropic 内置，7 个）、**自定义 Skills**（安装到 `.claude/skills/`，13 个）、**系统命令**（内置，无需配置）。
+命令分三类：**Bundled Skills**（Anthropic 内置，9 个）、**自定义 Skills**（安装到 `.claude/skills/`，13 个）、**系统命令**（内置，无需配置）。
 
 完整命令速查表见 [00-日常使用说明.md](./00-日常使用说明.md) Section 7。
 
@@ -114,6 +114,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.37 | 2026-06 | **Claude Code 官方更新跟进（v2.1.114 → 176，距上次 v3.32 约 2 个月）**。**模型升级**（01 §7.2 + 00 命令表 + 04 §13 模型卡/1M 窗口说明 + 本地 `/done` skill commit 模板）：新增 **Fable 5**（Mythos 级，最强，`claude-fable-5`）+ **Opus 4.8**（当前默认旗舰，`claude-opus-4-8`），全局替换过时的"Opus 4.6 默认"；`xhigh` effort 修正为 Opus 4.7/4.8 专属、`/fast` 适用 Opus 4.8/4.7/4.6。**新增 04 §9.4 Dynamic Workflows**（动态工作流）：JavaScript 脚本确定性编排数十~数百子代理（`agent`/`pipeline`/`parallel` 原语），`ultracode` 关键词触发 / `/deep-research` 内置工作流 / `/workflows` 查看，附成本警告。**Bundled 命令 7 → 9**：新增 `/code-review`（diff 审查，`ultra` = 云端深审）、`/deep-research`、`/workflows`；`/ultrareview` 降级为 `/code-review ultra` 废弃别名。**命令名订正**：全局 `/less-permission-prompts` → **`/fewer-permission-prompts`**（真实命令名，旧文档误写）。**未跟进项**（待官方 changelog 核实版本号后写）：Hooks 新事件（WorktreeCreate/Remove、FileChanged、PermissionDenied）、settings 新字段（autoMode、worktree.baseRef、enforceAvailableModels）。Skills 总数不变（13 个） |
 | v3.36 | 2026-05 | **`/codex` 三档输出升级——Codex 2025-2026 重启后分化为 CLI（`@openai/codex` v0.130.0+，Rust 实现）+ Mac App（独立桌面 App，Computer Use / Chrome 扩展 / Automations）两个独立产品**。**新增 exec 模式**（CLI 闭环）：`cat .codex-task.md \| codex exec --sandbox workspace-write --ask-for-approval never -`，Claude 直调 CLI 拿回结果，无需用户中转。**关键 flag 内置**：`--sandbox workspace-write`（默认 `read-only` 写不了文件） + `--ask-for-approval never`（exec 自动化跳过交互） + 末尾 `-`（从 stdin 读 prompt） + 可选 `--model X`（如 `gpt-5-pro` 长上下文）。**未提交改动护栏**（exec 前 `git status` 提醒先 commit/stash，因 codex 会直接改文件） + **CLI 不可用自动降级为 md 模式**（`brew install codex` / `npm i -g @openai/codex`） + **新增 app 模式提示段**：明示 Mac App **无法被自动调起**（`codex://` URL scheme 仅打开面板、Automations 无外部 API），仅在需要 Computer Use（操作桌面 app）/ Chrome 扩展（复用已登录 session）/ Automations（定时触发）场景手动选。**Step 0 加 0-pre 检测段**（`--exec` / `--model X` / 中文触发词如"直接执行""让codex做"） + **Question 2 输出方式弹窗**（md / CLI exec / Mac App 手动 3 选项）。Skills 总数不变（仍 13 个） |
 | v3.35 | 2026-05 | **`/visual` 首次写入 03 模板**——项目数据可视化仪表盘 Skill。把 roadmap 进度、audit 报告、跨文件变更等渲染为**自包含 HTML 仪表盘**（零依赖、暗色主题、浏览器直接打开）。参考 Anthropic 工程师 Thariq Shihipar "HTML is ridiculously effective" 实践。**4 种场景**（roadmap / audit / changes / 自由描述）+ **内置设计系统**（CSS 变量色板 + 4 种布局模式）+ **`.gitignore` 建议**（一次性产物不进版本控制）。Skills 总数 **12 → 13** |
 | v3.34 | 2026-05 | **01 新增 Section 7 "环境变量与模型配置"**。新增独立章节（~45 行）整合此前分散在各文档的运行时配置知识：**常用环境变量表**（`CLAUDE_CODE_ENABLE_AWAY_SUMMARY` / `ENABLE_PROMPT_CACHING_1H` / `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` / `CLAUDE_CODE_USE_POWERSHELL_TOOL`，含 `settings.json` `env` 字段持久化方法和用户级/项目级选择建议）+ **模型选择策略**（Opus 4.7 / 4.6 / Sonnet 4.6 / Haiku 4.5 定位与适用场景）+ **Effort 等级指南**（`low` ~ `max` 含 `xhigh` Opus 4.7 专属）+ `/fast` 模式说明。原 Section 7-9 顺延为 8-10。Skills 总数不变（12 个）|
