@@ -4,3 +4,4 @@ CLAUDE.local.md
 .DS_Store
 .codex-task.md
 docs/reports/*.html
+.idea/
