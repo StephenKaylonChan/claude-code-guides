@@ -42,6 +42,17 @@ allowed-tools: Read, Edit, Bash
 | Claude wants to fetch content from X | 域名 X 不在 WebFetch allow | `WebFetch(domain:X)`（**首选用户级**，跨项目复用价值大） |
 | WebSearch 弹窗 | 全局缺 WebSearch | `WebSearch`（**不带括号 / 无 domain 概念**，零风险全局开） |
 
+> **🔍 诊断翻转：用户说"联网搜索还在问" ≠ WebSearch**
+> 用户常把整个"联网"统称"搜索"，但弹窗八成是 **WebFetch（抓取某个网页）**，不是 WebSearch。
+> - **先看弹窗第一行**：`Fetch` / `wants to fetch content from X` = WebFetch（逐域名白名单）；`Search` = WebSearch（已全局开就不会弹）
+> - WebSearch 配好后**从不弹**；反复弹的几乎都是 WebFetch 撞上**名单外的新域名**
+>
+> **⚠️ 逐域名白名单的固有特性：新域名首次必然弹**
+> WebFetch 是白名单模式，互联网域名无穷 → **新站第一次一定问**，属正常，不是没修好。攒齐常用站后基本不弹，但别向用户承诺"加完就永不弹"。
+>
+> **🔒 为什么不建议图省事裸放 `WebFetch`（不带 domain）**
+> 整个放开 `WebFetch` 能消灭所有弹窗，但会拆掉一道真实防线：恶意网页可藏注入指令，诱导 Claude 把敏感数据拼进 URL 抓到外部站（数据外泄——"网页能读 + 能外发 + 可能读到坏内容"三者凑齐）。逐域名白名单正是掐断"外发"这一环。**低敏感 + 有人盯着的场景可接受裸放，但务必让用户清楚拆掉的是什么。**
+
 > **💡 "Yes, and don't ask again" 的沉淀位置陷阱**
 > 用户在弹窗点 "Yes, and don't ask again" 时，规则**默认写入 `./.claude/settings.local.json`**（项目本地，gitignored）。
 > - **后果**：跨项目浏览同一批技术博客 / 文档站时，每个新项目都要重新同意一遍

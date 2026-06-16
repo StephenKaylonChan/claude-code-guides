@@ -287,6 +287,12 @@ ls .claude/rules/ 2>/dev/null
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
 
+**v3.38 新增**（重点检查，⚠️ /fix-permission Web 类诊断补强）：
+- **诊断翻转**：用户说"联网搜索还在问" → 八成是 WebFetch（新域名）不是 WebSearch，先看弹窗第一行写 `Fetch` 还是 `Search`
+- **预期管理**：逐域名是白名单，互联网域名无穷 → 新站首次必然弹属正常，别承诺"加完就永不弹"
+- **裸放 `WebFetch` 安全代价**：整放能消灭弹窗但拆掉"防数据外泄"防线（注入诱导外发），低敏感场景可接受但须用户知情
+- **三方一致检查**：03 §2.11 源头模板 ↔ `.claude/skills/fix-permission` 运行副本 ↔ `.agents/skills/fix-permission` Codex 镜像
+
 **v3.37 新增**（重点检查，⚠️ Claude Code 官方更新跟进 v2.1.114→176）：
 - **模型升级**（01 §7.2 + 00 命令表）：**Fable 5**（Mythos 级，最强）+ **Opus 4.8**（当前默认旗舰）。Model ID：`claude-fable-5` / `claude-opus-4-8` / `claude-sonnet-4-6` / `claude-haiku-4-5`。检查项目文档是否仍写"Opus 4.6 默认"等过时信息
 - **Effort / Fast 修正**：`xhigh` 为 Opus 4.7/4.8 专属；`/fast` 适用 Opus 4.8/4.7/4.6（不再是"Opus 4.6 专属"）
