@@ -2,7 +2,7 @@
 
 > Claude Code 自定义工作流命令系统
 
-**版本**: v3.38
+**版本**: v3.39
 **适用**: Claude Code 2.x（2026 年）
 
 ---
@@ -599,20 +599,25 @@ Options:
 **定位**：**状态快照 + 恢复桥梁**。承载"**git log 抓不到的软信息**"（决策/踩坑/下一步）+ "**叙事性预汇总**"（省 /catchup 的推理成本）。
 
 **明确职责边界**：
-- ✅ Commit 当前变更（不绕 Hook，失败弹窗询问）
+- ✅ Commit 当前变更（**commit 步骤全自动不弹窗**，Hook 拦下只记录不绕过）
 - ✅ 勾 Roadmap checkbox（**副业**）
 - ✅ 写 session-notes
 - ❌ **不管 Spec frontmatter**（那是 /done 的职责——主业）
-- ❌ **不跑 `--no-verify`**（绕 Hook 要用户明确授权）
+- ❌ **不跑 `--no-verify`**（绕 Hook 要用户手动来，skill 不替你决定）
 - ❌ 不做代码验证（commit 存在即验证过）
+
+**v3.39 变化**（commit 步骤去交互——真实使用反馈：会话收尾时连环弹窗打断节奏）：
+- **commit 全自动、不再 AskUserQuestion**——"会话交接 = 把活儿提交掉"意图已明确，三处弹窗（新增文件勾选 / 复杂 message 选候选 / Hook 失败处理）全改自动决策
+- **1b 新增文件**：自动 stage，排除垃圾名单（`.env*` / `*.log` / `*.tmp` / `node_modules/` / 构建产物 / `.DS_Store` / session-notes 自身），**Step 4 逐个列出已 stage 文件**让用户复核兜底
+- **1c commit message**：简单 / 复杂改动一律自动生成，拆 commit 交给 `/implement`
+- **1d Hook 拦下**：不问、不擅自 `--no-verify` → 安全默认跳过 commit + session-notes 标注未提交
+- **范围限定**：只作用于 /handoff 自身，不改其他 skill / 平时手动提交的确认行为
+- **2b Gate 检测仍保留询问**（不属于 commit/push 步骤）
 
 **v3.22 变化**：
 - **参数分流**：`/handoff`（完整）+ `/handoff quick`（精简，只填 2 段）
 - **session-notes 结构化为 6 段 + 关联指针**（去掉纯数字统计、合并 Roadmap/Spec 状态到关联指针）
 - **去掉 Spec frontmatter 更新**（职责归 /done）
-- **去掉自动 --no-verify**（改为 AskUserQuestion 让用户决定）
-- **新增文件 → AskUserQuestion multiSelect**（避免误 stage 临时文件）
-- **commit message 复杂改动 → AskUserQuestion 列候选**（简单改动 Claude 直接判）
 - **检测到 Gate 满足但未跑 /done → 提示先跑 /done**
 
 **什么时候不需要 /handoff**：
@@ -656,47 +661,25 @@ git status --short
 git diff --stat HEAD 2>/dev/null | tail -5
 ```
 
-## Step 1: 处理未提交变更
+## Step 1: 处理未提交变更（commit 全自动，不弹窗）
+
+> /handoff 的 commit 步骤**一律自动决策、不再 AskUserQuestion**——会话交接时"把活儿提交掉"意图已明确，问了反而打断收尾。
+> 唯一例外是 Hook 拦下时不擅自绕过（见 1d）。本节的"不问"只作用于 /handoff 自身，不改其他 skill / 平时手动提交的确认行为。
 
 ### 1a. 工作区干净 → 跳过到 Step 2
 
-### 1b. 有未提交变更
+### 1b. 有未提交变更 → 自动 stage
 
-**已修改文件**（`git status --short` 里 ` M` 开头）：Claude 读取并自动 stage（排除 `.env`、`*.log`、`node_modules/`、构建产物）。
+**已修改文件**（`git status --short` 里 ` M` 开头）：Claude 读取并自动 stage。
 
-**新增文件**（`??` 开头，unstaged）：**MUST 用 AskUserQuestion multiSelect 询问**，避免误 stage 临时文件：
+**新增文件**（`??` 开头，unstaged）：自动 stage，但 **MUST 排除垃圾名单**——`.env*`、`*.log`、`*.tmp`、`node_modules/`、`dist/` / `build/` 等构建产物、`.DS_Store`、以及 `.claude/session-notes.md` 自身。
 
-```
-Question: 发现未跟踪的新增文件，选择要提交的（多选）：
+> 不再用 AskUserQuestion 让用户逐个勾选。代价是可能误 stage 名单外的临时文件——用 **Step 4 输出逐个列出已 stage 的文件**对冲：用户一眼能看出异常，手动 `git reset <file>` 即可撤掉。
 
-multiSelect: true
+### 1c. 生成 commit message → 自动
 
-Options:
-1. src/components/LoginForm.tsx
-2. src/hooks/useAuth.ts
-3. test.md   ← 看起来是临时文件？
-4. notes.txt ← 看起来是临时文件？
-```
-
-用户勾选后 stage。
-
-### 1c. 生成 commit message
-
-**简单改动**（≤3 文件，单一主题）→ Claude 直接生成 Conventional Commits message。
-
-**复杂改动**（≥4 文件 / 跨模块 / 多个主题）→ **AskUserQuestion 询问**：
-
-```
-Question: 本次变更跨多个模块/主题，commit message 建议：
-
-Options:
-1. (Recommended) feat(auth): 实现 JWT 刷新机制
-2. feat: 添加认证相关代码（auth + api + frontend）
-3. 拆成多个 commit（Tidy First）
-4. 自定义（自由输入）
-```
-
-选 3 → Claude 按 Tidy First 拆 commit（结构先、行为后，详见 /implement Step 5）。
+简单 / 复杂改动**一律由 Claude 直接生成** Conventional Commits message，不再列候选弹窗。
+需要 Tidy First 拆成多个 commit 的，用 `/implement`（它的 Step 5 管拆分），不在 /handoff 内交互。
 
 ### 1d. 执行 commit
 
@@ -704,21 +687,11 @@ Options:
 git commit -m "<message>"
 ```
 
-**失败处理**（Hook 拦下，exit code 2）→ **MUST 用 AskUserQuestion 询问**（不自动 --no-verify）：
+**失败处理**（Hook 拦下，exit code 2）→ **不询问、也不自动 `--no-verify`**，走安全默认：
+- 跳过 commit，继续 Step 2-3；
+- 在 session-notes 的"注意事项"段标注 **"⚠️ 工作区有未提交变更（Hook 未通过，未 commit）"**。
 
-```
-Question: commit 被 Hook 拦下（测试/lint 未通过）。如何处理？
-
-Options:
-1. (Recommended) 返回编辑修复（取消本次 /handoff）
-2. 只写 session-notes 记录未提交状态（不 commit）
-3. 强制跳过 Hook（--no-verify，会留下未验证的 commit 在历史中）
-4. 自定义
-```
-
-选 1 → 停止 /handoff，用户去修复。
-选 2 → 跳过 commit，继续 Step 2-3（session-notes 里标注"工作区有未提交变更"）。
-选 3 → 仅在用户明确选择时才 `--no-verify`，message 前缀 `wip:`。
+> 这是 /handoff 唯一不"自动提交"的情形：绕 Hook（`--no-verify`）会在历史里留下未验证 commit，风险由用户承担，仍要**手动**来，skill 不替你决定。
 
 ## Step 2: Roadmap 更新（副业）
 
@@ -844,8 +817,10 @@ git commit -m "docs: 勾选 Phase N [条目名] 完成"
 ━━━━━━━━━━━━━━━━━━━━━━━━
 提交状态：
   ✅ 正常 commit: feat(auth): ...
-  / ⚠️ 只记录未提交状态（Hook 拦下，用户选择不 --no-verify）
-  / 🏷️ WIP commit（--no-verify，用户明确授权）
+  已 stage 文件（请复核，误 stage 可 git reset <file>）：
+    - src/components/LoginForm.tsx
+    - src/hooks/useAuth.ts
+  / ⚠️ 只记录未提交状态（Hook 拦下，未 commit；需绕过自行 --no-verify）
   / ⏭️ 无变更
 
 Roadmap：
@@ -4388,5 +4363,5 @@ mkdir -p .claude/skills/codex
 
 ---
 
-**版本**: v3.38
+**版本**: v3.39
 **更新日期**: 2026-05（v3.36）

@@ -11,7 +11,7 @@ disable-model-invocation: true
 
 <task>
 会话中断前的状态快照：commit 未提交变更 + 勾 Roadmap checkbox + 写 session-notes。
-**不碰 Spec frontmatter**（归 /done），**不绕 Hook**（--no-verify 要用户授权）。
+**commit 步骤全自动、不弹窗**（v3.39）；**不碰 Spec frontmatter**（归 /done）；**不擅自绕 Hook**（Hook 拦下只记录、不 --no-verify）。
 </task>
 
 <workflow>
@@ -32,47 +32,25 @@ git status --short
 git diff --stat HEAD 2>/dev/null | tail -5
 ```
 
-## Step 1: 处理未提交变更
+## Step 1: 处理未提交变更（commit 全自动，不弹窗）
+
+> /handoff 的 commit 步骤**一律自动决策、不再 AskUserQuestion**——会话交接时"把活儿提交掉"意图已明确，问了反而打断收尾。
+> 唯一例外是 Hook 拦下时不擅自绕过（见 1d）。本节的"不问"只作用于 /handoff 自身，不改其他 skill / 平时手动提交的确认行为。
 
 ### 1a. 工作区干净 → 跳过到 Step 2
 
-### 1b. 有未提交变更
+### 1b. 有未提交变更 → 自动 stage
 
-**已修改文件**（`git status --short` 里 ` M` 开头）：Claude 读取并自动 stage（排除 `.env`、`*.log`、`node_modules/`、构建产物）。
+**已修改文件**（`git status --short` 里 ` M` 开头）：Claude 读取并自动 stage。
 
-**新增文件**（`??` 开头，unstaged）：**MUST 用 AskUserQuestion multiSelect 询问**，避免误 stage 临时文件：
+**新增文件**（`??` 开头，unstaged）：自动 stage，但 **MUST 排除垃圾名单**——`.env*`、`*.log`、`*.tmp`、`node_modules/`、`dist/` / `build/` 等构建产物、`.DS_Store`、以及 `.claude/session-notes.md` 自身。
 
-```
-Question: 发现未跟踪的新增文件，选择要提交的（多选）：
+> 不再用 AskUserQuestion 让用户逐个勾选。代价是可能误 stage 名单外的临时文件——用 **Step 4 输出逐个列出已 stage 的文件**对冲：用户一眼能看出异常，手动 `git reset <file>` 即可撤掉。
 
-multiSelect: true
+### 1c. 生成 commit message → 自动
 
-Options:
-1. src/components/LoginForm.tsx
-2. src/hooks/useAuth.ts
-3. test.md   ← 看起来是临时文件？
-4. notes.txt ← 看起来是临时文件？
-```
-
-用户勾选后 stage。
-
-### 1c. 生成 commit message
-
-**简单改动**（≤3 文件，单一主题）→ Claude 直接生成 Conventional Commits message。
-
-**复杂改动**（≥4 文件 / 跨模块 / 多个主题）→ **AskUserQuestion 询问**：
-
-```
-Question: 本次变更跨多个模块/主题，commit message 建议：
-
-Options:
-1. (Recommended) feat(auth): 实现 JWT 刷新机制
-2. feat: 添加认证相关代码（auth + api + frontend）
-3. 拆成多个 commit（Tidy First）
-4. 自定义（自由输入）
-```
-
-选 3 → Claude 按 Tidy First 拆 commit（结构先、行为后，详见 /implement Step 5）。
+简单 / 复杂改动**一律由 Claude 直接生成** Conventional Commits message，不再列候选弹窗。
+需要 Tidy First 拆成多个 commit 的，用 `/implement`（它的 Step 5 管拆分），不在 /handoff 内交互。
 
 ### 1d. 执行 commit
 
@@ -80,21 +58,11 @@ Options:
 git commit -m "<message>"
 ```
 
-**失败处理**（Hook 拦下，exit code 2）→ **MUST 用 AskUserQuestion 询问**（不自动 --no-verify）：
+**失败处理**（Hook 拦下，exit code 2）→ **不询问、也不自动 `--no-verify`**，走安全默认：
+- 跳过 commit，继续 Step 2-3；
+- 在 session-notes 的"注意事项"段标注 **"⚠️ 工作区有未提交变更（Hook 未通过，未 commit）"**。
 
-```
-Question: commit 被 Hook 拦下（测试/lint 未通过）。如何处理？
-
-Options:
-1. (Recommended) 返回编辑修复（取消本次 /handoff）
-2. 只写 session-notes 记录未提交状态（不 commit）
-3. 强制跳过 Hook（--no-verify，会留下未验证的 commit 在历史中）
-4. 自定义
-```
-
-选 1 → 停止 /handoff，用户去修复。
-选 2 → 跳过 commit，继续 Step 2-3（session-notes 里标注"工作区有未提交变更"）。
-选 3 → 仅在用户明确选择时才 `--no-verify`，message 前缀 `wip:`。
+> 这是 /handoff 唯一不"自动提交"的情形：绕 Hook（`--no-verify`）会在历史里留下未验证 commit，风险由用户承担，仍要**手动**来，skill 不替你决定。
 
 ## Step 2: Roadmap 更新（副业）
 
@@ -220,8 +188,10 @@ git commit -m "docs: 勾选 Phase N [条目名] 完成"
 ━━━━━━━━━━━━━━━━━━━━━━━━
 提交状态：
   ✅ 正常 commit: feat(auth): ...
-  / ⚠️ 只记录未提交状态（Hook 拦下，用户选择不 --no-verify）
-  / 🏷️ WIP commit（--no-verify，用户明确授权）
+  已 stage 文件（请复核，误 stage 可 git reset <file>）：
+    - src/components/LoginForm.tsx
+    - src/hooks/useAuth.ts
+  / ⚠️ 只记录未提交状态（Hook 拦下，未 commit；需绕过自行 --no-verify）
   / ⏭️ 无变更
 
 Roadmap：

@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.38（2026-06）
+> **版本**: v3.39（2026-06）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -114,6 +114,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.39 | 2026-06 | **`/handoff` commit 步骤去交互（真实使用反馈驱动）**。源于使用反馈——会话收尾跑 `/handoff` 时连环弹窗（新增文件勾选 / 复杂 commit message 选候选 / Hook 失败处理）打断节奏。Step 1 commit 三处 AskUserQuestion 全改**自动决策**：**1b 新增文件**自动 stage + 排除垃圾名单（`.env*` / `*.log` / `*.tmp` / `node_modules/` / 构建产物 / `.DS_Store` / session-notes 自身），Step 4 逐个列出已 stage 文件让用户复核兜底；**1c commit message** 简单/复杂一律自动生成，拆 commit 交给 `/implement`；**1d Hook 拦下**不问也不擅自 `--no-verify`，安全默认跳过 commit + session-notes 标注未提交。**范围严格限定 /handoff 自身**，不改其他 skill / 平时手动提交的确认行为；**2b Spec Gate 检测仍保留询问**（不属于 commit/push 步骤）。三方同步：源头 03 模板 + 职责边界/变化记录 + `.claude` 运行副本 + `.agents` Codex 镜像。Skills 总数不变（13 个） |
 | v3.38 | 2026-06 | **`/fix-permission` Web 类诊断补强（真实使用反馈驱动）**。源于本次排查——"WebSearch 已全局放行，但联网仍偶尔弹窗"：弹的其实是 **WebFetch（逐域名白名单）**撞上名单外新域名，非 WebSearch。03 §2.11 Web 小节新增三段：**诊断翻转**（用户说"搜索还在问" → 先看弹窗第一行 `Fetch` / `Search` 区分 WebFetch / WebSearch）、**预期管理**（逐域名白名单下新域名首次必然弹属正常，别承诺"加完永不弹"）、**裸放 `WebFetch` 的安全代价**（整放能消灭弹窗但拆掉防数据外泄防线，低敏感场景可接受但须用户知情）。三方同步：源头 03 模板 + `.claude` 运行副本 + `.agents` Codex 镜像。实跑收尾：用户全局 settings.json 补 6 个 WebFetch domain（56 → 62）。Skills 总数不变（13 个） |
 | v3.37 | 2026-06 | **Claude Code 官方更新跟进（v2.1.114 → 176，距上次 v3.32 约 2 个月）**。**模型升级**（01 §7.2 + 00 命令表 + 04 §13 模型卡/1M 窗口说明 + 本地 `/done` skill commit 模板）：新增 **Fable 5**（Mythos 级，最强，`claude-fable-5`）+ **Opus 4.8**（当前默认旗舰，`claude-opus-4-8`），全局替换过时的"Opus 4.6 默认"；`xhigh` effort 修正为 Opus 4.7/4.8 专属、`/fast` 适用 Opus 4.8/4.7/4.6。**新增 04 §9.4 Dynamic Workflows**（动态工作流）：JavaScript 脚本确定性编排数十~数百子代理（`agent`/`pipeline`/`parallel` 原语），`ultracode` 关键词触发 / `/deep-research` 内置工作流 / `/workflows` 查看，附成本警告。**Bundled 命令 7 → 9**：新增 `/code-review`（diff 审查，`ultra` = 云端深审）、`/deep-research`、`/workflows`；`/ultrareview` 降级为 `/code-review ultra` 废弃别名。**命令名订正**：全局 `/less-permission-prompts` → **`/fewer-permission-prompts`**（真实命令名，旧文档误写）。**未跟进项**（待官方 changelog 核实版本号后写）：Hooks 新事件（WorktreeCreate/Remove、FileChanged、PermissionDenied）、settings 新字段（autoMode、worktree.baseRef、enforceAvailableModels）。Skills 总数不变（13 个） |
 | v3.36 | 2026-05 | **`/codex` 三档输出升级——Codex 2025-2026 重启后分化为 CLI（`@openai/codex` v0.130.0+，Rust 实现）+ Mac App（独立桌面 App，Computer Use / Chrome 扩展 / Automations）两个独立产品**。**新增 exec 模式**（CLI 闭环）：`cat .codex-task.md \| codex exec --sandbox workspace-write --ask-for-approval never -`，Claude 直调 CLI 拿回结果，无需用户中转。**关键 flag 内置**：`--sandbox workspace-write`（默认 `read-only` 写不了文件） + `--ask-for-approval never`（exec 自动化跳过交互） + 末尾 `-`（从 stdin 读 prompt） + 可选 `--model X`（如 `gpt-5-pro` 长上下文）。**未提交改动护栏**（exec 前 `git status` 提醒先 commit/stash，因 codex 会直接改文件） + **CLI 不可用自动降级为 md 模式**（`brew install codex` / `npm i -g @openai/codex`） + **新增 app 模式提示段**：明示 Mac App **无法被自动调起**（`codex://` URL scheme 仅打开面板、Automations 无外部 API），仅在需要 Computer Use（操作桌面 app）/ Chrome 扩展（复用已登录 session）/ Automations（定时触发）场景手动选。**Step 0 加 0-pre 检测段**（`--exec` / `--model X` / 中文触发词如"直接执行""让codex做"） + **Question 2 输出方式弹窗**（md / CLI exec / Mac App 手动 3 选项）。Skills 总数不变（仍 13 个） |
@@ -161,4 +162,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-06（v3.38）
+**最后更新**: 2026-06（v3.39）

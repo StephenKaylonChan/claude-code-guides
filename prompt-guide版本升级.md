@@ -287,6 +287,13 @@ ls .claude/rules/ 2>/dev/null
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
 
+**v3.39 新增**（重点检查，⚠️ /handoff commit 步骤去交互）：
+- **commit 三处弹窗全去掉**：检查 `.claude/skills/handoff/SKILL.md` Step 1 是否还残留 AskUserQuestion——新增文件勾选（1b）/ 复杂 commit message 选候选（1c）/ Hook 失败处理（1d）应全部改为自动决策
+- **1b 自动 stage + 垃圾名单**：自动 stage 已改 + 新增文件，排除 `.env*` / `*.log` / `*.tmp` / `node_modules/` / 构建产物 / `.DS_Store` / session-notes 自身；Step 4 输出 MUST 逐个列出已 stage 文件供复核
+- **1d 安全默认**：Hook 拦下不问、不擅自 `--no-verify` → 跳过 commit + session-notes 标注未提交（绕 Hook 要用户手动）
+- **范围限定**：只作用于 /handoff 自身；**2b Spec Gate 检测仍保留询问**（不属于 commit/push 步骤），别一并删掉
+- **三方一致检查**：03 源头模板 + 职责边界/v3.39 变化记录 ↔ `.claude/skills/handoff` 运行副本 ↔ `.agents/skills/handoff` Codex 镜像
+
 **v3.38 新增**（重点检查，⚠️ /fix-permission Web 类诊断补强）：
 - **诊断翻转**：用户说"联网搜索还在问" → 八成是 WebFetch（新域名）不是 WebSearch，先看弹窗第一行写 `Fetch` 还是 `Search`
 - **预期管理**：逐域名是白名单，互联网域名无穷 → 新站首次必然弹属正常，别承诺"加完就永不弹"
