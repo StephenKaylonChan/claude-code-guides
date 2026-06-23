@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.39（2026-06）
+> **版本**: v3.40（2026-06）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -36,7 +36,7 @@
 
 ## 🎯 命令体系
 
-命令分三类：**Bundled Skills**（Anthropic 内置，9 个）、**自定义 Skills**（安装到 `.claude/skills/`，13 个）、**系统命令**（内置，无需配置）。
+命令分三类：**Bundled Skills**（Anthropic 内置，9 个）、**自定义 Skills**（安装到 `.claude/skills/`，14 个）、**系统命令**（内置，无需配置）。
 
 完整命令速查表见 [00-日常使用说明.md](./00-日常使用说明.md) Section 7。
 
@@ -54,7 +54,7 @@ project-root/
 │   ├── rules/
 │   │   ├── frontend.md            # 前端路径感知规则
 │   │   └── backend.md             # 后端路径感知规则
-│   ├── skills/                    # 自定义命令（13 个，v3.36 codex 升级）
+│   ├── skills/                    # 自定义命令（14 个，v3.40 loop-engineering 新增）
 │   │   ├── audit/SKILL.md
 │   │   ├── catchup/SKILL.md
 │   │   ├── handoff/SKILL.md
@@ -67,7 +67,8 @@ project-root/
 │   │   ├── diagnose/SKILL.md
 │   │   ├── fix-permission/SKILL.md
 │   │   ├── codex/SKILL.md
-│   │   └── visual/SKILL.md
+│   │   ├── visual/SKILL.md
+│   │   └── loop-engineering/SKILL.md
 │   ├── agents/                    # 自定义子代理（可选）
 │   └── hooks/                     # Hook 脚本
 │       ├── session-start.sh
@@ -114,6 +115,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.40 | 2026-06 | **新增 `/loop-engineering` 目标驱动有限循环 Skill（Loop Engineering 方法论沉淀）**。基于 2026 年社区对 Coding Agent loop 的讨论和本次两轮调研，把"一次性 prompt"升级为可验证、可停止、可恢复的 Agent 工作循环：**Loop Contract**（Goal / Scope / Non-goals / Budget / Done / Stop / Block / Gate / Human confirmation points）+ **Observe → Decide → Act → Verify → Reflect** 迭代 + **自动推进/人工停顿边界**（普通步骤自动推进，重大决策/范围扩大/外部副作用/人工 Gate/预算耗尽 MUST 停下来）+ **maker/checker 分离**（高风险时 subagent 独立审查）+ **复用既有工作流**（复杂设计先 `/spec`，单点执行交给 `/implement`，完成验收交给 `/done`，中断恢复用 `/handoff`/`/catchup`）。首版保守：`disable-model-invocation: true` + `allowed-tools` 只读 + `disallowed-tools: Write, Edit` 硬禁止写入（写入走 `/implement`），不默认创建后台 automation/routine，防止无限循环、Agent 自评完成和越权写入。**第三轮调研打磨**（用 `/loop-engineering --readonly` 自身试跑 + 联网核实 Osmani/Cherny/Steinberger 来源与 Claude Code primitives）：新增"要不要用 loop"前置闸门（distill and demote / 与内置 `/goal`·`/loop` 划清边界）+ 停滞 circuit-breaker + Done 判定独立 + L1-L3 自治分级 + 社区失败模式反例（loopmaxxing / comprehension debt）；修正"`allowed-tools` 不含 Write/Edit = 只读"的误解（它是预批准清单非限制清单，硬禁止须用 `disallowed-tools`）。三方同步：设计 spec + 03 源头模板 + `.claude` 运行副本 + `.agents` Codex 镜像 + prompt/roadmap。Skills 总数 **13 → 14** |
 | v3.39 | 2026-06 | **`/handoff` commit 步骤去交互（真实使用反馈驱动）**。源于使用反馈——会话收尾跑 `/handoff` 时连环弹窗（新增文件勾选 / 复杂 commit message 选候选 / Hook 失败处理）打断节奏。Step 1 commit 三处 AskUserQuestion 全改**自动决策**：**1b 新增文件**自动 stage + 排除垃圾名单（`.env*` / `*.log` / `*.tmp` / `node_modules/` / 构建产物 / `.DS_Store` / session-notes 自身），Step 4 逐个列出已 stage 文件让用户复核兜底；**1c commit message** 简单/复杂一律自动生成，拆 commit 交给 `/implement`；**1d Hook 拦下**不问也不擅自 `--no-verify`，安全默认跳过 commit + session-notes 标注未提交。**范围严格限定 /handoff 自身**，不改其他 skill / 平时手动提交的确认行为；**2b Spec Gate 检测仍保留询问**（不属于 commit/push 步骤）。三方同步：源头 03 模板 + 职责边界/变化记录 + `.claude` 运行副本 + `.agents` Codex 镜像。Skills 总数不变（13 个） |
 | v3.38 | 2026-06 | **`/fix-permission` Web 类诊断补强（真实使用反馈驱动）**。源于本次排查——"WebSearch 已全局放行，但联网仍偶尔弹窗"：弹的其实是 **WebFetch（逐域名白名单）**撞上名单外新域名，非 WebSearch。03 §2.11 Web 小节新增三段：**诊断翻转**（用户说"搜索还在问" → 先看弹窗第一行 `Fetch` / `Search` 区分 WebFetch / WebSearch）、**预期管理**（逐域名白名单下新域名首次必然弹属正常，别承诺"加完永不弹"）、**裸放 `WebFetch` 的安全代价**（整放能消灭弹窗但拆掉防数据外泄防线，低敏感场景可接受但须用户知情）。三方同步：源头 03 模板 + `.claude` 运行副本 + `.agents` Codex 镜像。实跑收尾：用户全局 settings.json 补 6 个 WebFetch domain（56 → 62）。Skills 总数不变（13 个） |
 | v3.37 | 2026-06 | **Claude Code 官方更新跟进（v2.1.114 → 176，距上次 v3.32 约 2 个月）**。**模型升级**（01 §7.2 + 00 命令表 + 04 §13 模型卡/1M 窗口说明 + 本地 `/done` skill commit 模板）：新增 **Fable 5**（Mythos 级，最强，`claude-fable-5`）+ **Opus 4.8**（当前默认旗舰，`claude-opus-4-8`），全局替换过时的"Opus 4.6 默认"；`xhigh` effort 修正为 Opus 4.7/4.8 专属、`/fast` 适用 Opus 4.8/4.7/4.6。**新增 04 §9.4 Dynamic Workflows**（动态工作流）：JavaScript 脚本确定性编排数十~数百子代理（`agent`/`pipeline`/`parallel` 原语），`ultracode` 关键词触发 / `/deep-research` 内置工作流 / `/workflows` 查看，附成本警告。**Bundled 命令 7 → 9**：新增 `/code-review`（diff 审查，`ultra` = 云端深审）、`/deep-research`、`/workflows`；`/ultrareview` 降级为 `/code-review ultra` 废弃别名。**命令名订正**：全局 `/less-permission-prompts` → **`/fewer-permission-prompts`**（真实命令名，旧文档误写）。**未跟进项**（待官方 changelog 核实版本号后写）：Hooks 新事件（WorktreeCreate/Remove、FileChanged、PermissionDenied）、settings 新字段（autoMode、worktree.baseRef、enforceAvailableModels）。Skills 总数不变（13 个） |
@@ -162,4 +164,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-06（v3.39）
+**最后更新**: 2026-06（v3.40）

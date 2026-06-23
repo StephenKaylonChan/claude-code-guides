@@ -77,7 +77,7 @@ Stop：是否需要完成通知？（macOS / Linux）
 **Skills 选择**：
 
 ```
-必须：audit（浅层巡检）、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理为执行契约）、implement（有纪律的单改动实施）、done（功能交付检查清单）、docs（文档生态守护者：更新/新增/删除/审计 spec-code/ADR/Gate）、release（Phase 里程碑工作流 + 可选 --publish 对外发版）、nbp2（AI 生图 Prompt 助手）、diagnose（全维度代码健康诊断）、fix-permission（权限拦截自动诊断修复）、codex（为外部 AI 生成自包含任务文档，三档输出：md / Codex CLI exec 闭环 / Mac App 手动）、visual（项目数据可视化仪表盘）
+必须：audit（浅层巡检）、catchup、handoff（含自动 commit 逻辑）、spec（讨论成果整理为执行契约）、implement（有纪律的单改动实施）、done（功能交付检查清单）、docs（文档生态守护者：更新/新增/删除/审计 spec-code/ADR/Gate）、release（Phase 里程碑工作流 + 可选 --publish 对外发版）、nbp2（AI 生图 Prompt 助手）、diagnose（全维度代码健康诊断）、fix-permission（权限拦截自动诊断修复）、codex（为外部 AI 生成自包含任务文档，三档输出：md / Codex CLI exec 闭环 / Mac App 手动）、visual（项目数据可视化仪表盘）、loop-engineering（目标驱动有限 Agent 循环）
 可选：是否有项目特定的高频操作值得封装为命令？
 ```
 
@@ -305,8 +305,8 @@ CLAUDE.local.md
 **⛔ 检查点 — Phase 5 是最容易遗漏的阶段。运行以下命令验证，输出完整结果后等我确认：**
 
 ```bash
-echo "=== Skills (应为 13 个，v3.35 起含 visual) ==="
-for f in audit catchup handoff spec implement done docs release nbp2 diagnose fix-permission codex visual; do
+echo "=== Skills (应为 14 个，v3.40 起含 loop-engineering) ==="
+for f in audit catchup handoff spec implement done docs release nbp2 diagnose fix-permission codex visual loop-engineering; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 echo "=== Hooks ==="
@@ -363,7 +363,7 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 - 子目录 CLAUDE.md: [数量] 个（如有）
 - .claude/rules/: [数量] 个规则文件（如有）
 - Hooks 已启用: [SessionStart / PreToolUse / PostToolUse / PreCompact / Stop / UserPromptSubmit（如有）]
-- Skills: audit / catchup / handoff / spec / implement / done / docs / release / nbp2 / diagnose / fix-permission / codex / visual（13 个）
+- Skills: audit / catchup / handoff / spec / implement / done / docs / release / nbp2 / diagnose / fix-permission / codex / visual / loop-engineering（14 个）
 - 开发文档: docs/development/（[已生成的文档列表]）
 - Agent Teams: [已启用 / 未启用]
 
@@ -378,6 +378,7 @@ echo '{"tool_name":"Write","tool_input":{"path":"src/test.ts"}}' \
 - 文档更新：/docs（深度探索代码 → 刷新开发文档）
 - 批量跨文件变更：/batch "描述"
 - 需求讨论后：/spec（整理讨论成果为设计文档）
+- 目标循环：/loop-engineering "目标" --execute --budget 3（普通步骤自动推进，重大 Gate 停下来）
 - 中断前：/handoff（自动 commit + 写交接文档）
 - 接续任务：/catchup
 - 上下文接近 70%：/handoff → /clear → /catchup

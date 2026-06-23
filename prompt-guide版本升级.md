@@ -287,6 +287,19 @@ ls .claude/rules/ 2>/dev/null
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
 
+**v3.40 新增**（重点检查，⚠️ 新增 /loop-engineering Skill）：
+- **`/loop-engineering` 目标驱动有限循环 Skill**：把一次性 prompt 升级为有边界的 Agent loop，先写 Loop Contract，再按 Observe → Decide → Act → Verify → Reflect 迭代
+- **迁移**：新增 `.claude/skills/loop-engineering/SKILL.md`，从 guide 03 Section 2.14 复制最新模板
+  ```bash
+  mkdir -p .claude/skills/loop-engineering
+  # 从 guide 03 Section 2.14 复制 SKILL.md 内容
+  ```
+- **Loop Contract 必备字段**：Goal / Scope / Non-goals / Mode / Budget / Done condition / Stop condition / Block condition / Verification gate / Human confirmation points
+- **安全边界**：`disable-model-invocation: true`；`allowed-tools` 不含 `Write/Edit`；不默认创建后台 routine/automation；不允许 Agent 自评即完成
+- **既有工作流编排**：复杂目标先 `/spec`；单点执行交给 `/implement`；完成验收交给 `/done`；中断/恢复用 `/handoff` / `/catchup`
+- **三方一致检查**：03 §2.14 源头模板 ↔ `.claude/skills/loop-engineering` 运行副本 ↔ `.agents/skills/loop-engineering` Codex 镜像
+- **Skills 总数 13 → 14**（新增 /loop-engineering）
+
 **v3.39 新增**（重点检查，⚠️ /handoff commit 步骤去交互）：
 - **commit 三处弹窗全去掉**：检查 `.claude/skills/handoff/SKILL.md` Step 1 是否还残留 AskUserQuestion——新增文件勾选（1b）/ 复杂 commit message 选候选（1c）/ Hook 失败处理（1d）应全部改为自动决策
 - **1b 自动 stage + 垃圾名单**：自动 stage 已改 + 新增文件，排除 `.env*` / `*.log` / `*.tmp` / `node_modules/` / 构建产物 / `.DS_Store` / session-notes 自身；Step 4 输出 MUST 逐个列出已 stage 文件供复核
@@ -688,8 +701,8 @@ chmod +x .claude/hooks/*.sh
 **⛔ 运行以下命令验证，输出完整结果**（不可跳过）：
 
 ```bash
-echo "=== Skills (应为 13 个，v3.35 含 visual / v3.25 起 /deep-audit 废弃) ==="
-for f in audit catchup handoff spec implement done docs release nbp2 diagnose fix-permission codex visual; do
+echo "=== Skills (应为 14 个，v3.40 含 loop-engineering / v3.25 起 /deep-audit 废弃) ==="
+for f in audit catchup handoff spec implement done docs release nbp2 diagnose fix-permission codex visual loop-engineering; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 # 验证旧 /deep-audit 是否已删除

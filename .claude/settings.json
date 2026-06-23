@@ -2,6 +2,10 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
+      "Write(.claude/session-notes.md)",
+      "Edit(.claude/session-notes.md)",
+      "Read(.claude/session-notes.md)",
+      "Bash(stat *)",
       "Bash(git status)",
       "Bash(git log *)",
       "Bash(git diff *)",

@@ -243,7 +243,8 @@ mkdir -p .claude
 │   ├── done/SKILL.md          # 新增（功能完成收尾检查，附描述参数）
 │   ├── docs/SKILL.md          # 新增（开发文档梳理）
 │   ├── release/SKILL.md       # 新增（Phase 完成系统性文档刷新）
-│   └── nbp2/SKILL.md          # 新增（AI 生图 Prompt 助手）
+│   ├── nbp2/SKILL.md          # 新增（AI 生图 Prompt 助手）
+│   └── loop-engineering/SKILL.md # 新增（目标驱动有限 Agent 循环）
 ├── agents/                    # 自定义子代理（可选）
 └── hooks/
     ├── session-start.sh
@@ -333,8 +334,8 @@ grep -q "session-notes.md" .gitignore || echo ".claude/session-notes.md" >> .git
 **⛔ 运行以下命令验证，输出完整结果**（不可跳过）：
 
 ```bash
-echo "=== Skills (应为 13 个，v3.35 起含 visual) ==="
-for f in audit catchup handoff spec implement done docs release nbp2 diagnose fix-permission codex visual; do
+echo "=== Skills (应为 14 个，v3.40 起含 loop-engineering) ==="
+for f in audit catchup handoff spec implement done docs release nbp2 diagnose fix-permission codex visual loop-engineering; do
   echo "  $f: $(test -f .claude/skills/$f/SKILL.md && echo '✅' || echo '❌ 缺失')"
 done
 echo "=== Hooks ==="
