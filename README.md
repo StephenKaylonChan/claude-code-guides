@@ -1,7 +1,7 @@
 # 参考文档 (Reference Guides)
 
 > **文档性质**: 通用参考文档，可复用于任何项目
-> **版本**: v3.40（2026-06）
+> **版本**: v3.41（2026-06）
 
 本目录包含 AI 协作系统的**通用配置指南**，基于 Claude Code 2.x 原生能力设计，可直接复制到其他项目使用。
 
@@ -115,6 +115,7 @@ project-root/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.41 | 2026-06 | **`/fix-permission` Web 类补强 — 全网抓取型 workflow 裸放 `WebFetch` 判据（真实使用反馈驱动）**。源于本次排查——`deep-research` 等联网调研 workflow 抓的是搜索结果里**动态冒出的不可预测 URL**（`pmc.ncbi.nlm.nih.gov`、`blog.google`…每次都不同），逐域名白名单**结构性失效**（永远漏、每撞新域名就弹），不是"攒齐就好"。Web 小节在"🔒 不建议裸放"后新增 **🌐 例外 callout**：此场景裸放 `WebFetch`（写入用户级 `~/.claude/settings.json`，裸 `WebFetch` 覆盖所有 `domain:*` 行使其冗余）才是正解、**不算"图省事"**；给出**判据**——抓取域名"事先可枚举" → 逐域名白名单，"由搜索结果动态决定" → 裸放；并提示 `WebSearch` 全局开只解决**搜索**那步、反复弹的是抓取来源页的 `WebFetch` 步。三方同步：源头 03 模板 + `.claude` 运行副本 + `.agents` Codex 镜像。实跑收尾：用户全局 `settings.json` 加裸 `WebFetch`。Skills 总数不变（14 个） |
 | v3.40 | 2026-06 | **新增 `/loop-engineering` 目标驱动有限循环 Skill（Loop Engineering 方法论沉淀）**。基于 2026 年社区对 Coding Agent loop 的讨论和本次两轮调研，把"一次性 prompt"升级为可验证、可停止、可恢复的 Agent 工作循环：**Loop Contract**（Goal / Scope / Non-goals / Budget / Done / Stop / Block / Gate / Human confirmation points）+ **Observe → Decide → Act → Verify → Reflect** 迭代 + **自动推进/人工停顿边界**（普通步骤自动推进，重大决策/范围扩大/外部副作用/人工 Gate/预算耗尽 MUST 停下来）+ **maker/checker 分离**（高风险时 subagent 独立审查）+ **复用既有工作流**（复杂设计先 `/spec`，单点执行交给 `/implement`，完成验收交给 `/done`，中断恢复用 `/handoff`/`/catchup`）。首版保守：`disable-model-invocation: true` + `allowed-tools` 只读 + `disallowed-tools: Write, Edit` 硬禁止写入（写入走 `/implement`），不默认创建后台 automation/routine，防止无限循环、Agent 自评完成和越权写入。**第三轮调研打磨**（用 `/loop-engineering --readonly` 自身试跑 + 联网核实 Osmani/Cherny/Steinberger 来源与 Claude Code primitives）：新增"要不要用 loop"前置闸门（distill and demote / 与内置 `/goal`·`/loop` 划清边界）+ 停滞 circuit-breaker + Done 判定独立 + L1-L3 自治分级 + 社区失败模式反例（loopmaxxing / comprehension debt）；修正"`allowed-tools` 不含 Write/Edit = 只读"的误解（它是预批准清单非限制清单，硬禁止须用 `disallowed-tools`）。三方同步：设计 spec + 03 源头模板 + `.claude` 运行副本 + `.agents` Codex 镜像 + prompt/roadmap。Skills 总数 **13 → 14** |
 | v3.39 | 2026-06 | **`/handoff` commit 步骤去交互（真实使用反馈驱动）**。源于使用反馈——会话收尾跑 `/handoff` 时连环弹窗（新增文件勾选 / 复杂 commit message 选候选 / Hook 失败处理）打断节奏。Step 1 commit 三处 AskUserQuestion 全改**自动决策**：**1b 新增文件**自动 stage + 排除垃圾名单（`.env*` / `*.log` / `*.tmp` / `node_modules/` / 构建产物 / `.DS_Store` / session-notes 自身），Step 4 逐个列出已 stage 文件让用户复核兜底；**1c commit message** 简单/复杂一律自动生成，拆 commit 交给 `/implement`；**1d Hook 拦下**不问也不擅自 `--no-verify`，安全默认跳过 commit + session-notes 标注未提交。**范围严格限定 /handoff 自身**，不改其他 skill / 平时手动提交的确认行为；**2b Spec Gate 检测仍保留询问**（不属于 commit/push 步骤）。三方同步：源头 03 模板 + 职责边界/变化记录 + `.claude` 运行副本 + `.agents` Codex 镜像。Skills 总数不变（13 个） |
 | v3.38 | 2026-06 | **`/fix-permission` Web 类诊断补强（真实使用反馈驱动）**。源于本次排查——"WebSearch 已全局放行，但联网仍偶尔弹窗"：弹的其实是 **WebFetch（逐域名白名单）**撞上名单外新域名，非 WebSearch。03 §2.11 Web 小节新增三段：**诊断翻转**（用户说"搜索还在问" → 先看弹窗第一行 `Fetch` / `Search` 区分 WebFetch / WebSearch）、**预期管理**（逐域名白名单下新域名首次必然弹属正常，别承诺"加完永不弹"）、**裸放 `WebFetch` 的安全代价**（整放能消灭弹窗但拆掉防数据外泄防线，低敏感场景可接受但须用户知情）。三方同步：源头 03 模板 + `.claude` 运行副本 + `.agents` Codex 镜像。实跑收尾：用户全局 settings.json 补 6 个 WebFetch domain（56 → 62）。Skills 总数不变（13 个） |
@@ -164,4 +165,4 @@ project-root/
 ---
 
 **文档性质**: 通用参考模板（可跨项目复用）
-**最后更新**: 2026-06（v3.40）
+**最后更新**: 2026-06（v3.41）

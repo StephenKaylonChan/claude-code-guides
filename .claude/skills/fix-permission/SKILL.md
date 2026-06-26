@@ -52,6 +52,12 @@ allowed-tools: Read, Edit, Bash
 >
 > **🔒 为什么不建议图省事裸放 `WebFetch`（不带 domain）**
 > 整个放开 `WebFetch` 能消灭所有弹窗，但会拆掉一道真实防线：恶意网页可藏注入指令，诱导 Claude 把敏感数据拼进 URL 抓到外部站（数据外泄——"网页能读 + 能外发 + 可能读到坏内容"三者凑齐）。逐域名白名单正是掐断"外发"这一环。**低敏感 + 有人盯着的场景可接受裸放，但务必让用户清楚拆掉的是什么。**
+>
+> **🌐 例外：全网抓取型 workflow（deep-research 等）→ 逐域名结构性失效，裸放才是正解**
+> 上面"逐域名优先 + 不建议裸放"针对**浏览固定一批博客 / 文档站**（域名事先可枚举）。但 `deep-research`、联网调研类 workflow 抓的是**搜索结果里动态冒出的不可预测 URL**（`pmc.ncbi.nlm.nih.gov`、`blog.google`…每次都不同）——逐域名白名单**永远漏、每撞新域名就弹**，不是"攒齐就好"，是结构性治不了。
+> - **此场景裸放 `WebFetch` 是正解，不算"图省事"**：写入用户级 `~/.claude/settings.json`（裸 `WebFetch` 会覆盖所有 `WebFetch(domain:*)` 行使其变冗余，旧行可留可删）；仍须让用户清楚拆掉的是上面那道"外发"防线，可随时删行还原。
+> - **判据**：抓取域名"事先可枚举" → 逐域名白名单；"由搜索结果动态决定" → 裸放 `WebFetch`。
+> - 注意 `WebSearch` 已全局开只解决**搜索**那步；deep-research 反复弹的是**抓取来源页**的 `WebFetch` 步。
 
 > **💡 "Yes, and don't ask again" 的沉淀位置陷阱**
 > 用户在弹窗点 "Yes, and don't ask again" 时，规则**默认写入 `./.claude/settings.local.json`**（项目本地，gitignored）。
