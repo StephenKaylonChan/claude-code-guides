@@ -287,6 +287,12 @@ ls .claude/rules/ 2>/dev/null
 - **技术栈专项检查**：自动识别 React/Next.js/FastAPI/Spring Boot，追加框架特有检查项。
 - **Skills 总数 10→11**：新增 `/diagnose`。
 
+**v3.42 新增**（重点检查，⚠️ 01 §7.3 模型解析机制补全）：
+- **新增 01 §7.3「模型解析与子代理继承」**：补全 §7.2 缺失的"不钉就继承"规则——模型解析优先级链（`/model` > 项目本地 > 项目级 > 用户级 > 内置默认）+ 钉模型三入口（settings `model` 字段 / agent frontmatter `model:` / `Agent` 调用参数）+ 子代理默认继承主循环
+- **关键认知**：Claude Code **无**"子代理默认模型"独立开关；主循环留 Opus、子代理降便宜模型省钱的**唯一**做法是给自定义 agent frontmatter 逐个写 `model:`；内置 Explore / Plan 永远继承主循环
+- **检查项**：项目文档若声称"可全局设置子代理模型"属错误信息；`effortLevel` 同样遵循"不钉就继承 + 各级覆盖"
+- **纯文档内容**：无 skill / 文件迁移，Skills 总数不变（14 个）
+
 **v3.40 新增**（重点检查，⚠️ 新增 /loop-engineering Skill）：
 - **`/loop-engineering` 目标驱动有限循环 Skill**：把一次性 prompt 升级为有边界的 Agent loop，先写 Loop Contract，再按 Observe → Decide → Act → Verify → Reflect 迭代
 - **迁移**：新增 `.claude/skills/loop-engineering/SKILL.md`，从 guide 03 Section 2.14 复制最新模板
